@@ -1,23 +1,15 @@
 import { useState, useMemo } from 'react';
-import { useGameData } from '../../contexts/GameDataContext';
+import { TabSpinner } from '../../hooks/useLazyCategory';
+import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 
 export default function AssetsTab() {
-  const { data } = useGameData();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [signature, setSignature] = useState('');
 
-  const assets = data?.assets || [];
+  const filters = useMemo(() => ({ search, category, signature }), [search, category, signature]);
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return assets.filter(asset => {
-      const textMatches = asset.filename.toLowerCase().includes(q) || asset.path.toLowerCase().includes(q);
-      const catMatches = category === '' || asset.category === category;
-      const sigMatches = signature === '' || asset.signature.includes(signature);
-      return textMatches && catMatches && sigMatches;
-    });
-  }, [assets, search, category, signature]);
+  const { items: assets, total, isInitialLoading, isFetchingNextPage, sentinelRef } = usePaginatedCategory('assets', filters, 30);
 
   return (
     <div className="tab-content">
@@ -25,6 +17,7 @@ export default function AssetsTab() {
         <div className="search-input-wrapper">
           <i className="fa-solid fa-search"></i>
           <input placeholder="Search assets by filename or path..." value={search} onChange={e => setSearch(e.target.value)} />
+          {isInitialLoading && <i className="fa-solid fa-circle-notch fa-spin" style={{ marginLeft: 8, color: 'var(--accent-blue)', fontSize: 14 }}></i>}
         </div>
         <div className="filters-group">
           <select value={category} onChange={e => setCategory(e.target.value)}>
@@ -57,25 +50,36 @@ export default function AssetsTab() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No assets in local-input match your search.</td></tr>
-            ) : filtered.slice(0, 200).map((asset, i) => {
-              const sizeMb = (asset.size_bytes / (1024 * 1024)).toFixed(2);
-              const isEncrypted = asset.signature.includes("ENCA");
-              return (
-                <tr key={i}>
-                  <td><strong style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>{asset.category}</strong></td>
-                  <td><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{asset.filename}</span></td>
-                  <td>
-                    <span className="badge" style={{ backgroundColor: isEncrypted ? 'rgba(236,72,153,0.08)' : 'rgba(56,189,248,0.08)', borderColor: isEncrypted ? 'rgba(236,72,153,0.2)' : 'rgba(56,189,248,0.2)', color: isEncrypted ? 'var(--accent-pink)' : 'var(--accent-blue)' }}>
-                      {asset.signature}
-                    </span>
+            {isInitialLoading && assets.length === 0 ? (
+              <tr><td colSpan="5" style={{ textAlign: 'center', padding: 40 }}><TabSpinner message="Scanning binary assets..." /></td></tr>
+            ) : assets.length === 0 ? (
+              <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No assets match your search.</td></tr>
+            ) : (
+              <>
+                {assets.map((asset, i) => {
+                  const sizeMb = (asset.size_bytes / (1024 * 1024)).toFixed(2);
+                  const isEncrypted = asset.signature.includes("ENCA");
+                  return (
+                    <tr key={i}>
+                      <td><strong style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>{asset.category}</strong></td>
+                      <td><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{asset.filename}</span></td>
+                      <td>
+                        <span className="badge" style={{ backgroundColor: isEncrypted ? 'rgba(236,72,153,0.08)' : 'rgba(56,189,248,0.08)', borderColor: isEncrypted ? 'rgba(236,72,153,0.2)' : 'rgba(56,189,248,0.2)', color: isEncrypted ? 'var(--accent-pink)' : 'var(--accent-blue)' }}>
+                          {asset.signature}
+                        </span>
+                      </td>
+                      <td>{sizeMb} MB</td>
+                      <td><code>{asset.path}</code></td>
+                    </tr>
+                  );
+                })}
+                <tr ref={sentinelRef}>
+                  <td colSpan="5" style={{ height: 30, border: 'none', textAlign: 'center' }}>
+                    {isFetchingNextPage && <div className="loading-spinner" style={{ width: 20, height: 20, margin: '0 auto', borderTopColor: 'var(--accent-blue)' }} />}
                   </td>
-                  <td>{sizeMb} MB</td>
-                  <td><code>{asset.path}</code></td>
                 </tr>
-              );
-            })}
+              </>
+            )}
           </tbody>
         </table>
       </div>

@@ -72,49 +72,101 @@ def load_databases():
             gamedata[key] = {}
 
 
+ASSET_INDEX = {}
+
+def build_asset_indices():
+    global ASSET_INDEX
+    ASSET_INDEX = {}
+    categories = ["Pieces", "Illust", "BuddyThumbs", "BuddyImages"]
+    for category in categories:
+        directory = os.path.join(EXTRACTED_DIR, category)
+        if os.path.exists(directory):
+            try:
+                for f in os.listdir(directory):
+                    if f.endswith(".png"):
+                        full_path = f"{EXTRACTED_DIR}/{category}/{f}".replace("\\", "/")
+                        name_no_ext = f[:-4]
+                        if "_" in name_no_ext:
+                            prefix_part, num_part = name_no_ext.rsplit("_", 1)
+                            prefix = "illust" if prefix_part.endswith("illust") else "img"
+                            try:
+                                num = int(num_part)
+                                ASSET_INDEX[(category, prefix, num)] = full_path
+                            except ValueError:
+                                pass
+            except Exception as e:
+                print(f"Error indexing {category}: {e}")
+
 def find_local_asset(category, image_id, prefix="img"):
-    """
-    Search pre-extracted assets for an asset by its ImageID.
-    Supports zero-padding for single-digit IDs.
-    """
-    directory = os.path.join(EXTRACTED_DIR, category)
-    if not os.path.exists(directory):
+    """Search pre-extracted assets by ImageID using instant in-memory lookup."""
+    if not ASSET_INDEX:
+        build_asset_indices()
+    if image_id is None:
         return None
-    
-    id_str_padded = f"{image_id:02d}" if image_id < 10 else str(image_id)
-    suffix_padded = f"{prefix}_{id_str_padded}.png"
-    suffix_normal = f"{prefix}_{image_id}.png"
-    
     try:
-        for f in os.listdir(directory):
-            if f.endswith(suffix_padded) or f.endswith(suffix_normal):
-                return f"{EXTRACTED_DIR}/{category}/{f}".replace("\\", "/")
-    except Exception:
-        pass
-    return None
+        return ASSET_INDEX.get((category, prefix, int(image_id)))
+    except (ValueError, TypeError):
+        return None
 
 # API Endpoints
 @app.get('/api/characters')
-def get_characters():
-    """Retrieve characters, linking their jobs to local Pieces and Illust asset paths."""
+def get_characters(
+    page: int = None,
+    limit: int = 20,
+    search: str = "",
+    species: str = "",
+    rarity: str = "",
+    weapon: str = "",
+    element: str = ""
+):
+    """Retrieve characters with server-side pagination and filter parameters."""
     char_db = gamedata.get("characters", {})
     infos = char_db.get("infos", [])
     jobs_data = char_db.get("data", [])
-    
-    # Index jobs by ID
     jobs_by_id = {job["ID"]: job for job in jobs_data}
     
     item_db = gamedata.get("items", {})
     item_set = item_db.get("itemSet", [])
     
-    result = []
+    q = search.lower().strip()
+    filtered_infos = []
     for info in infos:
+        if species and str(info.get("Species", "")) != str(species):
+            continue
+        if rarity and str(info.get("rarity", "")) != str(rarity):
+            continue
+            
+        char_jobs = [jobs_by_id.get(jid) for jid in info.get("Jobs", []) if jobs_by_id.get(jid)]
+        if weapon and not any(str(j.get("Attrib", "")) == str(weapon) for j in char_jobs):
+            continue
+        if element and not any(str(j.get("SkillAttrib", "")) == str(element) for j in char_jobs):
+            continue
+            
+        if q:
+            name_en = info.get("NameString", {}).get("en", "").lower()
+            name_ja = info.get("NameString", {}).get("ja", "").lower()
+            cid_str = str(info.get("ID", ""))
+            job_names = " ".join(j.get("NameString", {}).get("en", "").lower() for j in char_jobs)
+            if not (q in name_en or q in name_ja or q in cid_str or q in job_names):
+                continue
+                
+        filtered_infos.append(info)
+
+    total = len(filtered_infos)
+
+    if page is not None:
+        start_idx = (page - 1) * limit
+        target_infos = filtered_infos[start_idx:start_idx + limit]
+    else:
+        target_infos = filtered_infos
+
+    result = []
+    for info in target_infos:
         char_jobs = []
         for job_id in info.get("Jobs", []):
             job = jobs_by_id.get(job_id)
             if job:
                 image_id = job.get("ImageID", 0)
-                # Resolve paths in local-input
                 piece_path = find_local_asset("Pieces", image_id, "img")
                 illust_path = find_local_asset("Illust", image_id, "illust")
                 
@@ -122,7 +174,6 @@ def get_characters():
                 job_copy["piece_file"] = piece_path
                 job_copy["illust_file"] = illust_path
                 
-                # Extract and parse unlock materials
                 unlock_materials = []
                 for item_entry in job.get("items", []):
                     code = item_entry.get("code", 0)
@@ -153,16 +204,43 @@ def get_characters():
         char_copy["JobsInfo"] = char_jobs
         result.append(char_copy)
         
+    if page is not None:
+        return {
+            "items": result,
+            "total": total,
+            "page": page,
+            "has_more": (page * limit) < total
+        }
     return result
 
 @app.get('/api/buddies')
-def get_buddies():
-    """Retrieve buddies/companions, linking them to local BuddyThumbs and BuddyImages."""
+def get_buddies(page: int = None, limit: int = 20, search: str = "", rarity: str = ""):
+    """Retrieve buddies/companions with optional pagination and filters."""
     buddy_db = gamedata.get("buddies", {})
     data = buddy_db.get("data", [])
     
-    result = []
+    q = search.lower().strip()
+    filtered = []
     for buddy in data:
+        if rarity and str(buddy.get("rarity", "")) != str(rarity):
+            continue
+        if q:
+            name_en = buddy.get("NameString", {}).get("en", "").lower()
+            name_ja = buddy.get("NameString", {}).get("ja", "").lower()
+            desc_en = buddy.get("DescString", {}).get("en", "").lower()
+            if not (q in name_en or q in name_ja or q in desc_en):
+                continue
+        filtered.append(buddy)
+
+    total = len(filtered)
+    if page is not None:
+        start_idx = (page - 1) * limit
+        target = filtered[start_idx:start_idx + limit]
+    else:
+        target = filtered
+
+    result = []
+    for buddy in target:
         image_id = buddy.get("ImageID", 0)
         thumb_path = find_local_asset("BuddyThumbs", image_id, "img")
         image_path = find_local_asset("BuddyImages", image_id, "img")
@@ -172,16 +250,40 @@ def get_buddies():
         buddy_copy["image_file"] = image_path
         result.append(buddy_copy)
         
+    if page is not None:
+        return {
+            "items": result,
+            "total": total,
+            "page": page,
+            "has_more": (page * limit) < total
+        }
     return result
 
 @app.get('/api/items')
-def get_items():
-    """Retrieve items database, augmented with local item icon URL and sortOrder image info."""
+def get_items(page: int = None, limit: int = 24, search: str = ""):
+    """Retrieve items database with optional pagination."""
     item_db = gamedata.get("items", {})
     items = item_db.get("itemSet", [])
 
-    result = []
+    q = search.lower().strip()
+    filtered_indexed = []
     for idx, item in enumerate(items):
+        if q:
+            name_en = item.get("NameString", {}).get("en", "").lower()
+            desc_en = item.get("DescString", {}).get("en", "").lower()
+            if not (q in name_en or q in desc_en or q in str(idx + 1)):
+                continue
+        filtered_indexed.append((idx, item))
+
+    total = len(filtered_indexed)
+    if page is not None:
+        start_idx = (page - 1) * limit
+        target = filtered_indexed[start_idx:start_idx + limit]
+    else:
+        target = filtered_indexed
+
+    result = []
+    for idx, item in target:
         sort_order = item.get("sortOrder", 0)
         piece_path = find_local_asset("Pieces", sort_order, "img") if sort_order else None
 
@@ -189,8 +291,16 @@ def get_items():
         item_copy["image_id"] = sort_order
         item_copy["piece_file"] = piece_path
         item_copy["icon_url"] = f"/api/assets/item/item_{idx + 1:02d}.png"
+        item_copy["item_index"] = idx + 1
         result.append(item_copy)
 
+    if page is not None:
+        return {
+            "items": result,
+            "total": total,
+            "page": page,
+            "has_more": (page * limit) < total
+        }
     return result
 
 @app.get('/api/assets/item/{filename}')
@@ -202,30 +312,72 @@ def serve_item_icon(filename: str):
     raise HTTPException(status_code=404, detail="Item icon not found")
 
 @app.get('/api/skills')
-def get_skills():
-    """Retrieve skills database."""
+def get_skills(page: int = None, limit: int = 30, search: str = ""):
+    """Retrieve skills database with optional pagination."""
     skill_db = gamedata.get("skills", {})
-    return skill_db.get("types", [])
+    types = skill_db.get("types", [])
+
+    q = search.lower().strip()
+    filtered = []
+    for skill in types:
+        if q:
+            name_en = skill.get("nameString", {}).get("en", "").lower()
+            desc_en = skill.get("descString", {}).get("en", "").lower()
+            icon_no = str(skill.get("iconNo", ""))
+            if not (q in name_en or q in desc_en or q in icon_no):
+                continue
+        filtered.append(skill)
+
+    total = len(filtered)
+    if page is not None:
+        start_idx = (page - 1) * limit
+        target = filtered[start_idx:start_idx + limit]
+        return {
+            "items": target,
+            "total": total,
+            "page": page,
+            "has_more": (page * limit) < total
+        }
+    return types
 
 @app.get('/api/stages')
-def get_stages():
+def get_stages(page: int = None, limit: int = 20, search: str = ""):
     """Retrieve chapters and stages with their wave and enemy layout details."""
     chapters = gamedata.get("stages", {}).get("chapters", [])
     layout_db = gamedata.get("stages_layout", {})
     enemy_db = gamedata.get("enemies", {}).get("data", [])
+    strings_db = gamedata.get("strings", {})
     
     enemies_by_id = {e["ID"]: e for e in enemy_db}
     
-    result_chapters = []
+    q = search.lower().strip()
+    filtered_chapters = []
     for ch in chapters:
+        ch_no = ch.get("chapterNo", 0)
+        title = f"Chapter {ch_no}"
+        if strings_db.get("scenarioSet") and ch_no - 1 < len(strings_db["scenarioSet"]):
+            title = strings_db["scenarioSet"][ch_no - 1].get("en", title)
+            
+        if q and not (q in str(ch_no) or q in title.lower()):
+            continue
+            
+        filtered_chapters.append(ch)
+
+    total = len(filtered_chapters)
+    if page is not None:
+        start_idx = (page - 1) * limit
+        target_chapters = filtered_chapters[start_idx:start_idx + limit]
+    else:
+        target_chapters = filtered_chapters
+
+    result_chapters = []
+    for ch in target_chapters:
         chapter_no = str(ch.get("chapterNo", ""))
         ch_layout = layout_db.get(chapter_no, {})
         
         result_sections = []
         for idx, sec in enumerate(ch.get("sections", [])):
             sec_copy = dict(sec)
-            
-            # Map index (0-based) to Lua section index (1-based, i.e., str(idx + 1))
             sec_id = str(idx + 1)
             sec_layout = ch_layout.get(sec_id)
             
@@ -263,12 +415,20 @@ def get_stages():
             else:
                 sec_copy["waves_details"] = []
                 
-            result_sections.append(sec_copy)
+            if sec.get("battleCnt", 0) > 0 or sec_layout:
+                result_sections.append(sec_copy)
             
         ch_copy = dict(ch)
         ch_copy["sections"] = result_sections
         result_chapters.append(ch_copy)
         
+    if page is not None:
+        return {
+            "items": result_chapters,
+            "total": total,
+            "page": page,
+            "has_more": (page * limit) < total
+        }
     return result_chapters
 
 @app.get('/api/strings')
@@ -277,47 +437,83 @@ def get_strings():
     string_db = gamedata.get("strings", {})
     return string_db
 
-@app.get('/api/audio')
-def get_audio_list():
-    """Scan extracted-gamedata directories and return lists of pre-extracted BGM and SE files."""
-    audio_data = {"BGM": [], "SE": []}
+@app.get('/api/stats')
+def get_stats():
+    """Retrieve fast summary counts for the dashboard."""
+    char_count = len(gamedata.get("characters", {}).get("infos", []))
+    buddy_count = len(gamedata.get("buddies", {}).get("data", []))
+    item_count = len(gamedata.get("items", {}).get("itemSet", []))
+    skill_count = len(gamedata.get("skills", {}).get("types", []))
+    stage_count = len(gamedata.get("stages", {}).get("chapters", []))
     
-    for category in ["BGM", "SE"]:
-        directory = os.path.join(EXTRACTED_DIR, category)
-        if os.path.exists(directory):
-            try:
-                for f in os.listdir(directory):
-                    if f.endswith(".wav"):
-                        path = os.path.join(directory, f)
-                        size = os.path.getsize(path)
-                        # Extract BGM number/name for clean displaying
-                        display_name = f
-                        if category == "BGM":
-                            # e.g., '03169150b52c2106408ff78547884d5cbgm38.wav' -> 'bgm38'
-                            display_name = f[32:-4] if len(f) > 36 else f[:-4]
-                        else:
-                            # e.g., '0153ab1af6c8c377b4133da016f89866homing_ice.wav' -> 'homing_ice'
-                            display_name = f[32:-4] if len(f) > 36 else f[:-4]
-                        
-                        audio_data[category].append({
-                            "filename": f,
-                            "name": display_name,
-                            "path": f"{EXTRACTED_DIR}/{category}/{f}".replace("\\", "/"),
-                            "size_bytes": size
-                        })
-                # Sort alphabetically by name
-                audio_data[category].sort(key=lambda x: x["name"])
-            except Exception as e:
-                print(f"Error scanning {category}: {e}")
-                
-    return audio_data
+    bgm_count = 0
+    se_count = 0
+    bgm_dir = os.path.join(EXTRACTED_DIR, "BGM")
+    if os.path.exists(bgm_dir):
+        bgm_count = len([f for f in os.listdir(bgm_dir) if f.endswith(".wav")])
+    se_dir = os.path.join(EXTRACTED_DIR, "SE")
+    if os.path.exists(se_dir):
+        se_count = len([f for f in os.listdir(se_dir) if f.endswith(".wav")])
 
+    return {
+        "characters": char_count,
+        "buddies": buddy_count,
+        "items": item_count,
+        "skills": skill_count,
+        "stages": stage_count,
+        "audio": {
+            "BGM": list(range(bgm_count)),
+            "SE": list(range(se_count))
+        },
+        "bgm_count": bgm_count,
+        "se_count": se_count
+    }
+
+@app.get('/api/audio')
+def get_audio_list(category: str = "BGM", page: int = None, limit: int = 30, search: str = ""):
+    """Scan extracted-gamedata directories and return lists of pre-extracted BGM and SE files with pagination."""
+    category = category.upper()
+    if category not in ["BGM", "SE"]:
+        category = "BGM"
+        
+    directory = os.path.join(EXTRACTED_DIR, category)
+    audio_list = []
+    if os.path.exists(directory):
+        try:
+            q = search.lower().strip()
+            for f in os.listdir(directory):
+                if f.endswith(".wav"):
+                    display_name = f[32:-4] if len(f) > 36 else f[:-4]
+                    if q and not (q in display_name.lower() or q in f.lower()):
+                        continue
+                    path = os.path.join(directory, f)
+                    audio_list.append({
+                        "filename": f,
+                        "name": display_name,
+                        "path": f"{EXTRACTED_DIR}/{category}/{f}".replace("\\", "/"),
+                        "size_bytes": os.path.getsize(path)
+                    })
+            audio_list.sort(key=lambda x: x["name"])
+        except Exception as e:
+            print(f"Error scanning {category}: {e}")
+
+    total = len(audio_list)
+    if page is not None:
+        start_idx = (page - 1) * limit
+        target = audio_list[start_idx:start_idx + limit]
+        return {
+            "items": target,
+            "total": total,
+            "page": page,
+            "category": category,
+            "has_more": (page * limit) < total
+        }
+
+    return {"BGM": audio_list if category == "BGM" else [], "SE": audio_list if category == "SE" else []}
 
 @app.get('/api/play/{category}/{filename}')
 def play_audio(category: str, filename: str):
-    """
-    Serve the pre-extracted WAV audio file directly.
-    """
+    """Serve WAV audio file directly."""
     category = category.upper()
     if category not in ["BGM", "SE"]:
         return Response(content="Invalid category", status_code=400)
@@ -330,41 +526,61 @@ def play_audio(category: str, filename: str):
     return FileResponse(path, media_type="audio/wav")
 
 @app.get('/api/assets')
-def get_assets_inventory():
-    """List all assets present in local-input for debugging/inspection in UI."""
+def get_assets_inventory(page: int = None, limit: int = 30, search: str = "", category: str = "", signature: str = ""):
+    """List all assets present in local-input with pagination."""
     inventory = []
-    
     categories = ["BG", "BGM", "Banner", "BuddyImages", "BuddyThumbs", "Illust", "Pieces", "SE", "Scenario"]
+    
+    q = search.lower().strip()
     for cat in categories:
+        if category and cat.lower() != category.lower():
+            continue
+            
         directory = os.path.join(LOCAL_INPUT_DIR, cat)
         if os.path.exists(directory):
             try:
                 for f in os.listdir(directory):
                     if f.endswith(".bin"):
+                        if q and not (q in f.lower() or q in cat.lower()):
+                            continue
+                            
                         path = os.path.join(directory, f)
                         size = os.path.getsize(path)
-                        # Determine if encrypted (starts with ENCA) or standard (starts with UnityFS)
-                        signature = "Unknown"
+                        sig = "Unknown"
                         try:
                             with open(path, "rb") as test_f:
                                 head = test_f.read(7)
                                 if head.startswith(b"ENCA"):
-                                    signature = "ENCA (Encrypted)"
+                                    sig = "ENCA (Encrypted)"
                                 elif head.startswith(b"UnityFS"):
-                                    signature = "UnityFS (AssetBundle)"
+                                    sig = "UnityFS (AssetBundle)"
                         except Exception:
                             pass
+                            
+                        if signature and signature.lower() not in sig.lower():
+                            continue
                             
                         inventory.append({
                             "category": cat,
                             "filename": f,
                             "path": f"{LOCAL_INPUT_DIR}/{cat}/{f}".replace("\\", "/"),
                             "size_bytes": size,
-                            "signature": signature
+                            "signature": sig
                         })
             except Exception:
                 pass
-                
+
+    total = len(inventory)
+    if page is not None:
+        start_idx = (page - 1) * limit
+        target = inventory[start_idx:start_idx + limit]
+        return {
+            "items": target,
+            "total": total,
+            "page": page,
+            "has_more": (page * limit) < total
+        }
+
     return inventory
 
 @app.get('/api/assets/image')

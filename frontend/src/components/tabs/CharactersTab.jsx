@@ -1,35 +1,22 @@
 import { useState, useMemo } from 'react';
-import { useGameData } from '../../contexts/GameDataContext';
 import { loc } from '../../utils/localization';
 import { rarityLabels, speciesTranslations, weaponMeta, elementMeta } from '../../utils/constants';
 import JobBadge from '../shared/JobBadge';
+import { TabSpinner } from '../../hooks/useLazyCategory';
+import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 
 export default function CharactersTab({ onSelectCharacter }) {
-  const { data, lang } = useGameData();
   const [search, setSearch] = useState('');
   const [species, setSpecies] = useState('');
   const [rarity, setRarity] = useState('');
   const [weapon, setWeapon] = useState('');
   const [element, setElement] = useState('');
 
-  const characters = data?.characters || [];
+  const filters = useMemo(() => ({
+    search, species, rarity, weapon, element
+  }), [search, species, rarity, weapon, element]);
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return characters.filter(char => {
-      const nameMatches = loc(char.NameString, lang).toLowerCase().includes(q) ||
-        (char.ID && char.ID.toString().includes(q)) ||
-        (char.JobsInfo && char.JobsInfo.some(job =>
-          (job.name && job.name.toLowerCase().includes(q)) ||
-          (job.ProfileString && loc(job.ProfileString, lang).toLowerCase().includes(q))
-        ));
-      const speciesMatches = species === '' || char.Species == species;
-      const rarityMatches = rarity === '' || char.rarity == rarity;
-      const weaponMatches = weapon === '' || (char.JobsInfo && char.JobsInfo.some(job => job.Attrib == weapon));
-      const elementMatches = element === '' || (char.JobsInfo && char.JobsInfo.some(job => job.SkillAttrib == element));
-      return nameMatches && speciesMatches && rarityMatches && weaponMatches && elementMatches;
-    });
-  }, [characters, search, species, rarity, weapon, element, lang]);
+  const { items: characters, total, isInitialLoading, isFetchingNextPage, sentinelRef, lang } = usePaginatedCategory('characters', filters, 35);
 
   return (
     <div className="tab-content">
@@ -37,6 +24,7 @@ export default function CharactersTab({ onSelectCharacter }) {
         <div className="search-input-wrapper">
           <i className="fa-solid fa-search"></i>
           <input placeholder="Search characters by name, ID, or profile..." value={search} onChange={e => setSearch(e.target.value)} />
+          {isInitialLoading && <i className="fa-solid fa-circle-notch fa-spin" style={{ marginLeft: 8, color: 'var(--accent-blue)', fontSize: 14 }}></i>}
         </div>
         <div className="filters-group">
           <select value={species} onChange={e => setSpecies(e.target.value)}>
@@ -67,31 +55,42 @@ export default function CharactersTab({ onSelectCharacter }) {
       </div>
 
       <div className="grid-layout">
-        {filtered.length === 0 ? (
+        {isInitialLoading && characters.length === 0 ? (
+          <div style={{ gridColumn: '1/-1', padding: 40, textAlign: 'center' }}>
+            <TabSpinner message="Loading characters..." />
+          </div>
+        ) : characters.length === 0 ? (
           <p className="stages-panel-placeholder" style={{ gridColumn: '1/-1' }}>No characters match the selected filters.</p>
-        ) : filtered.map(char => {
-          const firstJob = char.JobsInfo?.[0];
-          const pieceUrl = firstJob?.piece_file ? `/api/assets/image?path=${encodeURIComponent(firstJob.piece_file)}` : null;
-          return (
-            <div key={char.ID} className="card-item" onClick={() => onSelectCharacter(char)}>
-              <span className="card-badge badge-rarity">{rarityLabels[char.rarity] || 'Class ' + char.rarity}</span>
-              {pieceUrl ? (
-                <div className="card-image" style={{ width: '100%', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-                  <img src={pieceUrl} alt="Icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <>
+            {characters.map(char => {
+              const firstJob = char.JobsInfo?.[0];
+              const pieceUrl = firstJob?.piece_file ? `/api/assets/image?path=${encodeURIComponent(firstJob.piece_file)}` : null;
+              return (
+                <div key={char.ID} className="card-item" onClick={() => onSelectCharacter(char)}>
+                  <span className="card-badge badge-rarity">{rarityLabels[char.rarity] || 'Class ' + char.rarity}</span>
+                  {pieceUrl ? (
+                    <div className="card-image" style={{ width: '100%', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                      <img src={pieceUrl} alt="Icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  ) : (
+                    <div className="card-image-placeholder"><i className="fa-solid fa-user-shield"></i></div>
+                  )}
+                  <h4 className="card-name">{loc(char.NameString, lang)}</h4>
+                  <div className="card-meta"><span><i className="fa-solid fa-circle-nodes"></i> ID: {char.ID}</span></div>
+                  {char.JobsInfo?.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
+                      {char.JobsInfo.map((job, i) => <JobBadge key={i} job={job} />)}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="card-image-placeholder"><i className="fa-solid fa-user-shield"></i></div>
-              )}
-              <h4 className="card-name">{loc(char.NameString, lang)}</h4>
-              <div className="card-meta"><span><i className="fa-solid fa-circle-nodes"></i> ID: {char.ID}</span></div>
-              {char.JobsInfo?.length > 0 && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
-                  {char.JobsInfo.map((job, i) => <JobBadge key={i} job={job} />)}
-                </div>
-              )}
+              );
+            })}
+            <div ref={sentinelRef} style={{ height: 30, gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {isFetchingNextPage && <div className="loading-spinner" style={{ width: 24, height: 24, borderTopColor: 'var(--accent-blue)' }} />}
             </div>
-          );
-        })}
+          </>
+        )}
       </div>
     </div>
   );

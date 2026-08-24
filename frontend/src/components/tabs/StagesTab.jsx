@@ -1,27 +1,18 @@
 import { useState, useMemo } from 'react';
-import { useGameData } from '../../contexts/GameDataContext';
 import { loc, translateStageTitle } from '../../utils/localization';
 import WaveBoard from '../shared/WaveBoard';
+import { TabSpinner } from '../../hooks/useLazyCategory';
+import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 
 export default function StagesTab({ onSelectItem }) {
-  const { data, lang } = useGameData();
   const [search, setSearch] = useState('');
   const [currentChapter, setCurrentChapter] = useState(null);
   const [openLayouts, setOpenLayouts] = useState({});
 
-  const stages = data?.stages || [];
-  const strings = data?.strings;
+  const filters = useMemo(() => ({ search }), [search]);
 
-  const filteredChapters = useMemo(() => {
-    const q = search.toLowerCase();
-    return stages.filter(ch => {
-      let name = `Chapter ${ch.chapterNo}`;
-      if (strings?.scenarioSet?.[ch.chapterNo - 1]) {
-        name = loc(strings.scenarioSet[ch.chapterNo - 1], lang);
-      }
-      return name.toLowerCase().includes(q) || ch.chapterNo.toString().includes(q);
-    });
-  }, [stages, search, lang, strings]);
+  const { items: stages, total, isInitialLoading, isFetchingNextPage, sentinelRef, lang, data } = usePaginatedCategory('stages', filters, 20);
+  const strings = data?.strings;
 
   const toggleLayout = (idx) => {
     setOpenLayouts(prev => ({ ...prev, [idx]: !prev[idx] }));
@@ -40,16 +31,26 @@ export default function StagesTab({ onSelectItem }) {
         <div className="search-input-wrapper" style={{ marginBottom: 16 }}>
           <i className="fa-solid fa-search"></i>
           <input placeholder="Search chapters..." value={search} onChange={e => setSearch(e.target.value)} />
+          {isInitialLoading && <i className="fa-solid fa-circle-notch fa-spin" style={{ marginLeft: 8, color: 'var(--accent-blue)', fontSize: 14 }}></i>}
         </div>
         <div className="chapters-list">
-          {filteredChapters.length === 0 ? (
+          {isInitialLoading && stages.length === 0 ? (
+            <div style={{ padding: 20, textAlign: 'center' }}><TabSpinner message="Loading stages..." /></div>
+          ) : stages.length === 0 ? (
             <p style={{ textAlign: 'center', padding: 12, color: 'var(--text-muted)', fontSize: 13 }}>No chapters match.</p>
-          ) : filteredChapters.map(ch => (
-            <button key={ch.chapterNo} className={`chapter-btn ${currentChapter?.chapterNo === ch.chapterNo ? 'active' : ''}`} onClick={() => setCurrentChapter(ch)}>
-              <span>{getChapterName(ch.chapterNo)}</span>
-              <span className="badge" style={{ fontSize: 9, padding: '2px 6px' }}>{ch.sections ? ch.sections.length : 0} Sect</span>
-            </button>
-          ))}
+          ) : (
+            <>
+              {stages.map(ch => (
+                <button key={ch.chapterNo} className={`chapter-btn ${currentChapter?.chapterNo === ch.chapterNo ? 'active' : ''}`} onClick={() => setCurrentChapter(ch)}>
+                  <span>{getChapterName(ch.chapterNo)}</span>
+                  <span className="badge" style={{ fontSize: 9, padding: '2px 6px' }}>{ch.sections ? ch.sections.length : 0} Sect</span>
+                </button>
+              ))}
+              <div ref={sentinelRef} style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isFetchingNextPage && <div className="loading-spinner" style={{ width: 20, height: 20, borderTopColor: 'var(--accent-blue)' }} />}
+              </div>
+            </>
+          )}
         </div>
       </div>
       <div className="stages-panel">

@@ -4,15 +4,21 @@ export default function DashboardTab({ onTabChange }) {
   const { data } = useGameData();
   if (!data) return null;
 
-  const bgmCount = data.audio?.BGM?.length || 0;
-  const seCount = data.audio?.SE?.length || 0;
+  const statsData = data?.stats || {};
+  const charCount = data.characters?.length ?? statsData.characters ?? 0;
+  const buddyCount = data.buddies?.length ?? statsData.buddies ?? 0;
+  const skillCount = data.skills?.length ?? statsData.skills ?? 0;
+  const itemCount = data.items?.length ?? statsData.items ?? 0;
+  const stageCount = data.stages?.length ?? statsData.stages ?? 0;
+  const bgmCount = statsData.bgm_count ?? data.audio?.BGM?.length ?? 0;
+  const seCount = statsData.se_count ?? data.audio?.SE?.length ?? 0;
 
   const stats = [
-    { key: 'characters', label: 'Characters', count: data.characters?.length || 0, icon: 'fa-users', bg: 'char-bg' },
-    { key: 'buddies', label: 'Companions', count: data.buddies?.length || 0, icon: 'fa-paw', bg: 'buddy-bg' },
-    { key: 'skills', label: 'Skills', count: data.skills?.length || 0, icon: 'fa-wand-magic-sparkles', bg: 'skill-bg' },
-    { key: 'items', label: 'Items', count: data.items?.length || 0, icon: 'fa-gem', bg: 'item-bg' },
-    { key: 'stages', label: 'Chapters', count: data.stages?.length || 0, icon: 'fa-map-location-dot', bg: 'stage-bg' },
+    { key: 'characters', label: 'Characters', count: charCount, icon: 'fa-users', bg: 'char-bg' },
+    { key: 'buddies', label: 'Companions', count: buddyCount, icon: 'fa-paw', bg: 'buddy-bg' },
+    { key: 'skills', label: 'Skills', count: skillCount, icon: 'fa-wand-magic-sparkles', bg: 'skill-bg' },
+    { key: 'items', label: 'Items', count: itemCount, icon: 'fa-gem', bg: 'item-bg' },
+    { key: 'stages', label: 'Chapters', count: stageCount, icon: 'fa-map-location-dot', bg: 'stage-bg' },
     { key: 'audio', label: 'Audio Tracks', count: `${bgmCount} BGM / ${seCount} SE`, icon: 'fa-music', bg: 'audio-bg' },
   ];
 

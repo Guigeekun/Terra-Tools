@@ -116,7 +116,7 @@ with open(dump_cs_path, "r", encoding="utf-8", errors="replace") as f:
             # Ends with .$
             if current_class.endswith(".$"):
                 gen_match = re.match(
-                    r"^Chapter(8|9|[1-3][0-9]|4[0-2])\.\$(Battle|Section)(\d+)(?:_(\d+))?.*?\.\$$",
+                    r"^Chapter(8|9|[1-3][0-9]|4[0-2])\.\$*(Battle|Section)(\d+)(?:_(\d+))?.*?\.\$$",
                     current_class
                 )
                 if gen_match:

@@ -1,21 +1,17 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useGameData } from '../../contexts/GameDataContext';
+import { TabSpinner } from '../../hooks/useLazyCategory';
+import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 
 export default function AudioTab() {
-  const { data } = useGameData();
   const [activePlaylist, setActivePlaylist] = useState('BGM');
   const [search, setSearch] = useState('');
   const [activeTrack, setActiveTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
 
-  const audioData = data?.audio || { BGM: [], SE: [] };
-  const tracks = audioData[activePlaylist] || [];
+  const filters = useMemo(() => ({ category: activePlaylist, search }), [activePlaylist, search]);
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return tracks.filter(t => t.name.toLowerCase().includes(q) || t.filename.toLowerCase().includes(q));
-  }, [tracks, search]);
+  const { items: tracks, total, isInitialLoading, isFetchingNextPage, sentinelRef } = usePaginatedCategory('audio', filters, 30);
 
   useEffect(() => {
     const audioEl = audioRef.current;
@@ -72,24 +68,34 @@ export default function AudioTab() {
           <div className="search-input-wrapper">
             <i className="fa-solid fa-search"></i>
             <input placeholder="Search audio tracks..." value={search} onChange={e => setSearch(e.target.value)} />
+            {isInitialLoading && <i className="fa-solid fa-circle-notch fa-spin" style={{ marginLeft: 8, color: 'var(--accent-blue)', fontSize: 14 }}></i>}
           </div>
         </div>
         <div className="playlist-items">
-          {filtered.length === 0 ? (
+          {isInitialLoading && tracks.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center' }}><TabSpinner message="Scanning audio..." /></div>
+          ) : tracks.length === 0 ? (
             <p style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)', fontSize: 13 }}>No audio assets found.</p>
-          ) : filtered.map((track, i) => {
-            const sizeMb = (track.size_bytes / (1024 * 1024)).toFixed(2);
-            const isActive = activeTrack?.filename === track.filename;
-            return (
-              <button key={i} className={`playlist-item ${isActive ? 'active' : ''}`} onClick={() => setActiveTrack(track)}>
-                <div style={{ textAlign: 'left' }}>
-                  <strong style={{ display: 'block', fontFamily: 'var(--font-heading)', fontSize: 14 }}>{track.name}</strong>
-                  <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--text-muted)' }}>{track.filename}</span>
-                </div>
-                <span className="audio-duration">{sizeMb} MB</span>
-              </button>
-            );
-          })}
+          ) : (
+            <>
+              {tracks.map((track, i) => {
+                const sizeMb = (track.size_bytes / (1024 * 1024)).toFixed(2);
+                const isActive = activeTrack?.filename === track.filename;
+                return (
+                  <button key={i} className={`playlist-item ${isActive ? 'active' : ''}`} onClick={() => setActiveTrack(track)}>
+                    <div style={{ textAlign: 'left' }}>
+                      <strong style={{ display: 'block', fontFamily: 'var(--font-heading)', fontSize: 14 }}>{track.name}</strong>
+                      <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--text-muted)' }}>{track.filename}</span>
+                    </div>
+                    <span className="audio-duration">{sizeMb} MB</span>
+                  </button>
+                );
+              })}
+              <div ref={sentinelRef} style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isFetchingNextPage && <div className="loading-spinner" style={{ width: 20, height: 20, borderTopColor: 'var(--accent-blue)' }} />}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
