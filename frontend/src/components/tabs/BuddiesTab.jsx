@@ -1,13 +1,15 @@
 import { useState, useMemo } from 'react';
 import { loc } from '../../utils/localization';
 import { rarityLabels } from '../../utils/constants';
-import { TabSpinner } from '../../hooks/useLazyCategory';
+import { TabSpinner, useLazyCategory } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 
 export default function BuddiesTab() {
   const [search, setSearch] = useState('');
   const [rarity, setRarity] = useState('');
   const [selectedBuddy, setSelectedBuddy] = useState(null);
+
+  useLazyCategory('skills');
 
   const filters = useMemo(() => ({ search, rarity }), [search, rarity]);
 
@@ -32,27 +34,33 @@ export default function BuddiesTab() {
 
             <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20, maxHeight: 100, overflowY: 'auto' }}>{loc(selectedBuddy.DescString, lang)}</p>
 
-            {selectedBuddy.skill && data?.skills?.[selectedBuddy.skill - 1] && (() => {
-              const selectedSkill = data.skills[selectedBuddy.skill - 1];
-              return (
-                <div style={{ backgroundColor: 'rgba(99, 102, 241, 0.05)', padding: 16, borderRadius: 8, marginBottom: 20, border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: 'var(--accent-indigo)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <i className="fa-solid fa-star"></i> Companion Skill
-                  </h4>
-                  <h5 style={{ margin: '0 0 8px 0', fontSize: 16 }}>{loc(selectedSkill.nameString, lang)}</h5>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.4 }}>{loc(selectedSkill.descString, lang)}</p>
+            {selectedBuddy.skill && (
+              data?.skills?.[selectedBuddy.skill - 1] ? (() => {
+                const selectedSkill = data.skills[selectedBuddy.skill - 1];
+                return (
+                  <div style={{ backgroundColor: 'rgba(99, 102, 241, 0.05)', padding: 16, borderRadius: 8, marginBottom: 20, border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: 'var(--accent-indigo)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <i className="fa-solid fa-star"></i> Companion Skill
+                    </h4>
+                    <h5 style={{ margin: '0 0 8px 0', fontSize: 16 }}>{loc(selectedSkill.nameString, lang)}</h5>
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.4 }}>{loc(selectedSkill.descString, lang)}</p>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
-                    <div><span style={{ color: 'var(--text-muted)' }}>Activation Rate:</span> {selectedSkill.emitRatio === 0 ? 'Equip' : `${selectedSkill.emitRatio}%`}</div>
-                    <div><span style={{ color: 'var(--text-muted)' }}>Element:</span> {selectedSkill.attrib || 'None'}</div>
-                    <div><span style={{ color: 'var(--text-muted)' }}>Area:</span> {loc(selectedSkill.rangePrefixString, lang, 'Self')}</div>
-                    {(selectedSkill.power > 0 || selectedSkill.spower > 0) && (
-                      <div><span style={{ color: 'var(--text-muted)' }}>Power:</span> {selectedSkill.power > 0 ? selectedSkill.power : selectedSkill.spower}</div>
-                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Activation Rate:</span> {selectedSkill.emitRatio === 0 ? 'Equip' : `${selectedSkill.emitRatio}%`}</div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Element:</span> {selectedSkill.attrib || 'None'}</div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Area:</span> {loc(selectedSkill.rangePrefixString, lang, 'Self')}</div>
+                      {(selectedSkill.power > 0 || selectedSkill.spower > 0) && (
+                        <div><span style={{ color: 'var(--text-muted)' }}>Power:</span> {selectedSkill.power > 0 ? selectedSkill.power : selectedSkill.spower}</div>
+                      )}
+                    </div>
                   </div>
+                );
+              })() : (
+                <div style={{ backgroundColor: 'rgba(99, 102, 241, 0.05)', padding: 16, borderRadius: 8, marginBottom: 20, border: '1px solid rgba(99, 102, 241, 0.2)', color: 'var(--text-muted)', textAlign: 'center', fontSize: 13 }}>
+                  <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 8 }}></i> Loading companion skill details...
                 </div>
-              );
-            })()}
+              )
+            )}
 
             <div style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 8, marginBottom: selectedBuddy.evolveID ? 20 : 0 }}>
               <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: 'var(--text-secondary)' }}>Max Level Stats (Lv {selectedBuddy.MaxLevel})</h4>
@@ -119,6 +127,10 @@ export default function BuddiesTab() {
                     {buddy.skill && data?.skills?.[buddy.skill - 1] ? (
                       <span style={{ color: 'var(--accent-indigo)' }}>
                         <i className="fa-solid fa-star"></i> {loc(data.skills[buddy.skill - 1].nameString, lang)} ({data.skills[buddy.skill - 1].emitRatio === 0 ? 'Equip' : `${data.skills[buddy.skill - 1].emitRatio}%`})
+                      </span>
+                    ) : buddy.skill && !data?.skills ? (
+                      <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+                        <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 4 }}></i> Loading skill...
                       </span>
                     ) : (
                       <span><i className="fa-solid fa-minus"></i> No Skill</span>

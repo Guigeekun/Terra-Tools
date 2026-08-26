@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { loc } from '../../utils/localization';
 import { rarityLabels, speciesTranslations, weaponMeta, elementMeta } from '../../utils/constants';
 import { useGameData } from '../../contexts/GameDataContext';
+import { useLazyCategory } from '../../hooks/useLazyCategory';
 import LightboxModal from './LightboxModal';
 
 export default function CharacterModal({ character, onClose, onOpenItem }) {
   const { lang, data } = useGameData();
+  useLazyCategory('skills');
   const [jobIndex, setJobIndex] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState(null);
 
@@ -135,7 +137,9 @@ export default function CharacterModal({ character, onClose, onOpenItem }) {
                 <div className="job-skills-box">
                   <h5>Active Skills</h5>
                   <ul className="job-skills-list">
-                    {(job.skills || []).length === 0
+                    {!skills || skills.length === 0
+                      ? <li style={{ color: 'var(--text-muted)' }}><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: 6 }}></i>Loading skills data...</li>
+                      : (job.skills || []).length === 0
                       ? <li style={{ color: 'var(--text-muted)' }}>No active skills found.</li>
                       : (job.skills || []).map((skillID, i) => {
                         const unlockLv = (job.skillMasterLevel && job.skillMasterLevel[i]) || 1;

@@ -10,11 +10,12 @@ const endpoints = {
 };
 
 export async function fetchInitialData() {
-  const [strings, stats] = await Promise.all([
+  const [strings, stats, skills] = await Promise.all([
     fetch('/api/strings').then(r => r.json()),
-    fetch('/api/stats').then(r => r.json())
+    fetch('/api/stats').then(r => r.json()),
+    fetch('/api/skills').then(r => r.json())
   ]);
-  return { strings, stats, audio: stats.audio };
+  return { strings, stats, skills, audio: stats.audio };
 }
 
 export async function fetchCategoryData(category) {
