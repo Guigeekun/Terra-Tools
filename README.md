@@ -1,4 +1,4 @@
-# Terra Battle Data Viz
+# <img src="frontend/public/TerraToolbox.png" width="38" height="38" align="center" alt="Terra Toolbox Icon"> Terra Battle Data Viz
 
 An interactive web-based database viewer and level editor for *Terra Battle*, designed to work alongside project **Liminal Gate**. 
 
@@ -53,6 +53,8 @@ Terra-Battle-Level-Editor/
 │   ├── verify_mapping.py       # Utility to verify metadata enum-to-ID alignment
 │   └── test_hash.py            # .NET String.GetHashCode tester
 ├── frontend/                   # React + Vite frontend source code
+│   └── public/
+│       └── TerraToolbox.png    # App icon and browser favicon
 └── user-data/                  # Extracted assets, databases, and runtime output (gitignored)
     └── extracted-gamedata/
         └── game_data/

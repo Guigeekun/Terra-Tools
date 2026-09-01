@@ -4,7 +4,7 @@ export default function Sidebar({ activeTab, onTabChange }) {
   return (
     <aside className="app-sidebar">
       <div className="sidebar-brand">
-        <i className="fa-solid fa-compass-drafting brand-icon"></i>
+        <img src="/TerraToolbox.png" alt="Terra Toolbox Logo" className="brand-logo" />
         <div className="brand-text">
           <h1>Terra Battle</h1>
           <span>Data Visualizer</span>

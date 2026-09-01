@@ -105,12 +105,17 @@ h6 {
     border-bottom: 1px solid var(--border-color);
 }
 
-.brand-icon {
-    font-size: 28px;
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+.brand-logo {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
     margin-right: 12px;
+    filter: drop-shadow(0 2px 8px rgba(56, 189, 248, 0.4));
+    transition: var(--transition-smooth);
+}
+
+.brand-logo:hover {
+    transform: scale(1.08) rotate(4deg);
 }
 
 .brand-text h1 {
@@ -380,12 +385,17 @@ h6 {
     color: rgba(255, 255, 255, 0.85);
 }
 
-.welcome-decoration {
-    font-size: 96px;
-    color: rgba(255, 255, 255, 0.08);
+.welcome-decoration-img {
+    height: 120px;
+    width: auto;
+    object-fit: contain;
     position: absolute;
     right: 24px;
-    bottom: -16px;
+    bottom: -10px;
+    opacity: 0.35;
+    filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.2));
+    pointer-events: none;
+    user-select: none;
 }
 
 /* Filter Bar & Search Fields */

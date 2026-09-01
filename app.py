@@ -35,6 +35,17 @@ app.add_middleware(
 os.makedirs("frontend/dist/assets", exist_ok=True)
 app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
 
+@app.get('/TerraToolbox.png')
+@app.get('/favicon.ico')
+def serve_app_icon():
+    pub_path = os.path.join("frontend", "public", "TerraToolbox.png")
+    if os.path.exists(pub_path):
+        return FileResponse(pub_path, media_type="image/png")
+    dist_path = os.path.join("frontend", "dist", "TerraToolbox.png")
+    if os.path.exists(dist_path):
+        return FileResponse(dist_path, media_type="image/png")
+    raise HTTPException(status_code=404, detail="Icon not found")
+
 # Paths
 DATA_DIR = os.path.join("user-data", "extracted-gamedata", "game_data")
 EXTRACTED_DIR = os.path.join("user-data", "extracted-gamedata")

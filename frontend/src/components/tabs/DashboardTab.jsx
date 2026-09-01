@@ -42,7 +42,7 @@ export default function DashboardTab({ onTabChange }) {
           <h3>Welcome to Terra Battle Data Visualizer</h3>
           <p>Browse extracted game databases including characters, companions, skills, items, stage layouts, and audio assets. Use the sidebar to navigate between data categories.</p>
         </div>
-        <i className="fa-solid fa-compass-drafting welcome-decoration"></i>
+        <img src="/TerraToolbox.png" alt="Terra Toolbox" className="welcome-decoration-img" />
       </div>
     </div>
   );
