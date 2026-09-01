@@ -1,5 +1,5 @@
-# <img src="frontend/public/TerraToolbox.png" width="38" height="38" align="center" alt="Terra Toolbox Icon"> Terra Battle Data Viz
-
+#  Terra Battle Data Viz
+<img src="frontend/public/TerraToolbox.png" width="200" height="200" align="center" alt="Terra Toolbox Icon">
 An interactive web-based database viewer and level editor for *Terra Battle*, designed to work alongside project **Liminal Gate**. 
 
 This editor provides comprehensive access to game assets, character stats, companion drop rates, skills, audio players (BGM/SE), and stage wave board layouts.
