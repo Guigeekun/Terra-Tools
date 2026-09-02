@@ -773,7 +773,7 @@ def main() -> int:
         extract_text_assets(env, output_dir)
 
         # Scan Scenario directory for DLC chapter scripts
-        scenario_dir = apk_path.parent / "resources" / "data_u2017" / "android" / "Scenario"
+        scenario_dir = apk_path.parent / "gdresources" / "data_u2017" / "android" / "Scenario"
         extract_dlc_text_assets(scenario_dir, output_dir)
         print()
 
@@ -789,7 +789,7 @@ def main() -> int:
 
         # Step 5c: Extract images from local android bundles
         print("  Extracting images from local Android asset bundles...")
-        android_dir = apk_path.parent / "resources" / "data_u2017" / "android"
+        android_dir = apk_path.parent / "gdresources" / "data_u2017" / "android"
         if android_dir.exists():
             for category in ("BG", "Banner", "BuddyImages", "BuddyThumbs", "Illust", "Pieces"):
                 extract_images_from_dir(category, android_dir, output_dir, inverse_table)

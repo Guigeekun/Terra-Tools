@@ -320,7 +320,7 @@ def main() -> int:
 
     # Step 4: Re-encrypt and copy resources
     print("\n[4/4] Copying and maintaining resources format...")
-    src_res_dir = apk_path.parent / "resources"
+    src_res_dir = apk_path.parent / "gdresources"
     dst_res_dir = output_dir / "resources"
 
     if src_res_dir.exists():
@@ -338,7 +338,7 @@ def main() -> int:
                 shutil.copy2(src_file, dst_file)
         print("  -> Resources copied successfully.")
     else:
-        print("  WARNING: Source resources folder not found at local-input/resources/.")
+        print("  WARNING: Source resources folder not found at local-input/gdresources/.")
 
     print("\n" + "=" * 60)
     print("RECOMPILATION COMPLETE!")

@@ -1,6 +1,6 @@
-#  Terra Battle Data Viz
+#  TerraTools
 <img src="frontend/public/TerraToolbox.png" width="200" height="200" align="center" alt="Terra Toolbox Icon">
-An interactive web-based database viewer and level editor for *Terra Battle*, designed to work alongside project **Liminal Gate**. 
+An interactive web-based database viewer for *Terra Battle*. 
 
 This editor provides comprehensive access to game assets, character stats, companion drop rates, skills, audio players (BGM/SE), and stage wave board layouts.
 
@@ -31,13 +31,13 @@ This editor provides comprehensive access to game assets, character stats, compa
 ## Project Structure
 
 ```text
-Terra-Battle-Level-Editor/
+TerraTools/
 ├── app.py                      # FastAPI Web Server (main entry point)
 ├── config.json.example         # Example path configuration template
 ├── requirements.txt            # Python dependencies (FastAPI, Uvicorn, UnityPy, capstone)
 ├── local-input/                # User-supplied raw game assets (gitignored)
 │   ├── terra-battle-5.5.7-170.apk # Terra Battle v5.5.7 APK
-│   └── resources/              # Raw client asset bundles (data_u2017/android/...)
+│   └── gdresources/            # Vanilla game client asset bundles (data_u2017/android/...)
 ├── scripts/                    # Code extraction & decompilation utilities
 │   ├── Decompiler.cs           # C# MoonSharp bytecode parser source
 │   ├── Decompiler.exe          # Compiled MoonSharp bytecode dumper
@@ -74,7 +74,7 @@ The `local-input/` directory is gitignored and acts as the workspace drop-zone f
 ```text
 local-input/
 ├── terra-battle-5.5.7-170.apk    # [Required] Terra Battle APK
-└── resources/                     # [Optional / Recommended] Game asset bundles
+└── gdresources/                   # [Optional / Recommended] Vanilla game asset bundles
     └── data_u2017/
         └── android/
             ├── BG/                # Background graphics asset bundles (.bin)
@@ -106,8 +106,8 @@ local-input/
    - **Used By**: `scripts/extract_native_stages.py` (and step 8 of `scripts/extract_everything.py`).
    - **Content Extracted**: Provides C# structure definitions, method Relative Virtual Addresses (RVAs), and vtable slot mappings needed to disassemble C++ battle generator classes (`Chapter8.$Battle...`).
 
-3. **`resources/data_u2017/android/`** *(Optional / Recommended for Media & Live Browsing)*
-   - **Path**: `local-input/resources/data_u2017/android/`
+3. **`gdresources/data_u2017/android/`** *(Optional / Recommended for Media & Live Browsing)*
+   - **Path**: `local-input/gdresources/data_u2017/android/`
    - **Source**: Downloaded game client asset cache folder.
    - **Used By**: `scripts/extract_everything.py` (steps 5c & 5d) and `app.py` (`/api/assets` inventory endpoint).
    - **Bundles & Categories**:

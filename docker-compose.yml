@@ -1,9 +1,7 @@
 services:
-  terra-level-editor:
-    build: .
-    container_name: terra-level-editor
+  terra-tools:
+    container_name: terra-tools
     ports:
-      - "5001:5001"
     volumes:
       # Map data directory as read-write
       - ./user-data:/app/user-data

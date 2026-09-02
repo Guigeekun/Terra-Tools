@@ -49,7 +49,7 @@ def serve_app_icon():
 # Paths
 DATA_DIR = os.path.join("user-data", "extracted-gamedata", "game_data")
 EXTRACTED_DIR = os.path.join("user-data", "extracted-gamedata")
-LOCAL_INPUT_DIR = os.path.join("local-input", "resources", "data_u2017", "android")
+LOCAL_INPUT_DIR = os.path.join("local-input", "gdresources", "data_u2017", "android")
 
 # Cached Databases
 gamedata = {}

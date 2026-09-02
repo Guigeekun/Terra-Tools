@@ -8,7 +8,7 @@ export default function Header({ activeTab }) {
   return (
     <header className="main-header">
       <div className="header-title">
-        <h2>{meta.title || 'Terra Battle'}</h2>
+        <h2>{meta.title || 'TerraTools'}</h2>
         <p>{meta.desc || ''}</p>
       </div>
       <div className="header-actions">
