@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { GameDataProvider, useGameData } from './contexts/GameDataContext';
+import { AudioProvider } from './contexts/AudioContext';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import LoadingOverlay from './components/layout/LoadingOverlay';
+import FloatingAudioPlayer from './components/shared/FloatingAudioPlayer';
 
 import DashboardTab from './components/tabs/DashboardTab';
 import CharactersTab from './components/tabs/CharactersTab';
@@ -43,6 +45,11 @@ function AppContent() {
         </main>
       </div>
 
+      <FloatingAudioPlayer 
+        activeTab={activeTab} 
+        onNavigateToAudio={() => setActiveTab('audio')} 
+      />
+
       {selectedCharacter && (
         <CharacterModal 
           character={selectedCharacter} 
@@ -63,7 +70,10 @@ function AppContent() {
 export default function App() {
   return (
     <GameDataProvider>
-      <AppContent />
+      <AudioProvider>
+        <AppContent />
+      </AudioProvider>
     </GameDataProvider>
   );
 }
+

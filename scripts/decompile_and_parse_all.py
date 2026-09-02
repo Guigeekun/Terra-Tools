@@ -134,57 +134,98 @@ def parse_decompiled_file(filepath, enum_to_id):
             if enemy_id_str:
                 helper_enemy_map[fn_name] = enemy_id_str
 
-    # Extract sections and their battle lists
-    sections = {}
+    # Extract ordered section sequences: interleaved story events + battle calls
+    sections = {}  # fn_name -> list of {'type': 'story'|'battle', ...}
     for fn_name, fn_lines in functions.items():
         if fn_name.startswith("Section") and not fn_name.startswith("SectionReached"):
-            battles = []
-            stack = []
+            sequence = []  # ordered mix of story/battle items
+            pending_tokens = []
+
+            # Collect all INDEX string tokens in order
             for line in fn_lines:
                 parts = re.split(r"\s+", line)
-                op = parts[0]
-                if op == "LITERAL":
-                    val = parts[1] if len(parts) > 1 else None
-                    stack.append(val)
-                elif op in ("INDEX", "INDEXN", "UPVALUE", "LOCAL"):
-                    val = parts[1] if len(parts) > 1 else None
-                    if val and val.startswith('"') and val.endswith('"'):
-                        val = val[1:-1]
-                    stack.append(val)
-                elif op == "CALL":
-                    num_args = int(parts[1])
-                    for _ in range(num_args):
-                        if stack:
-                            stack.pop()
-                    if stack:
-                        stack.pop()
-                if op in ("INDEX", "UPVALUE") and len(parts) > 1:
+                op = parts[0] if parts else ""
+                if op == "INDEX" and len(parts) > 1:
                     val = parts[1]
                     if val.startswith('"') and val.endswith('"'):
                         val = val[1:-1]
-                    if "Battle" in val:
-                        battles.append(val)
-            
-            seen = set()
-            ordered_battles = [b for b in battles if not (b in seen or seen.add(b))]
-            ordered_battles = [b for b in ordered_battles if b != "StartBattle"]
-            if ordered_battles:
-                sections[fn_name] = ordered_battles
+                    pending_tokens.append(val)
 
-    # Extract spawns for each battle
+            # Walk tokens and reconstruct the chronological call sequence
+            j = 0
+            while j < len(pending_tokens):
+                tok = pending_tokens[j]
+                if tok in ("StartEvent", "StartEvents"):
+                    j += 1
+                    while j < len(pending_tokens) and pending_tokens[j] not in (
+                        "StartEvent", "StartEvents", "StartBattle",
+                        "SelectTeam", "RegisterEnemies", "RegisterSections",
+                        "SectionReached", "RegisterSectionTitles", "SetBG"
+                    ):
+                        sid = pending_tokens[j]
+                        # Include any scenario-looking ID (CH_XX_YY, PR1, LUCK_*, etc.)
+                        if re.match(r'^(CH_|PR\d|LUCK_|[A-Z]{2,}_)', sid):
+                            sequence.append({"type": "story", "scenarioID": sid})
+                        j += 1
+                elif tok == "StartBattle":
+                    j += 1
+                    battle_names = []
+                    while j < len(pending_tokens) and pending_tokens[j] not in (
+                        "StartEvent", "StartEvents", "StartBattle",
+                        "SelectTeam", "RegisterEnemies", "RegisterSections",
+                        "SectionReached", "RegisterSectionTitles", "SetBG"
+                    ):
+                        b = pending_tokens[j]
+                        if "Battle" in b:
+                            battle_names.append(b)
+                        j += 1
+                    if battle_names:
+                        sequence.append({"type": "battle", "battles": battle_names})
+                else:
+                    j += 1
+
+            if sequence:
+                sections[fn_name] = sequence
+
+    # Extract chapter background ID from Init function (SetBG <id>)
+    chapter_bg = 0
+    init_lines = functions.get("Init", [])
+    for i, line in enumerate(init_lines):
+        if "INDEX" in line and '"SetBG"' in line:
+            for j in range(i + 1, min(len(init_lines), i + 4)):
+                if init_lines[j].startswith("LITERAL"):
+                    p = re.split(r"\s+", init_lines[j])
+                    if len(p) > 1 and p[1].isdigit():
+                        chapter_bg = int(p[1])
+                        break
+
+    # Extract spawns and BGM for each battle function
     battles_spawns = {}
+    battle_bgms = {}
     for fn_name, fn_lines in functions.items():
         if "Battle" in fn_name and not fn_name.startswith("StartBattle"):
             spawns = []
             stack = []
-            for line in fn_lines:
+            bgm_id = 0
+            for i, line in enumerate(fn_lines):
+                if "INDEX" in line and '"PlayBGM"' in line:
+                    for j in range(i + 1, min(len(fn_lines), i + 4)):
+                        if fn_lines[j].startswith("LITERAL"):
+                            p = re.split(r"\s+", fn_lines[j])
+                            if len(p) > 1:
+                                val = p[1].strip('"')
+                                m = re.search(r'BGM_?(\d+)', val, re.IGNORECASE)
+                                if m:
+                                    bgm_id = int(m.group(1))
+                                    break
+
                 parts = re.split(r"\s+", line)
                 op = parts[0]
                 if op == "LITERAL":
                     val = parts[1] if len(parts) > 1 else None
                     try:
                         val = int(val)
-                    except ValueError:
+                    except (ValueError, TypeError):
                         pass
                     stack.append(val)
                 elif op in ("INDEX", "INDEXN", "UPVALUE", "LOCAL"):
@@ -199,7 +240,7 @@ def parse_decompiled_file(filepath, enum_to_id):
                         if stack:
                             args.insert(0, stack.pop())
                     fn_called = stack.pop() if stack else None
-                    
+
                     x, y, enemy_id_str, vid = None, None, None, None
                     if fn_called == "CreateEnemy":
                         if len(args) >= 4:
@@ -214,7 +255,6 @@ def parse_decompiled_file(filepath, enum_to_id):
                             x, y, vid = args[0], args[1], args[2]
 
                     if enemy_id_str is not None:
-                        # Resolve numeric ID
                         numeric_id = enum_to_id.get(enemy_id_str)
                         spawns.append({
                             "enemy_var": enemy_id_str,
@@ -224,23 +264,36 @@ def parse_decompiled_file(filepath, enum_to_id):
                             "vid": vid
                         })
             battles_spawns[fn_name] = spawns
+            if bgm_id > 0:
+                battle_bgms[fn_name] = bgm_id
 
-    # Combine sections and battle spawns
+    # Combine: expand battle items into waves with enemy spawns, bgID, and bgmID
     layout = {}
-    for sec_name, battle_list in sections.items():
-        waves = []
-        for i, b_name in enumerate(battle_list):
-            spawns = battles_spawns.get(b_name, [])
-            waves.append({
-                "wave_index": i + 1,
-                "battle_name": b_name,
-                "enemies": spawns
-            })
-        # Normalize Section name (e.g. Section1 -> 1, Section2 -> 2)
+    for sec_name, sequence in sections.items():
+        result_items = []
+        wave_counter = 0
+        for item in sequence:
+            if item["type"] == "story":
+                result_items.append({"type": "story", "scenarioID": item["scenarioID"]})
+            elif item["type"] == "battle":
+                for b_name in item["battles"]:
+                    wave_counter += 1
+                    spawns = battles_spawns.get(b_name, [])
+                    w_bgm = battle_bgms.get(b_name, 0)
+                    result_items.append({
+                        "type": "wave",
+                        "wave_index": wave_counter,
+                        "battle_name": b_name,
+                        "bgID": chapter_bg,
+                        "bgmID": w_bgm,
+                        "enemies": spawns
+                    })
+
+        # Normalize section index
         match = re.search(r"\d+", sec_name)
         sec_idx = int(match.group()) if match else None
         if sec_idx is not None:
-            layout[str(sec_idx)] = waves
+            layout[str(sec_idx)] = result_items
 
     return layout
 

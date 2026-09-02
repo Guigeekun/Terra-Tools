@@ -1,48 +1,54 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
+import { useAudio } from '../../contexts/AudioContext';
+
+function formatTime(seconds) {
+  if (!seconds || isNaN(seconds)) return '00:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
 
 export default function AudioTab() {
   const [activePlaylist, setActivePlaylist] = useState('BGM');
   const [search, setSearch] = useState('');
-  const [activeTrack, setActiveTrack] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef(null);
+
+  const {
+    activeTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    playTrack,
+    togglePlayPause,
+    seek,
+    stopTrack,
+  } = useAudio();
 
   const filters = useMemo(() => ({ category: activePlaylist, search }), [activePlaylist, search]);
 
-  const { items: tracks, total, isInitialLoading, isFetchingNextPage, sentinelRef } = usePaginatedCategory('audio', filters, 30);
-
-  useEffect(() => {
-    const audioEl = audioRef.current;
-    if (!audioEl) return;
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => setIsPlaying(false);
-    audioEl.addEventListener('play', handlePlay);
-    audioEl.addEventListener('pause', handlePause);
-    audioEl.addEventListener('ended', handleEnded);
-    return () => {
-      audioEl.removeEventListener('play', handlePlay);
-      audioEl.removeEventListener('pause', handlePause);
-      audioEl.removeEventListener('ended', handleEnded);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (activeTrack && audioRef.current) {
-      audioRef.current.src = `/api/play/${activePlaylist.toLowerCase()}/${activeTrack.filename}`;
-      audioRef.current.play().catch(e => console.error("Audio play error", e));
-    }
-  }, [activeTrack, activePlaylist]);
+  const { items: tracks, isInitialLoading, isFetchingNextPage, sentinelRef } = usePaginatedCategory('audio', filters, 30);
 
   return (
     <div className="tab-content audio-layout">
       <div className="player-controls-panel">
         <div className="player-card">
           <div className="player-header">
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--gradient-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontSize: 24, boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)' }}>
-              <i className="fa-solid fa-music"></i>
+            <div 
+              style={{ 
+                width: 64, 
+                height: 64, 
+                borderRadius: '50%', 
+                background: 'var(--gradient-primary)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                margin: '0 auto', 
+                fontSize: 24, 
+                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)' 
+              }}
+            >
+              <i className={`fa-solid fa-music ${isPlaying ? 'fa-beat' : ''}`}></i>
             </div>
             <h4>{activeTrack ? activeTrack.name : 'No Track Selected'}</h4>
             <p>{activeTrack ? activeTrack.filename : '---'}</p>
@@ -50,15 +56,53 @@ export default function AudioTab() {
           <div className={`player-visualization ${isPlaying ? 'playing' : ''}`}>
             {Array.from({ length: 9 }).map((_, i) => <div key={i} className="bar"></div>)}
           </div>
-          <div className="player-audio-wrapper">
-            <audio ref={audioRef} controls></audio>
-          </div>
+
+          {/* Interactive Player Controls */}
+          {activeTrack ? (
+            <div className="tab-player-controls" style={{ marginTop: 20 }}>
+              <div className="floating-timeline-section">
+                <input
+                  type="range"
+                  className="floating-scrub-bar"
+                  min={0}
+                  max={duration || 100}
+                  step={0.1}
+                  value={currentTime}
+                  onChange={e => seek(Number(e.target.value))}
+                />
+                <div className="floating-time-display">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 12 }}>
+                <button 
+                  className="floating-control-btn stop-btn" 
+                  onClick={stopTrack} 
+                  title="Stop Track"
+                >
+                  <i className="fa-solid fa-square"></i>
+                </button>
+                <button 
+                  className="floating-control-btn play-pause-btn" 
+                  onClick={togglePlayPause}
+                  title={isPlaying ? 'Pause' : 'Play'}
+                >
+                  <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12 }}>Select a track from the playlist to start continuous playback.</p>
+          )}
         </div>
         <div className="player-info-card">
-          <h5><i className="fa-solid fa-circle-info"></i> Audio Information</h5>
-          <p>Background music and sound effects are streamed directly from the extracted game data.</p>
+          <h5><i className="fa-solid fa-circle-info"></i> App-Wide Audio</h5>
+          <p>Music will continue playing seamlessly across tabs. Use the floating player widget to control audio from anywhere.</p>
         </div>
       </div>
+
       <div className="playlist-panel">
         <div className="playlist-tabs">
           <button className={`playlist-tab-btn ${activePlaylist === 'BGM' ? 'active' : ''}`} onClick={() => setActivePlaylist('BGM')}>Background Music</button>
@@ -82,9 +126,16 @@ export default function AudioTab() {
                 const sizeMb = (track.size_bytes / (1024 * 1024)).toFixed(2);
                 const isActive = activeTrack?.filename === track.filename;
                 return (
-                  <button key={i} className={`playlist-item ${isActive ? 'active' : ''}`} onClick={() => setActiveTrack(track)}>
+                  <button 
+                    key={i} 
+                    className={`playlist-item ${isActive ? 'active' : ''}`} 
+                    onClick={() => playTrack(track, activePlaylist)}
+                  >
                     <div style={{ textAlign: 'left' }}>
-                      <strong style={{ display: 'block', fontFamily: 'var(--font-heading)', fontSize: 14 }}>{track.name}</strong>
+                      <strong style={{ display: 'block', fontFamily: 'var(--font-heading)', fontSize: 14 }}>
+                        {isActive && <i className="fa-solid fa-volume-high" style={{ marginRight: 8, color: 'var(--accent-blue)' }}></i>}
+                        {track.name}
+                      </strong>
                       <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--text-muted)' }}>{track.filename}</span>
                     </div>
                     <span className="audio-duration">{sizeMb} MB</span>

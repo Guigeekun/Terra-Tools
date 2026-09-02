@@ -13,17 +13,31 @@ export default function WaveBoard({ waves, lang }) {
   const enemyMap = {};
   enemies.forEach(e => { enemyMap[`${e.x},${e.y}`] = e; });
 
+  const bgUrl = wave?.bg_url || (wave?.bgID ? `/api/bg/${wave.bgID}` : null);
+
   return (
     <div className="stage-layout-content">
-      <div className="wave-tabs">
-        {waves.map((w, idx) => (
-          <button key={idx} className={`wave-tab-btn ${idx === activeWave ? 'active' : ''}`} onClick={() => setActiveWave(idx)}>
-            <i className="fa-solid fa-circle-play"></i> Wave {w.wave_index}
-          </button>
-        ))}
-      </div>
+      {waves.length > 1 && (
+        <div className="wave-tabs">
+          {waves.map((w, idx) => (
+            <button key={idx} className={`wave-tab-btn ${idx === activeWave ? 'active' : ''}`} onClick={() => setActiveWave(idx)}>
+              <i className="fa-solid fa-circle-play"></i> Wave {w.wave_index}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="wave-layout-workspace">
-        <div className="board-grid-wrapper">
+        <div
+          className="board-grid-wrapper"
+          style={bgUrl ? {
+            backgroundImage: `linear-gradient(rgba(10, 13, 22, 0.72), rgba(10, 13, 22, 0.82)), url("${bgUrl}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            borderRadius: '12px',
+            border: '1px solid rgba(56, 189, 248, 0.25)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+          } : {}}
+        >
           <div className="board-grid">
             {Array.from({ length: 8 }).map((_, y) =>
               Array.from({ length: 6 }).map((_, x) => {

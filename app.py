@@ -55,6 +55,133 @@ LOCAL_INPUT_DIR = os.path.join("local-input", "resources", "data_u2017", "androi
 gamedata = {}
 
 
+import re as _re
+
+STORY_SCENARIO_OFFSET = 485
+"""Index in StringSet.scenarioSet where actual story narrative text begins.
+
+The first 485 entries in scenarioSet are short UI labels (chapter names, location
+names, etc.). From index 485 onward the entries correspond 1-to-1 with the ordered
+flat list of stories defined in BookData (all chapters concatenated in order)."""
+
+BG_MAP: dict[int, str] = {}
+BGM_MAP: dict[int, str] = {}
+
+
+def build_media_indices():
+    """Build fast lookup tables for background images and BGM track files."""
+    global BG_MAP, BGM_MAP
+    BG_MAP = {}
+    BGM_MAP = {}
+
+    bg_dir = os.path.join(EXTRACTED_DIR, "BG")
+    if os.path.exists(bg_dir):
+        for f in os.listdir(bg_dir):
+            if f.endswith(".png"):
+                m = _re.search(r"stage_back_(\d+)\.png", f, _re.IGNORECASE)
+                if m:
+                    BG_MAP[int(m.group(1))] = f"{EXTRACTED_DIR}/BG/{f}".replace("\\", "/")
+
+    bgm_dir = os.path.join(EXTRACTED_DIR, "BGM")
+    if os.path.exists(bgm_dir):
+        for f in os.listdir(bgm_dir):
+            if f.endswith(".wav"):
+                m = _re.search(r"bgm_?(\d+)", f, _re.IGNORECASE)
+                if m:
+                    BGM_MAP[int(m.group(1))] = f
+
+
+def strip_story_markup(text: str) -> str:
+    """Strip game engine markup tags from a story string, returning plain readable text."""
+    if not text:
+        return ""
+    # Remove all angle-bracket tags: <anim=...>, <fstyle=...>, <s>, </s>, <p>, etc.
+    text = _re.sub(r"<[^>]+>", "", text)
+    # Collapse multiple spaces/tabs to a single space
+    text = _re.sub(r"[ \t]+", " ", text)
+    # Collapse excessive newlines (>2) to double newline
+    text = _re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def build_scenario_lookup() -> dict:
+    """Build a dict mapping scenarioID -> resolved story data.
+
+    Uses the positional offset mapping between BookData (ordered story list)
+    and StringSet.scenarioSet (narrative text entries starting at index 485).
+    """
+    book_data = gamedata.get("book", {}).get("data", [])
+    scenario_set = gamedata.get("strings", {}).get("scenarioSet", [])
+
+    if not book_data or not scenario_set:
+        return {}
+
+    langs = ["en", "ja", "fr", "de", "es", "zh_tw"]
+    lookup: dict[str, dict] = {}
+
+    n = 0
+    for chapter in book_data:
+        for story_ref in chapter.get("stories", []):
+            sid = story_ref.get("scenarioID", "")
+            idx = STORY_SCENARIO_OFFSET + n
+            n += 1
+            if not sid:
+                continue
+            if idx < len(scenario_set):
+                entry = scenario_set[idx]
+                lookup[sid] = {
+                    "scenarioID": sid,
+                    "bgID": entry.get("bgID", 0),
+                    "bgmID": entry.get("bgmID", 0),
+                    "flag": entry.get("flag", 0),
+                    "text_clean": {lang: strip_story_markup(entry.get(lang, "")) for lang in langs},
+                    "text_raw": {lang: entry.get(lang, "") for lang in langs},
+                }
+            else:
+                lookup[sid] = {
+                    "scenarioID": sid,
+                    "bgID": 0, "bgmID": 0, "flag": 0,
+                    "text_clean": {}, "text_raw": {},
+                }
+
+    return lookup
+
+
+def get_chapter_stories_by_section(chapter_no: int | str) -> dict[int, list[dict]]:
+    """Map chapter_no -> dict[sec_index, list of resolved story dicts]."""
+    book_data = gamedata.get("book", {}).get("data", [])
+    scenario_lookup = gamedata.get("scenario_lookup", {})
+
+    target_key = f"Chapter{chapter_no}"
+    ch_book = next((b for b in book_data if b.get("key") == target_key), None)
+    if not ch_book:
+        return {}
+
+    stories_by_sec: dict[int, list[dict]] = {}
+    for story_ref in ch_book.get("stories", []):
+        sid = story_ref.get("scenarioID", "")
+        if not sid:
+            continue
+
+        m = _re.search(r"CH_\d+_(\d+)", sid)
+        sec_idx = int(m.group(1)) if m else 1
+
+        if sec_idx not in stories_by_sec:
+            stories_by_sec[sec_idx] = []
+
+        story_data = dict(scenario_lookup.get(sid, {
+            "scenarioID": sid, "bgID": 0, "bgmID": 0,
+            "text_clean": {}, "text_raw": {}
+        }))
+        bg_id = story_data.get("bgID", 0)
+        bgm_id = story_data.get("bgmID", 0)
+        story_data["bg_url"] = f"/api/bg/{bg_id}" if bg_id in BG_MAP else None
+        story_data["bgm_url"] = f"/api/play/BGM/{BGM_MAP[bgm_id]}" if bgm_id in BGM_MAP else None
+        stories_by_sec[sec_idx].append({"type": "story", **story_data})
+
+    return stories_by_sec
+
+
 def load_databases():
     """Load all game databases from JSON files."""
     db_files = {
@@ -65,7 +192,8 @@ def load_databases():
         "stages": "BattleData.json",
         "strings": "StringSet.json",
         "enemies": "EnemyData.json",
-        "stages_layout": "StagesLayout.json"
+        "stages_layout": "StagesLayout.json",
+        "book": "BookData.json",
     }
     
     for key, filename in db_files.items():
@@ -81,6 +209,14 @@ def load_databases():
         else:
             print(f"Warning: database file not found: {path}")
             gamedata[key] = {}
+
+    # Pre-build scenario story lookup after all data is loaded
+    gamedata["scenario_lookup"] = build_scenario_lookup()
+    print(f"Built scenario story lookup: {len(gamedata['scenario_lookup'])} scenarios")
+
+    # Build BG and BGM media indices
+    build_media_indices()
+    print(f"Built media indices: {len(BG_MAP)} BGs, {len(BGM_MAP)} BGMs")
 
 
 ASSET_INDEX = {}
@@ -351,16 +487,41 @@ def get_skills(page: int = None, limit: int = 30, search: str = ""):
         }
     return types
 
+@app.get('/api/chapters')
+def get_chapters():
+    """Retrieve all chapters with their story/narrative text resolved from StringSet."""
+    book_data = gamedata.get("book", {}).get("data", [])
+    scenario_lookup = gamedata.get("scenario_lookup", {})
+
+    result = []
+    for chapter in book_data:
+        ch_key = chapter.get("key", "")
+        stories = [
+            scenario_lookup.get(s.get("scenarioID", ""), {"scenarioID": s.get("scenarioID", "")})
+            for s in chapter.get("stories", []) if s.get("scenarioID")
+        ]
+        result.append({
+            "key": ch_key,
+            "title": chapter.get("title", ""),
+            "icon": chapter.get("icon", ""),
+            "unlockType": chapter.get("unlockType", 0),
+            "unlockValue": chapter.get("unlockValue", 0),
+            "stories": stories,
+        })
+    return result
+
+
 @app.get('/api/stages')
 def get_stages(page: int = None, limit: int = 20, search: str = ""):
-    """Retrieve chapters and stages with their wave and enemy layout details."""
+    """Retrieve chapters and stages with their wave, enemy layout, and story narrative details."""
     chapters = gamedata.get("stages", {}).get("chapters", [])
     layout_db = gamedata.get("stages_layout", {})
     enemy_db = gamedata.get("enemies", {}).get("data", [])
     strings_db = gamedata.get("strings", {})
-    
+    scenario_lookup = gamedata.get("scenario_lookup", {})
+
     enemies_by_id = {e["ID"]: e for e in enemy_db}
-    
+
     q = search.lower().strip()
     filtered_chapters = []
     for ch in chapters:
@@ -368,10 +529,10 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
         title = f"Chapter {ch_no}"
         if strings_db.get("scenarioSet") and ch_no - 1 < len(strings_db["scenarioSet"]):
             title = strings_db["scenarioSet"][ch_no - 1].get("en", title)
-            
+
         if q and not (q in str(ch_no) or q in title.lower()):
             continue
-            
+
         filtered_chapters.append(ch)
 
     total = len(filtered_chapters)
@@ -385,54 +546,95 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
     for ch in target_chapters:
         chapter_no = str(ch.get("chapterNo", ""))
         ch_layout = layout_db.get(chapter_no, {})
-        
+        book_sec_stories = get_chapter_stories_by_section(chapter_no)
+
         result_sections = []
         for idx, sec in enumerate(ch.get("sections", [])):
             sec_copy = dict(sec)
             sec_id = str(idx + 1)
-            sec_layout = ch_layout.get(sec_id)
-            
+            sec_num = idx + 1
+            sec_layout = ch_layout.get(sec_id)  # list of {type:'story'|'wave', ...}
+
             if sec_layout:
-                waves_details = []
-                for wave in sec_layout:
-                    enemies_list = []
-                    for enemy in wave.get("enemies", []):
-                        enemy_id = enemy.get("enemy_id")
-                        enemy_info = enemies_by_id.get(enemy_id) if enemy_id else None
-                        
-                        enemy_detail = {
-                            "enemy_var": enemy.get("enemy_var"),
-                            "enemy_id": enemy_id,
-                            "x": enemy.get("x"),
-                            "y": enemy.get("y"),
-                            "vid": enemy.get("vid")
-                        }
-                        if enemy_info:
-                            enemy_detail["NameString"] = enemy_info.get("NameString")
-                            enemy_detail["HP"] = enemy_info.get("HP")
-                            enemy_detail["ATK"] = enemy_info.get("ATK")
-                            enemy_detail["DEF"] = enemy_info.get("DEF")
-                            enemy_detail["LV"] = enemy_info.get("LV")
-                            enemy_detail["ImageID"] = enemy_info.get("ImageID")
-                            
-                        enemies_list.append(enemy_detail)
-                        
-                    waves_details.append({
-                        "wave_index": wave.get("wave_index"),
-                        "battle_name": wave.get("battle_name"),
-                        "enemies": enemies_list
-                    })
-                sec_copy["waves_details"] = waves_details
+                # Use exact parsed Lua sequence (Chapters 1-7, 6000-6006)
+                sequence = []
+                for item in sec_layout:
+                    item_type = item.get("type", "wave")
+                    if item_type == "story":
+                        sid = item.get("scenarioID", "")
+                        story_data = dict(scenario_lookup.get(sid, {
+                            "scenarioID": sid, "bgID": 0, "bgmID": 0,
+                            "text_clean": {}, "text_raw": {}
+                        }))
+                        bg_id = story_data.get("bgID", 0)
+                        bgm_id = story_data.get("bgmID", 0)
+                        story_data["bg_url"] = f"/api/bg/{bg_id}" if bg_id in BG_MAP else None
+                        story_data["bgm_url"] = f"/api/play/BGM/{BGM_MAP[bgm_id]}" if bgm_id in BGM_MAP else None
+                        sequence.append({"type": "story", **story_data})
+                    else:
+                        # Wave item — resolve enemy details, BG, and BGM
+                        w_bg = item.get("bgID", 0)
+                        w_bgm = item.get("bgmID", 0)
+                        enemies_list = []
+                        for enemy in item.get("enemies", []):
+                            enemy_id = enemy.get("enemy_id")
+                            enemy_info = enemies_by_id.get(enemy_id) if enemy_id else None
+                            enemy_detail = {
+                                "enemy_var": enemy.get("enemy_var"),
+                                "enemy_id": enemy_id,
+                                "x": enemy.get("x"),
+                                "y": enemy.get("y"),
+                                "vid": enemy.get("vid")
+                            }
+                            if enemy_info:
+                                enemy_detail["NameString"] = enemy_info.get("NameString")
+                                enemy_detail["HP"] = enemy_info.get("HP")
+                                enemy_detail["ATK"] = enemy_info.get("ATK")
+                                enemy_detail["DEF"] = enemy_info.get("DEF")
+                                enemy_detail["LV"] = enemy_info.get("LV")
+                                enemy_detail["ImageID"] = enemy_info.get("ImageID")
+                            enemies_list.append(enemy_detail)
+                        sequence.append({
+                            "type": "wave",
+                            "wave_index": item.get("wave_index"),
+                            "battle_name": item.get("battle_name"),
+                            "bgID": w_bg,
+                            "bgmID": w_bgm,
+                            "bg_url": f"/api/bg/{w_bg}" if w_bg in BG_MAP else None,
+                            "bgm_url": f"/api/play/BGM/{BGM_MAP[w_bgm]}" if w_bgm in BGM_MAP else None,
+                            "enemies": enemies_list
+                        })
+                sec_copy["sequence"] = sequence
             else:
-                sec_copy["waves_details"] = []
-                
-            if sec.get("battleCnt", 0) > 0 or sec_layout:
+                # Synthesize section sequence from BattleData + BookData (Chapters 8-42, 100+, etc.)
+                sequence = []
+                sec_stories = book_sec_stories.get(sec_num, [])
+                sequence.extend(sec_stories)
+
+                default_bg = sec_stories[0].get("bgID", 0) if sec_stories else 0
+                default_bgm = sec_stories[0].get("bgmID", 10) if sec_stories else 10
+
+                battle_cnt = sec.get("battleCnt", 0)
+                for w in range(1, battle_cnt + 1):
+                    sequence.append({
+                        "type": "wave",
+                        "wave_index": w,
+                        "battle_name": f"Wave {w}",
+                        "bgID": default_bg,
+                        "bgmID": default_bgm,
+                        "bg_url": f"/api/bg/{default_bg}" if default_bg in BG_MAP else None,
+                        "bgm_url": f"/api/play/BGM/{BGM_MAP[default_bgm]}" if default_bgm in BGM_MAP else None,
+                        "enemies": []
+                    })
+                sec_copy["sequence"] = sequence
+
+            if sec.get("battleCnt", 0) > 0 or sec_layout or sec_copy.get("sequence"):
                 result_sections.append(sec_copy)
-            
+
         ch_copy = dict(ch)
         ch_copy["sections"] = result_sections
         result_chapters.append(ch_copy)
-        
+
     if page is not None:
         return {
             "items": result_chapters,
@@ -521,6 +723,15 @@ def get_audio_list(category: str = "BGM", page: int = None, limit: int = 30, sea
         }
 
     return {"BGM": audio_list if category == "BGM" else [], "SE": audio_list if category == "SE" else []}
+
+@app.get('/api/bg/{bg_id}')
+def serve_bg_image(bg_id: int):
+    """Serve stage background image by bgID."""
+    bg_path = BG_MAP.get(bg_id)
+    if not bg_path or not os.path.exists(bg_path):
+        raise HTTPException(status_code=404, detail=f"Background image for bgID {bg_id} not found")
+    return FileResponse(bg_path, media_type="image/png")
+
 
 @app.get('/api/play/{category}/{filename}')
 def play_audio(category: str, filename: str):
