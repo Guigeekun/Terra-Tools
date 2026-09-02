@@ -12,7 +12,7 @@ if config_path.exists():
         config = json.load(f)
 else:
     config = {
-        "dump_cs_path": "local-input/dump.cs",
+        "dump_cs_path": "user-data/dump.cs",
         "apk_path": "local-input/terra-battle-5.5.7-170.apk",
         "lib_path": "user-data/libil2cpp.so",
         "objdump_cmd": "llvm-objdump",
