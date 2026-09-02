@@ -34,6 +34,7 @@ export const elementMeta = {
 
 export const TAB_META = {
   dashboard:   { title: 'Dashboard Overview', desc: 'High-level statistics and category index of the exported game data.', icon: 'fa-chart-pie', label: 'Dashboard' },
+  storybook:   { title: 'Interactive Storybook', desc: 'Experience the full Terra Battle narrative with background art, soundtracks, and chapter timeline.', icon: 'fa-book-open-reader', label: 'Storybook' },
   characters:  { title: 'Characters Database', desc: 'Browse character stats, unlock jobs, active skills, and local art assets.', icon: 'fa-users', label: 'Characters' },
   buddies:     { title: 'Companions (Buddies)', desc: 'Explore the companion stats, description profiles, and thumbnails.', icon: 'fa-paw', label: 'Companions' },
   skills:      { title: 'Skills Catalog', desc: 'List of active skills, status triggers, powers, and area calculations.', icon: 'fa-wand-magic-sparkles', label: 'Skills' },

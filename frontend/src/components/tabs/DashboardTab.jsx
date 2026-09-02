@@ -14,11 +14,12 @@ export default function DashboardTab({ onTabChange }) {
   const seCount = statsData.se_count ?? data.audio?.SE?.length ?? 0;
 
   const stats = [
+    { key: 'storybook', label: 'Storybook Reader', count: 'Chapters 1-42', icon: 'fa-book-open-reader', bg: 'stage-bg' },
     { key: 'characters', label: 'Characters', count: charCount, icon: 'fa-users', bg: 'char-bg' },
     { key: 'buddies', label: 'Companions', count: buddyCount, icon: 'fa-paw', bg: 'buddy-bg' },
     { key: 'skills', label: 'Skills', count: skillCount, icon: 'fa-wand-magic-sparkles', bg: 'skill-bg' },
     { key: 'items', label: 'Items', count: itemCount, icon: 'fa-gem', bg: 'item-bg' },
-    { key: 'stages', label: 'Chapters', count: stageCount, icon: 'fa-map-location-dot', bg: 'stage-bg' },
+    { key: 'stages', label: 'Chapters & Stages', count: stageCount, icon: 'fa-map-location-dot', bg: 'stage-bg' },
     { key: 'audio', label: 'Audio Tracks', count: `${bgmCount} BGM / ${seCount} SE`, icon: 'fa-music', bg: 'audio-bg' },
   ];
 

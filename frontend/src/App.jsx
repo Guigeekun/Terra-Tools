@@ -7,6 +7,7 @@ import LoadingOverlay from './components/layout/LoadingOverlay';
 import FloatingAudioPlayer from './components/shared/FloatingAudioPlayer';
 
 import DashboardTab from './components/tabs/DashboardTab';
+import StorybookTab from './components/tabs/StorybookTab';
 import CharactersTab from './components/tabs/CharactersTab';
 import BuddiesTab from './components/tabs/BuddiesTab';
 import SkillsTab from './components/tabs/SkillsTab';
@@ -34,6 +35,7 @@ function AppContent() {
           <Header activeTab={activeTab} />
           <div className="content-container">
             {activeTab === 'dashboard' && <DashboardTab onTabChange={setActiveTab} />}
+            {activeTab === 'storybook' && <StorybookTab />}
             {activeTab === 'characters' && <CharactersTab onSelectCharacter={setSelectedCharacter} />}
             {activeTab === 'buddies' && <BuddiesTab />}
             {activeTab === 'skills' && <SkillsTab />}

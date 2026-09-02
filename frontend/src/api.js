@@ -4,10 +4,16 @@ const endpoints = {
   items:      '/api/items',
   skills:     '/api/skills',
   stages:     '/api/stages',
+  chapters:   '/api/chapters',
   strings:    '/api/strings',
   audio:      '/api/audio',
   assets:     '/api/assets',
 };
+
+export async function fetchChapters() {
+  const res = await fetch('/api/chapters');
+  return res.json();
+}
 
 export async function fetchInitialData() {
   const [strings, stats, skills] = await Promise.all([

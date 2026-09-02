@@ -489,25 +489,43 @@ def get_skills(page: int = None, limit: int = 30, search: str = ""):
 
 @app.get('/api/chapters')
 def get_chapters():
-    """Retrieve all chapters with their story/narrative text resolved from StringSet."""
+    """Retrieve main story chapters (Chapters 1 to 42) with resolved narrative text."""
     book_data = gamedata.get("book", {}).get("data", [])
     scenario_lookup = gamedata.get("scenario_lookup", {})
 
     result = []
     for chapter in book_data:
         ch_key = chapter.get("key", "")
-        stories = [
-            scenario_lookup.get(s.get("scenarioID", ""), {"scenarioID": s.get("scenarioID", "")})
-            for s in chapter.get("stories", []) if s.get("scenarioID")
-        ]
+        # Strictly limit to main story chapters Chapter1 through Chapter42
+        m = _re.match(r"^Chapter(\d+)$", ch_key, _re.IGNORECASE)
+        if not m:
+            continue
+        ch_num = int(m.group(1))
+        if not (1 <= ch_num <= 42):
+            continue
+
+        stories = []
+        for s in chapter.get("stories", []):
+            sid = s.get("scenarioID")
+            if sid:
+                story_data = dict(scenario_lookup.get(sid, {"scenarioID": sid}))
+                bg_id = story_data.get("bgID", 0)
+                bgm_id = story_data.get("bgmID", 0)
+                story_data["bg_url"] = f"/api/bg/{bg_id}" if bg_id in BG_MAP else None
+                story_data["bgm_url"] = f"/api/play/BGM/{BGM_MAP[bgm_id]}" if bgm_id in BGM_MAP else None
+                stories.append(story_data)
+
         result.append({
             "key": ch_key,
+            "chapterNo": ch_num,
             "title": chapter.get("title", ""),
             "icon": chapter.get("icon", ""),
             "unlockType": chapter.get("unlockType", 0),
             "unlockValue": chapter.get("unlockValue", 0),
             "stories": stories,
         })
+
+    result.sort(key=lambda x: x["chapterNo"])
     return result
 
 

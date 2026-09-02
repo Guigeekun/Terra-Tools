@@ -52,7 +52,6 @@ export function AudioProvider({ children }) {
     setActiveTrack({ ...track, category: catLower });
     setPlaylistCategory(catLower);
     setIsFloatingOpen(true);
-    setIsMinimized(false);
 
     if (audioRef.current) {
       audioRef.current.src = src;
