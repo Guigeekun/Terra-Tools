@@ -23,6 +23,12 @@ COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 # Ensure the empty directories exist in case they aren't mounted
 RUN mkdir -p /app/user-data /app/local-input /app/scripts
 
+# Fetch pre-extracted user-data from GitHub releases if missing
+ARG FETCH_USER_DATA=true
+RUN if [ "$FETCH_USER_DATA" = "true" ]; then \
+        python /app/scripts/download_user_data.py --target-dir /app/user-data ; \
+    fi
+
 # Copy entrypoint script and make it executable
 COPY docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh

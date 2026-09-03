@@ -6,10 +6,9 @@ __pycache__
 .env
 .venv
 venv/
-user-data/
 local-input/
 user-output/
-scripts/
+local-input.zip*
 .git
 .gitignore
 .vscode
