@@ -182,6 +182,62 @@ def get_chapter_stories_by_section(chapter_no: int | str) -> dict[int, list[dict
     return stories_by_sec
 
 
+def get_main_story_section_scenario_index(chapter_no: int | str, sec_idx: int | str) -> int | None:
+    """Return the 0-based scenarioSet index for a main story chapter (1-42) and section (1-indexed)."""
+    try:
+        ch = int(chapter_no)
+        sec = int(sec_idx)
+    except (ValueError, TypeError):
+        return None
+    if not (1 <= ch <= 42):
+        return None
+    if ch == 1:
+        base = 57
+    elif ch == 2:
+        base = 62
+    elif ch == 3:
+        base = 67
+    else:
+        base = 72 + (ch - 4) * 10
+    return base + (sec - 1)
+
+
+def resolve_section_title(chapter_no: int | str, sec_idx: int | str, raw_title: str = "") -> dict:
+    """Resolve a localized section title dictionary and subtitle dictionary."""
+    sc_idx = get_main_story_section_scenario_index(chapter_no, sec_idx)
+    scenario_set = gamedata.get("strings", {}).get("scenarioSet", [])
+    langs = ["en", "ja", "fr", "de", "es", "zh_tw"]
+
+    if sc_idx is not None and sc_idx < len(scenario_set):
+        entry = scenario_set[sc_idx]
+        sub_dict = {
+            lang: entry.get(lang, "").strip()
+            for lang in langs
+            if entry.get(lang, "").strip()
+        }
+        title_loc = {}
+        for lang in langs:
+            sub = sub_dict.get(lang) or sub_dict.get("en") or ""
+            if sub:
+                title_loc[lang] = f"Stage {chapter_no}-{sec_idx}: {sub}"
+            else:
+                title_loc[lang] = f"Stage {chapter_no}-{sec_idx}"
+
+        return {
+            "subtitle": sub_dict,
+            "title_loc": title_loc,
+            "title": title_loc.get("en", f"Stage {chapter_no}-{sec_idx}")
+        }
+
+    # Non-main story chapters or stages without scenarioSet entry
+    fallback_title = raw_title.strip() if raw_title else f"Stage {chapter_no}-{sec_idx}"
+    return {
+        "subtitle": {},
+        "title_loc": {lang: fallback_title for lang in langs},
+        "title": fallback_title
+    }
+
+
 def load_databases():
     """Load all game databases from JSON files."""
     db_files = {
@@ -406,6 +462,21 @@ def get_buddies(page: int = None, limit: int = 20, search: str = "", rarity: str
         }
     return result
 
+@app.get('/api/buddy/{buddy_id}')
+def get_buddy_details(buddy_id: int):
+    """Retrieve details for a single companion/buddy by ID."""
+    buddy_db = gamedata.get("buddies", {})
+    data = buddy_db.get("data", [])
+    buddy = next((b for b in data if b.get("ID") == buddy_id), None)
+    if not buddy:
+        raise HTTPException(status_code=404, detail="Buddy not found")
+
+    image_id = buddy.get("ImageID", 0)
+    buddy_copy = dict(buddy)
+    buddy_copy["thumb_file"] = find_local_asset("BuddyThumbs", image_id, "img")
+    buddy_copy["image_file"] = find_local_asset("BuddyImages", image_id, "img")
+    return buddy_copy
+
 @app.get('/api/items')
 def get_items(page: int = None, limit: int = 24, search: str = ""):
     """Retrieve items database with optional pagination."""
@@ -539,6 +610,8 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
     scenario_lookup = gamedata.get("scenario_lookup", {})
 
     enemies_by_id = {e["ID"]: e for e in enemy_db}
+    buddy_db = gamedata.get("buddies", {}).get("data", [])
+    buddies_by_id = {b["ID"]: b for b in buddy_db}
 
     q = search.lower().strip()
     filtered_chapters = []
@@ -571,6 +644,67 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
             sec_copy = dict(sec)
             sec_id = str(idx + 1)
             sec_num = idx + 1
+            sec_copy["section_index"] = sec_num
+
+            title_info = resolve_section_title(ch.get("chapterNo", chapter_no), sec_num, sec.get("title", ""))
+            sec_copy["title"] = title_info["title"]
+            sec_copy["title_loc"] = title_info["title_loc"]
+            sec_copy["subtitle"] = title_info["subtitle"]
+
+            # Resolve companion drops (dropBuddies)
+            raw_drop_buddies = sec.get("dropBuddies", [])
+            resolved_buddies = []
+            for b_entry in raw_drop_buddies:
+                if isinstance(b_entry, dict):
+                    code = b_entry.get("code", 0)
+                    b_id = b_entry.get("id") or (code // 256 if code > 0 else 0)
+                    count = b_entry.get("count") or (code % 256 if code > 0 else 1)
+                elif isinstance(b_entry, int):
+                    b_id = b_entry // 256 if b_entry > 256 else b_entry
+                    count = b_entry % 256 if b_entry > 256 else 1
+                else:
+                    b_id = 0
+                    count = 1
+
+                if b_id > 0:
+                    buddy_info = buddies_by_id.get(b_id)
+                    if buddy_info:
+                        image_id = buddy_info.get("ImageID", 0)
+                        resolved_buddies.append({
+                            "id": b_id,
+                            "ID": b_id,
+                            "NameString": buddy_info.get("NameString", {}),
+                            "name": buddy_info.get("NameString", {}),
+                            "DescString": buddy_info.get("DescString", {}),
+                            "desc": buddy_info.get("DescString", {}),
+                            "count": count,
+                            "rarity": buddy_info.get("rarity", 0),
+                            "ImageID": image_id,
+                            "image_id": image_id,
+                            "thumb_file": find_local_asset("BuddyThumbs", image_id, "img"),
+                            "image_file": find_local_asset("BuddyImages", image_id, "img"),
+                            "skill": buddy_info.get("skill"),
+                            "ATKmax": buddy_info.get("ATKmax", 0),
+                            "DEFmax": buddy_info.get("DEFmax", 0),
+                            "SATKmax": buddy_info.get("SATKmax", 0),
+                            "SDEFmax": buddy_info.get("SDEFmax", 0),
+                            "MaxLevel": buddy_info.get("MaxLevel", 0),
+                            "evolveID": buddy_info.get("evolveID", 0),
+                        })
+                    else:
+                        resolved_buddies.append({
+                            "id": b_id,
+                            "ID": b_id,
+                            "NameString": {"en": f"Companion #{b_id}"},
+                            "name": {"en": f"Companion #{b_id}"},
+                            "count": count,
+                            "rarity": 0,
+                            "ImageID": 0,
+                            "image_id": 0,
+                            "thumb_file": None
+                        })
+            sec_copy["dropBuddies"] = resolved_buddies
+
             sec_layout = ch_layout.get(sec_id)  # list of {type:'story'|'wave', ...}
 
             if sec_layout:
@@ -954,10 +1088,15 @@ def get_item_details(item_id: int):
                             spawning_enemies[eid] = enemy_id_to_drops[eid]
             
             if is_section_drop or spawning_enemies:
+                ch_num = ch.get("chapterNo")
+                sec_num = s_idx + 1
+                title_info = resolve_section_title(ch_num, sec_num, sec.get("title", ""))
                 dropped_in_stages.append({
-                    "chapter_no": ch.get("chapterNo"),
-                    "section_index": s_idx + 1,
-                    "section_title": sec.get("title"),
+                    "chapter_no": ch_num,
+                    "section_index": sec_num,
+                    "section_title": title_info["title"],
+                    "section_title_loc": title_info["title_loc"],
+                    "subtitle": title_info["subtitle"],
                     "is_section_drop": is_section_drop,
                     "section_drop_count": section_drop_count,
                     "spawning_enemies": [

@@ -18,6 +18,7 @@ import AssetsTab from './components/tabs/AssetsTab';
 
 import CharacterModal from './components/modals/CharacterModal';
 import ItemModal from './components/modals/ItemModal';
+import BuddyModal from './components/modals/BuddyModal';
 
 function AppContent() {
   const { loading } = useGameData();
@@ -25,6 +26,7 @@ function AppContent() {
   
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
+  const [selectedBuddy, setSelectedBuddy] = useState(null);
 
   return (
     <>
@@ -37,10 +39,10 @@ function AppContent() {
             {activeTab === 'dashboard' && <DashboardTab onTabChange={setActiveTab} />}
             {activeTab === 'storybook' && <StorybookTab />}
             {activeTab === 'characters' && <CharactersTab onSelectCharacter={setSelectedCharacter} />}
-            {activeTab === 'buddies' && <BuddiesTab />}
+            {activeTab === 'buddies' && <BuddiesTab onSelectBuddy={setSelectedBuddy} />}
             {activeTab === 'skills' && <SkillsTab />}
             {activeTab === 'items' && <ItemsTab onSelectItem={setSelectedItemId} />}
-            {activeTab === 'stages' && <StagesTab onSelectItem={setSelectedItemId} />}
+            {activeTab === 'stages' && <StagesTab onSelectItem={setSelectedItemId} onSelectBuddy={setSelectedBuddy} />}
             {activeTab === 'audio' && <AudioTab />}
             {activeTab === 'assets' && <AssetsTab />}
           </div>
@@ -63,6 +65,14 @@ function AppContent() {
         <ItemModal 
           itemId={selectedItemId} 
           onClose={() => setSelectedItemId(null)} 
+        />
+      )}
+      {selectedBuddy && (
+        <BuddyModal 
+          buddy={typeof selectedBuddy === 'object' ? selectedBuddy : null}
+          buddyId={typeof selectedBuddy === 'number' || typeof selectedBuddy === 'string' ? selectedBuddy : (selectedBuddy?.ID || selectedBuddy?.id)}
+          onClose={() => setSelectedBuddy(null)}
+          onSelectBuddy={setSelectedBuddy}
         />
       )}
     </>

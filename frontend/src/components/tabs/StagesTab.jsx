@@ -5,7 +5,7 @@ import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { useAudio } from '../../contexts/AudioContext';
 
-export default function StagesTab({ onSelectItem }) {
+export default function StagesTab({ onSelectItem, onSelectBuddy }) {
   const [search, setSearch] = useState('');
   const [currentChapter, setCurrentChapter] = useState(null);
   const [openSections, setOpenSections] = useState({});
@@ -113,10 +113,39 @@ export default function StagesTab({ onSelectItem }) {
                 <>Drop Item ID: <a href="#" style={{color: 'var(--accent-blue)', textDecoration: 'underline'}} onClick={(e) => { e.preventDefault(); onSelectItem(sec.itemID); }}>{sec.itemID}</a> ({sec.itemCount || 1})</>
               ) : 'No Item Drops';
 
-              let buddiesStr = 'No Companion Drops';
+              let buddiesDisplay = 'No Companion Drops';
               if (Array.isArray(sec.dropBuddies) && sec.dropBuddies.length) {
-                const parts = sec.dropBuddies.map(b => (typeof b === 'object' && b !== null ? (b.name || b.id || JSON.stringify(b)) : String(b)));
-                buddiesStr = `Companion Drops: ${parts.join(', ')}`;
+                buddiesDisplay = (
+                  <>
+                    Companion Drops:{' '}
+                    {sec.dropBuddies.map((b, bIdx) => {
+                      const bId = typeof b === 'object' && b !== null ? (b.id || b.ID) : b;
+                      const bName = typeof b === 'object' && b !== null
+                        ? (loc(b.NameString || b.name, lang) || `Companion #${bId}`)
+                        : `Companion #${bId}`;
+                      return (
+                        <span key={bIdx}>
+                          {bIdx > 0 && ', '}
+                          {bId ? (
+                            <a
+                              href="#"
+                              style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (onSelectBuddy) onSelectBuddy(b);
+                              }}
+                            >
+                              {bName}
+                            </a>
+                          ) : (
+                            bName
+                          )}
+                          {b.count > 1 ? ` (x${b.count})` : ''}
+                        </span>
+                      );
+                    })}
+                  </>
+                );
               }
 
               const isOpen = !!openSections[idx];
@@ -127,7 +156,7 @@ export default function StagesTab({ onSelectItem }) {
               return (
                 <div key={idx} className="stage-item-card">
                   <div className="stage-item-header">
-                    <span className="stage-item-title">{translateStageTitle(sec.title, lang, strings)}</span>
+                    <span className="stage-item-title">{translateStageTitle(sec, lang, strings, currentChapter.chapterNo, idx + 1)}</span>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       {storyItems.length > 0 && (
                         <span className="badge" style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)', fontSize: 9, padding: '2px 7px' }}>
@@ -144,7 +173,7 @@ export default function StagesTab({ onSelectItem }) {
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid var(--border-color)', paddingTop: 10 }}>
                     <span><i className="fa-solid fa-gem"></i> {dropItems}</span>
-                    <span><i className="fa-solid fa-paw"></i> {buddiesStr}</span>
+                    <span><i className="fa-solid fa-paw"></i> {buddiesDisplay}</span>
                   </div>
 
                   {sequence.length > 0 && (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { loc, translateStageTitle } from '../../utils/localization';
+import { loc, translateStageTitle, getSectionSubtitle } from '../../utils/localization';
 import { useGameData } from '../../contexts/GameDataContext';
 import { fetchItemDetails } from '../../api';
 
@@ -53,7 +53,7 @@ export default function ItemModal({ itemId, onClose }) {
                           Chapter {st.chapter_no} - Section {st.section_index}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                          {translateStageTitle(st.section_title, lang, data?.strings)}
+                          {getSectionSubtitle(st.chapter_no, st.section_index, lang, data?.strings) || (st.subtitle && loc(st.subtitle, lang)) || translateStageTitle(st.section_title, lang, data?.strings, st.chapter_no, st.section_index)}
                         </div>
                         {st.is_section_drop && (
                           <span className="badge" style={{ backgroundColor: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.2)', color: '#22c55e', fontSize: 10, marginTop: 4 }}>

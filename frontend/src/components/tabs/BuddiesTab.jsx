@@ -4,7 +4,7 @@ import { rarityLabels } from '../../utils/constants';
 import { TabSpinner, useLazyCategory } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 
-export default function BuddiesTab() {
+export default function BuddiesTab({ onSelectBuddy }) {
   const [search, setSearch] = useState('');
   const [rarity, setRarity] = useState('');
   const [selectedBuddy, setSelectedBuddy] = useState(null);
@@ -15,9 +15,17 @@ export default function BuddiesTab() {
 
   const { items: buddies, total, isInitialLoading, isFetchingNextPage, sentinelRef, lang, data } = usePaginatedCategory('buddies', filters, 35);
 
+  const handleSelectBuddy = (b) => {
+    if (onSelectBuddy) {
+      onSelectBuddy(b);
+    } else {
+      setSelectedBuddy(b);
+    }
+  };
+
   return (
     <div className="tab-content">
-      {selectedBuddy && (
+      {!onSelectBuddy && selectedBuddy && (
         <div className="modal-backdrop" onClick={() => setSelectedBuddy(null)}>
           <div className="modal-card" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
             <button className="modal-close-btn" onClick={() => setSelectedBuddy(null)}>
@@ -75,7 +83,7 @@ export default function BuddiesTab() {
             {selectedBuddy.evolveID > 0 && buddies.find(b => b.ID === selectedBuddy.evolveID) && (
               <div style={{ padding: 12, border: '1px solid var(--border-color)', borderRadius: 8 }}>
                 <h4 style={{ margin: '0 0 8px 0', fontSize: 14, color: 'var(--text-secondary)' }}>Evolves Into</h4>
-                <a href="#" onClick={(e) => { e.preventDefault(); setSelectedBuddy(buddies.find(b => b.ID === selectedBuddy.evolveID)); }} style={{ color: 'var(--accent-blue)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <a href="#" onClick={(e) => { e.preventDefault(); handleSelectBuddy(buddies.find(b => b.ID === selectedBuddy.evolveID)); }} style={{ color: 'var(--accent-blue)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <i className="fa-solid fa-arrow-right"></i> {loc(buddies.find(b => b.ID === selectedBuddy.evolveID).NameString, lang)}
                 </a>
               </div>
@@ -101,7 +109,7 @@ export default function BuddiesTab() {
       <div className="grid-layout">
         {isInitialLoading && buddies.length === 0 ? (
           <div style={{ gridColumn: '1/-1', padding: 40, textAlign: 'center' }}>
-            <TabSpinner message="Loading companions..." />
+            <TabSpinner message="Loading companions database..." />
           </div>
         ) : buddies.length === 0 ? (
           <p className="stages-panel-placeholder" style={{ gridColumn: '1/-1' }}>No companions match the selected filters.</p>
@@ -110,11 +118,11 @@ export default function BuddiesTab() {
             {buddies.map(buddy => {
               const thumbUrl = buddy.thumb_file ? `/api/assets/image?path=${encodeURIComponent(buddy.thumb_file)}` : null;
               return (
-                <div key={buddy.ID} className="card-item" onClick={() => setSelectedBuddy(buddy)} style={{ cursor: 'pointer' }}>
+                <div key={buddy.ID} className="card-item" onClick={() => handleSelectBuddy(buddy)} style={{ cursor: 'pointer' }}>
                   <span className="card-badge badge-rarity">{rarityLabels[buddy.rarity] || 'Class ' + buddy.rarity}</span>
                   {thumbUrl ? (
-                    <div className="card-image" style={{ width: '100%', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-                      <img src={thumbUrl} alt="Companion" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div className="card-image" style={{ width: '100%', aspectRatio: '1 / 1', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                      <img src={thumbUrl} alt="Companion" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     </div>
                   ) : (
                     <div className="card-image-placeholder"><i className="fa-solid fa-paw"></i></div>

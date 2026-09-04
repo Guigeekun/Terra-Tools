@@ -4,10 +4,34 @@ services:
     container_name: terra-tools
     ports:
       - "5001:5001"
+    develop:
+      watch:
+        # Sync Python backend code and restart container automatically
+        - action: sync+restart
+          path: ./app.py
+          target: /app/app.py
+        # Sync runtime config and restart container
+        - action: sync+restart
+          path: ./config.json
+          target: /app/config.json
+        # Sync built frontend assets directly into the container
+        - action: sync
+          path: ./frontend/dist
+          target: /app/frontend/dist
+        # Rebuild container only when dependencies or Docker config change
+        - action: rebuild
+          path: ./requirements.txt
+        - action: rebuild
+          path: ./Dockerfile
+        - action: rebuild
+          path: ./docker-entrypoint.sh
     volumes:
       # Map data directory as read-write
       - ./user-data:/app/user-data
       # Map scripts and local-input as read-only so the entrypoint can use them without baking them into the image
       - ./scripts:/app/scripts:ro
       - ./local-input:/app/local-input:ro
+      # Map frontend dist so npm run build updates the container instantly with or without --watch
+      - ./frontend/dist:/app/frontend/dist
     restart: unless-stopped
+
