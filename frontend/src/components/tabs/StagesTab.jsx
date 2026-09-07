@@ -69,7 +69,7 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
   };
 
   return (
-    <div className="tab-content stages-layout">
+    <div className={`tab-content stages-layout ${currentChapter ? 'has-active-chapter' : ''}`}>
       <div className="chapters-panel">
         <div className="search-input-wrapper" style={{ marginBottom: 16 }}>
           <i className="fa-solid fa-search"></i>
@@ -104,6 +104,14 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
           </div>
         ) : (
           <div>
+            <button 
+              className="stages-mobile-back-btn" 
+              onClick={() => setCurrentChapter(null)}
+              title="Return to Chapter List"
+            >
+              <i className="fa-solid fa-arrow-left"></i>
+              <span>Back to Chapters</span>
+            </button>
             <h3 style={{ marginBottom: 20 }}>{getChapterName(currentChapter.chapterNo)}</h3>
 
             {(!currentChapter.sections || currentChapter.sections.length === 0) ? (

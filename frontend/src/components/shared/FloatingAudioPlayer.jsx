@@ -31,13 +31,16 @@ export default function FloatingAudioPlayer({ activeTab, onNavigateToAudio }) {
 
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
 
+  const isStorybook = activeTab === 'storybook';
+  const offsetClass = isStorybook ? 'storybook-offset' : '';
+
   if (!activeTrack) return null;
 
   // If user closed the floating overlay, show a small launcher pill if active track is still playing/loaded
   if (!isFloatingOpen) {
     return (
       <button 
-        className="floating-player-reopen-btn" 
+        className={`floating-player-reopen-btn ${offsetClass}`}
         onClick={openFloatingPlayer} 
         title="Open Audio Player"
       >
@@ -50,7 +53,7 @@ export default function FloatingAudioPlayer({ activeTab, onNavigateToAudio }) {
   // Minimized Compact Pill Mode
   if (isMinimized) {
     return (
-      <div className="floating-player-minimized">
+      <div className={`floating-player-minimized ${offsetClass}`}>
         <div className={`mini-disc ${isPlaying ? 'spinning' : ''}`}>
           <i className="fa-solid fa-compact-disc"></i>
         </div>
@@ -87,7 +90,7 @@ export default function FloatingAudioPlayer({ activeTab, onNavigateToAudio }) {
 
   // Full Expanded Floating Player Card
   return (
-    <div className="floating-player-card">
+    <div className={`floating-player-card ${offsetClass}`}>
       {/* Header bar */}
       <div className="floating-player-header">
         <div className="floating-track-meta">

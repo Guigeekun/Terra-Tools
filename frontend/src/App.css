@@ -60,6 +60,24 @@ h6 {
     font-weight: 600;
 }
 
+/* Universal Form Elements & Dark Dropdown Theming */
+select {
+    color-scheme: dark;
+    accent-color: var(--accent-blue);
+}
+
+select option {
+    background-color: #0b0e1b;
+    color: #f8fafc;
+    padding: 8px 12px;
+}
+
+select option:checked,
+select option:hover {
+    background-color: #1e2648;
+    color: var(--accent-blue);
+}
+
 /* Scrollbar Customization */
 ::-webkit-scrollbar {
     width: 6px;
@@ -103,6 +121,28 @@ h6 {
     display: flex;
     align-items: center;
     border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-close-btn {
+    display: none;
+    margin-left: auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-smooth);
+}
+
+.sidebar-close-btn:hover {
+    color: #fff;
+    border-color: var(--accent-blue);
+    background: rgba(56, 189, 248, 0.2);
 }
 
 .brand-logo {
@@ -208,6 +248,35 @@ h6 {
     flex-shrink: 0;
 }
 
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.mobile-menu-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 16px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    flex-shrink: 0;
+}
+
+.mobile-menu-btn:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
 .header-title h2 {
     font-size: 20px;
 }
@@ -249,11 +318,13 @@ h6 {
     font-size: 13px;
     outline: none;
     cursor: pointer;
+    color-scheme: dark;
 }
 
 .lang-selector select option {
-    background-color: var(--bg-dark);
-    color: var(--text-primary);
+    background-color: #0b0e1b;
+    color: #f8fafc;
+    padding: 6px 10px;
 }
 
 .lang-selector:hover {
@@ -446,7 +517,7 @@ h6 {
 }
 
 .filters-group select {
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: rgba(14, 18, 36, 0.85);
     border: 1px solid var(--border-color);
     border-radius: 14px;
     padding: 10px 16px;
@@ -457,10 +528,17 @@ h6 {
     outline: none;
     cursor: pointer;
     transition: var(--transition-smooth);
+    color-scheme: dark;
 }
 
 .filters-group select:hover {
     border-color: var(--accent-blue);
+}
+
+.filters-group select option {
+    background-color: #0b0e1b;
+    color: #f8fafc;
+    padding: 8px 12px;
 }
 
 /* Layout Grids */
@@ -624,6 +702,26 @@ h6 {
     display: flex;
     gap: 24px;
     height: calc(100vh - 200px);
+}
+
+.stages-mobile-back-btn {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.stages-mobile-back-btn:hover {
+    background: rgba(56, 189, 248, 0.22);
 }
 
 .chapters-panel {
@@ -1887,6 +1985,14 @@ h6 {
     }
 }
 
+/* Lift floating player when in Storybook to never overlap bottom navigation bar */
+.floating-player-reopen-btn.storybook-offset,
+.floating-player-minimized.storybook-offset,
+.floating-player-card.storybook-offset {
+    bottom: 96px;
+    transition: bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s ease;
+}
+
 .floating-player-header {
     display: flex;
     justify-content: space-between;
@@ -2217,7 +2323,7 @@ h6 {
 }
 
 /* ==========================================================================
-   Interactive Storybook Tab Styling
+   Interactive Storybook Tab Styling (In-Game Presentation: Text on Artwork)
    ========================================================================== */
 
 .storybook-container {
@@ -2226,6 +2332,18 @@ h6 {
     height: calc(100vh - 140px);
     overflow: hidden;
     position: relative;
+    user-select: none;
+}
+
+.storybook-container.fullscreen-mode {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 99999;
+    background: #030611;
+    padding: 14px;
+    border-radius: 0;
 }
 
 /* Timeline Header - Sticky Top */
@@ -2235,15 +2353,15 @@ h6 {
     z-index: 40;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     background: var(--bg-card);
     backdrop-filter: blur(20px);
     border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 10px 20px;
+    border-radius: 18px;
+    padding: 8px 18px;
     box-shadow: var(--shadow-premium);
     flex-shrink: 0;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .storybook-timeline-title {
@@ -2263,6 +2381,8 @@ h6 {
     gap: 6px;
     overflow-x: auto;
     padding: 4px 0;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
 }
 
 .storybook-timeline-node {
@@ -2271,7 +2391,6 @@ h6 {
     border-radius: 10px;
     border: 1px solid var(--border-color);
     background: rgba(255, 255, 255, 0.03);
-    margin-bottom: 10px;
     color: var(--text-secondary);
     font-family: monospace;
     font-size: 11px;
@@ -2299,7 +2418,7 @@ h6 {
 }
 
 .storybook-chapter-select select {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(14, 18, 36, 0.9);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 6px 12px;
@@ -2309,68 +2428,77 @@ h6 {
     outline: none;
     cursor: pointer;
     max-width: 220px;
+    color-scheme: dark;
 }
 
-/* Center Reader View */
-.storybook-reader-view {
+.storybook-chapter-select select:hover {
+    border-color: var(--accent-blue);
+}
+
+.storybook-chapter-select select option {
+    background-color: #0b0e1b;
+    color: #f8fafc;
+    padding: 6px 10px;
+}
+
+/* In-Game Visual Story Stage: Artwork Canvas + Narrative Overlay */
+.storybook-game-stage {
     flex: 1;
     min-height: 0;
-    display: flex;
-    gap: 20px;
-    overflow: hidden;
-    align-items: stretch;
-}
-
-/* Background Artwork Panel - Contained image preserving format without overflow */
-.storybook-artwork-panel {
-    flex: 1.2;
-    min-width: 0;
-    height: 100%;
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    background: #060913;
     position: relative;
+    border-radius: 20px;
+    border: 1px solid var(--border-glow);
+    background: #04060d;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
 }
 
-.storybook-bg-wrapper {
+.storybook-stage-bg-wrapper {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
-    padding: 12px;
+    overflow: hidden;
 }
 
-.storybook-bg-ambient {
+.storybook-stage-bg-ambient {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    filter: blur(36px) opacity(0.35);
-    transform: scale(1.1);
+    filter: blur(44px) brightness(0.4) saturate(1.3);
+    transform: scale(1.15);
     pointer-events: none;
+    user-select: none;
 }
 
-.storybook-bg-contained {
+.storybook-stage-bg-main {
     max-width: 100%;
     max-height: 100%;
     width: auto;
-    height: auto;
+    height: 100%;
     object-fit: contain;
     position: relative;
     z-index: 2;
-    border-radius: 14px;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
-    transition: opacity 0.4s ease;
+    transition: transform 0.4s ease, filter 0.4s ease;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.8));
+    pointer-events: none;
+    user-select: none;
 }
 
-.storybook-bg-placeholder {
+.storybook-game-stage.ui-hidden .storybook-stage-bg-main {
+    transform: scale(1.03);
+}
+
+.storybook-stage-placeholder {
     width: 100%;
     height: 100%;
     display: flex;
@@ -2380,99 +2508,195 @@ h6 {
     color: rgba(255, 255, 255, 0.05);
 }
 
-/* Narrative Text Panel */
-.storybook-text-panel {
-    flex: 1;
-    min-width: 70%;
-    height: 100%;
+/* Floating Stage Tools: Hide UI, Fullscreen */
+.storybook-stage-floating-actions {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 30;
     display: flex;
-    flex-direction: column;
-    overflow-y: auto;
+    align-items: center;
+    gap: 8px;
 }
 
-.storybook-card {
-    height: 100%;
-    background: var(--bg-card);
-    backdrop-filter: blur(24px);
-    border: 1px solid var(--border-glow);
+.stage-tool-pill {
+    background: rgba(10, 14, 28, 0.75);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 6px 14px;
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    transition: var(--transition-smooth);
+}
+
+.stage-tool-pill:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: var(--accent-blue);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.stage-tool-pill.active {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: var(--accent-amber);
+    color: var(--accent-amber);
+}
+
+/* Narrative Dialog Box (Rendered DIRECTLY on top of background image) */
+.storybook-dialog-box {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    z-index: 20;
+    background: linear-gradient(180deg, rgba(12, 17, 34, 0.62) 0%, rgba(7, 10, 22, 0.72) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(56, 189, 248, 0.3);
     border-radius: 20px;
-    padding: 24px 28px;
+    padding: 20px 24px 16px 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 24px rgba(56, 189, 248, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    max-height: 52%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    box-shadow: var(--shadow-premium);
-    overflow-y: auto;
+    cursor: default;
+    user-select: text;
+    animation: dialogSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.storybook-card-header {
+@keyframes dialogSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes dialogCenterFadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, calc(-50% + 16px)) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.storybook-dialog-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 14px;
-    gap: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    gap: 12px;
     flex-shrink: 0;
 }
 
 .storybook-chapter-badge .ch-tag {
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 1.2px;
     color: var(--accent-blue);
     text-transform: uppercase;
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .storybook-chapter-badge .ch-title {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
+    text-shadow: 
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000,
+         0 2px 6px rgba(0, 0, 0, 0.9);
 }
 
 .storybook-meta-pills {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
 }
 
 .meta-pill {
     font-size: 11px;
     font-family: monospace;
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-secondary);
 }
 
 .meta-pill.bgm-pill {
-    background: rgba(99, 102, 241, 0.15);
-    border-color: rgba(99, 102, 241, 0.3);
-    color: #a5b4fc;
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #c7d2fe;
 }
 
-/* Narrative Body */
-.storybook-card-body {
+.storybook-dialog-body {
     flex: 1;
     font-size: 15px;
     line-height: 1.85;
-    color: rgba(248, 250, 252, 0.95);
+    color: #ffffff;
+    font-weight: 500;
+    text-shadow: 
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000,
+         0 2px 4px rgba(0, 0, 0, 0.95),
+         0 0 8px rgba(0, 0, 0, 0.9);
     overflow-y: auto;
-    padding-right: 8px;
+    padding-right: 6px;
+    scrollbar-width: thin;
 }
 
-.storybook-card-body p {
-    margin-bottom: 14px;
+.storybook-dialog-body p {
+    margin-bottom: 12px;
 }
 
-.storybook-card-body p:last-child {
+.storybook-dialog-body p:last-child {
     margin-bottom: 0;
 }
 
-/* Bottom Navigation Bar - Sticky Bottom */
+.storybook-dialog-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.dialog-tap-hint {
+    color: var(--accent-blue);
+    opacity: 0.8;
+}
+
+/* Bottom Navigation Bar */
 .storybook-bottom-nav {
     position: sticky;
     bottom: 0;
@@ -2481,13 +2705,13 @@ h6 {
     background: rgba(14, 18, 36, 0.95);
     backdrop-filter: blur(20px);
     border: 1px solid var(--border-glow);
-    border-radius: 20px;
-    padding: 10px 20px;
+    border-radius: 18px;
+    padding: 8px 18px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-top: 12px;
+    gap: 12px;
+    margin-top: 10px;
     box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.4);
 }
 
@@ -2505,6 +2729,7 @@ h6 {
     font-weight: 500;
     cursor: pointer;
     transition: var(--transition-smooth);
+    white-space: nowrap;
 }
 
 .storybook-nav-btn:hover:not(:disabled) {
@@ -2523,6 +2748,12 @@ h6 {
     background: rgba(34, 197, 94, 0.15);
     border-color: rgba(34, 197, 94, 0.4);
     color: var(--accent-green);
+}
+
+.storybook-nav-btn.ui-toggle-btn.active {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: var(--accent-amber);
 }
 
 .storybook-scene-counter {
@@ -2562,5 +2793,479 @@ h6 {
 .storybook-footer-right {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+}
+
+/* ==========================================================================
+   Responsive Design Breakpoints & Touch-Friendly Adaptations
+   ========================================================================== */
+
+/* Tablets & Small Laptops (<= 1024px) */
+@media (max-width: 1024px) {
+    .content-container {
+        padding: 24px 20px;
+    }
+
+    .job-detail-layout {
+        gap: 20px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+    }
+}
+
+/* Tablets & Mobile Screens (<= 900px): Collapsible Drawer Sidebar */
+@media (max-width: 900px) {
+    .app-container {
+        position: relative;
+        overflow-x: hidden;
+    }
+
+    /* Off-screen Drawer Sidebar */
+    .app-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        max-width: 80vw;
+        height: 100vh;
+        z-index: 1200;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .app-sidebar.open {
+        transform: translateX(0);
+    }
+
+    /* Touch Backdrop */
+    .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(6px);
+        z-index: 1100;
+        animation: fadeIn 0.25s ease;
+    }
+
+    /* Mobile Menu Toggle & Header adjustments */
+    .mobile-menu-btn {
+        display: flex;
+    }
+
+    .sidebar-close-btn {
+        display: flex;
+    }
+
+    .main-header {
+        height: 64px;
+        padding: 0 16px;
+    }
+
+    .header-title h2 {
+        font-size: 17px;
+    }
+
+    .header-title p {
+        display: none;
+    }
+
+    .lang-selector {
+        padding: 6px 10px;
+    }
+
+    .lang-selector select {
+        font-size: 12px;
+    }
+
+    .content-container {
+        padding: 16px 12px;
+    }
+
+    /* Audio Layout: Stacked instead of side-by-side */
+    .audio-layout {
+        flex-direction: column;
+        height: auto;
+        gap: 16px;
+    }
+
+    .player-controls-panel {
+        width: 100%;
+    }
+
+    .audio-table-panel {
+        height: 450px;
+    }
+
+    /* Storybook adjustments */
+    .storybook-container {
+        height: calc(100vh - 90px);
+    }
+
+    .storybook-dialog-box {
+        padding: 16px;
+        max-height: 58%;
+    }
+
+    .storybook-dialog-body {
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    .floating-player-reopen-btn.storybook-offset,
+    .floating-player-minimized.storybook-offset,
+    .floating-player-card.storybook-offset {
+        bottom: 80px;
+    }
+}
+
+/* Mobile Phones (<= 768px): Master-Detail Stages & Stacked Modals */
+@media (max-width: 768px) {
+    /* Stages Tab: Mobile Master-Detail View */
+    .stages-layout {
+        flex-direction: column;
+        height: calc(100vh - 100px);
+    }
+
+    .stages-layout.has-active-chapter .chapters-panel {
+        display: none;
+    }
+
+    .stages-layout:not(.has-active-chapter) .stages-panel {
+        display: none;
+    }
+
+    .stages-layout .chapters-panel {
+        width: 100%;
+        height: 100%;
+    }
+
+    .stages-layout .stages-panel {
+        width: 100%;
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    .stages-mobile-back-btn {
+        display: inline-flex;
+    }
+
+    /* Modals Responsive */
+    .modal-card {
+        width: 95%;
+        max-height: 92vh;
+        padding: 20px 16px;
+        border-radius: 20px;
+    }
+
+    .modal-close-btn {
+        top: 14px;
+        right: 14px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .job-detail-layout {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .modal-char-meta {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .modal-tabs {
+        overflow-x: auto;
+        padding-bottom: 8px;
+        scrollbar-width: thin;
+    }
+
+    .modal-tab-btn {
+        padding: 6px 14px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    /* Storybook Mobile: Centered & See-through Dialog Card */
+    .storybook-dialog-box {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        bottom: auto;
+        right: auto;
+        width: calc(100% - 28px);
+        max-width: 480px;
+        max-height: 68%;
+        background: linear-gradient(180deg, rgba(8, 12, 28, 0.48) 0%, rgba(5, 8, 20, 0.60) 100%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(56, 189, 248, 0.28);
+        border-radius: 18px;
+        padding: 16px 20px 14px 20px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 20px rgba(56, 189, 248, 0.1);
+        text-align: center;
+        animation: dialogCenterFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .storybook-dialog-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+    }
+
+    .storybook-chapter-badge {
+        text-align: center;
+    }
+
+    .storybook-dialog-body {
+        text-align: center;
+        font-size: 14.5px;
+        line-height: 1.75;
+        color: #ffffff;
+        font-weight: 500;
+        text-shadow: 
+            -1px -1px 0 #000,
+             1px -1px 0 #000,
+            -1px  1px 0 #000,
+             1px  1px 0 #000,
+             0 2px 4px rgba(0, 0, 0, 0.95),
+             0 0 8px rgba(0, 0, 0, 0.9);
+    }
+
+    .storybook-dialog-footer {
+        justify-content: center;
+        gap: 12px;
+    }
+}
+
+/* Small Mobile Phones (<= 640px): Full Touch Polish */
+@media (max-width: 640px) {
+    .content-container {
+        padding: 10px 8px;
+    }
+
+    /* Dashboard */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        padding: 14px 12px;
+        border-radius: 14px;
+    }
+
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+        margin-right: 10px;
+        border-radius: 12px;
+    }
+
+    .stat-info h3 {
+        font-size: 15px;
+    }
+
+    .stat-info p {
+        font-size: 11px;
+    }
+
+    .welcome-box {
+        padding: 18px 16px;
+        border-radius: 18px;
+    }
+
+    .welcome-text h3 {
+        font-size: 18px;
+    }
+
+    .welcome-text p {
+        font-size: 12px;
+    }
+
+    .welcome-decoration-img {
+        display: none;
+    }
+
+    /* Grids: Characters, Companions, Items, Skills, Assets */
+    .characters-grid,
+    .buddies-grid,
+    .items-grid,
+    .skills-grid,
+    .assets-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 10px;
+    }
+
+    .filter-bar {
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .search-input-wrapper {
+        min-width: 100%;
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .filters-group {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .filters-group select {
+        flex: 1;
+        min-width: 110px;
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    /* Storybook Mobile Polish */
+    .storybook-container {
+        height: calc(100vh - 84px);
+    }
+
+    .storybook-timeline-header {
+        padding: 6px 12px;
+        gap: 8px;
+    }
+
+    .storybook-timeline-title {
+        display: none;
+    }
+
+    .storybook-timeline-node {
+        min-width: 28px;
+        height: 28px;
+        font-size: 10px;
+    }
+
+    .storybook-chapter-select select {
+        max-width: 130px;
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+
+    .storybook-dialog-box {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        bottom: auto;
+        right: auto;
+        width: calc(100% - 20px);
+        max-width: 420px;
+        padding: 14px 16px 10px 16px;
+        max-height: 72%;
+        background: linear-gradient(180deg, rgba(8, 12, 28, 0.44) 0%, rgba(5, 8, 20, 0.56) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 16px;
+        text-align: center;
+    }
+
+    .storybook-chapter-badge .ch-title {
+        font-size: 15px;
+    }
+
+    .storybook-dialog-body {
+        text-align: center;
+        font-size: 13.5px;
+        line-height: 1.65;
+        color: #ffffff;
+        font-weight: 500;
+        text-shadow: 
+            -1px -1px 0 #000,
+             1px -1px 0 #000,
+            -1px  1px 0 #000,
+             1px  1px 0 #000,
+             0 2px 4px rgba(0, 0, 0, 0.95),
+             0 0 8px rgba(0, 0, 0, 0.9);
+    }
+
+    .storybook-bottom-nav {
+        padding: 6px 10px;
+        border-radius: 14px;
+        margin-top: 6px;
+    }
+
+    .storybook-nav-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .nav-btn-text {
+        display: none;
+    }
+
+    .storybook-scene-counter .counter-label {
+        font-size: 11px;
+    }
+
+    .stage-pill-label {
+        display: none;
+    }
+
+    .stage-tool-pill {
+        padding: 6px 10px;
+    }
+
+    /* Floating Audio Player on Mobile */
+    .floating-player-card {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: 12px;
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .floating-player-minimized {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: 12px;
+    }
+
+    .floating-player-reopen-btn {
+        bottom: 12px;
+        right: 10px;
+        max-width: calc(100vw - 20px);
+    }
+
+    /* In Storybook on mobile: elevate above bottom nav bar */
+    .floating-player-reopen-btn.storybook-offset {
+        bottom: 74px;
+        right: 12px;
+    }
+
+    .floating-player-minimized.storybook-offset {
+        bottom: 74px;
+        right: 12px;
+        left: auto;
+        width: auto;
+        max-width: calc(100vw - 24px);
+    }
+
+    .floating-player-card.storybook-offset {
+        bottom: 74px;
+        left: 10px;
+        right: 10px;
+    }
 }

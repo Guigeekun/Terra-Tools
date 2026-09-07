@@ -23,6 +23,7 @@ import BuddyModal from './components/modals/BuddyModal';
 function AppContent() {
   const { loading } = useGameData();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -32,9 +33,24 @@ function AppContent() {
     <>
       {loading && <LoadingOverlay />}
       <div className="app-container">
-        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        {mobileSidebarOpen && (
+          <div 
+            className="sidebar-backdrop active" 
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+        <Sidebar 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab} 
+          isOpen={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
+        />
         <main className="app-main">
-          <Header activeTab={activeTab} />
+          <Header 
+            activeTab={activeTab} 
+            onToggleSidebar={() => setMobileSidebarOpen(prev => !prev)}
+          />
           <div className="content-container">
             {activeTab === 'dashboard' && <DashboardTab onTabChange={setActiveTab} />}
             {activeTab === 'storybook' && <StorybookTab />}

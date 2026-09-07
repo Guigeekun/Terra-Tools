@@ -1,15 +1,25 @@
 import { TAB_META } from '../../utils/constants';
 import { useGameData } from '../../contexts/GameDataContext';
 
-export default function Header({ activeTab }) {
+export default function Header({ activeTab, onToggleSidebar }) {
   const { lang, setLang } = useGameData();
   const meta = TAB_META[activeTab] || {};
 
   return (
     <header className="main-header">
-      <div className="header-title">
-        <h2>{meta.title || 'TerraTools'}</h2>
-        <p>{meta.desc || ''}</p>
+      <div className="header-left">
+        <button 
+          className="mobile-menu-btn" 
+          onClick={onToggleSidebar}
+          aria-label="Toggle navigation menu"
+          title="Open Menu"
+        >
+          <i className="fa-solid fa-bars"></i>
+        </button>
+        <div className="header-title">
+          <h2>{meta.title || 'TerraTools'}</h2>
+          <p>{meta.desc || ''}</p>
+        </div>
       </div>
       <div className="header-actions">
         <div className="lang-selector">

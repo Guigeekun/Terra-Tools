@@ -6,6 +6,9 @@ export function AudioProvider({ children }) {
   const [activeTrack, setActiveTrack] = useState(null);
   const [playlistCategory, setPlaylistCategory] = useState('bgm'); // 'bgm' or 'se'
   const [isPlaying, setIsPlaying] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
+  const userPausedRef = useRef(false);
+
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.8);
@@ -43,17 +46,23 @@ export function AudioProvider({ children }) {
   const handlePlay = () => setIsPlaying(true);
   const handlePause = () => setIsPlaying(false);
 
+  // Explicit user action to play a track
   const playTrack = useCallback((track, category = 'bgm') => {
     if (!track) return;
 
     const catLower = (category || 'bgm').toLowerCase();
     const src = track.url || `/api/play/${catLower}/${track.filename}`;
 
+    // User explicitly triggered play
+    userPausedRef.current = false;
+    setUserPaused(false);
+
     setActiveTrack({ ...track, category: catLower });
     setPlaylistCategory(catLower);
     setIsFloatingOpen(true);
 
     if (audioRef.current) {
+      audioRef.current.loop = (catLower === 'bgm');
       audioRef.current.src = src;
       audioRef.current.play().then(() => {
         setIsPlaying(true);
@@ -61,13 +70,60 @@ export function AudioProvider({ children }) {
     }
   }, []);
 
+  // Sync BGM for Storybook without unpausing if user manually paused
+  const syncStoryBgm = useCallback((track, category = 'bgm') => {
+    if (!track) return;
+
+    const catLower = (category || 'bgm').toLowerCase();
+    const src = track.url || `/api/play/${catLower}/${track.filename}`;
+
+    setActiveTrack({ ...track, category: catLower });
+    setPlaylistCategory(catLower);
+
+    if (audioRef.current) {
+      audioRef.current.loop = (catLower === 'bgm');
+
+      const currentSrc = audioRef.current.currentSrc || audioRef.current.src;
+      const isSameSrc = currentSrc && (currentSrc.endsWith(src) || currentSrc === src);
+
+      if (!isSameSrc) {
+        audioRef.current.src = src;
+      }
+
+      // CRITICAL: If the user paused the music, NEVER unpause by itself!
+      if (userPausedRef.current) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+        return;
+      }
+
+      // User has not paused, so play new scene track
+      if (!isSameSrc || audioRef.current.paused) {
+        audioRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(e => {
+          console.warn('Autoplay prevented or waiting for interaction:', e);
+        });
+      }
+    }
+  }, []);
+
   const togglePlayPause = useCallback(() => {
     if (!audioRef.current || !activeTrack) return;
 
     if (isPlaying) {
+      // User explicitly paused: remember this so nothing auto-resumes
+      userPausedRef.current = true;
+      setUserPaused(true);
       audioRef.current.pause();
+      setIsPlaying(false);
     } else {
-      audioRef.current.play().catch(e => console.error('Audio play error:', e));
+      // User explicitly resumed
+      userPausedRef.current = false;
+      setUserPaused(false);
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(e => console.error('Audio play error:', e));
     }
   }, [isPlaying, activeTrack]);
 
@@ -91,6 +147,8 @@ export function AudioProvider({ children }) {
   }, []);
 
   const stopTrack = useCallback(() => {
+    userPausedRef.current = true;
+    setUserPaused(true);
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -119,6 +177,7 @@ export function AudioProvider({ children }) {
         activeTrack,
         playlistCategory,
         isPlaying,
+        userPaused,
         currentTime,
         duration,
         volume,
@@ -126,6 +185,7 @@ export function AudioProvider({ children }) {
         isMinimized,
         isFloatingOpen,
         playTrack,
+        syncStoryBgm,
         togglePlayPause,
         seek,
         setVolume,
