@@ -8,11 +8,55 @@ from backend.database import (
     BGM_MAP,
     find_local_asset,
     resolve_section_title,
-    get_chapter_stories_by_section
+    translate_stage_title,
+    get_chapter_stories_by_section,
+    get_chapter_banner,
+    get_section_banner,
+)
+from backend.stage_translations import (
+    derive_chapter_display_name,
+    RANDOM_CHAPTER_RELATED,
+    is_random_section,
 )
 
 router = APIRouter(tags=["stages"])
 
+
+def build_possible_enemies_pool(
+    related_chapter_nos: list[int],
+    layout_db: dict,
+    enemies_by_id: dict,
+) -> list[dict]:
+    """Collect the unique set of enemies that appear across the fixed-layout
+    sibling chapters, to use as the 'possible enemies' pool for a random section."""
+    seen_ids: set = set()
+    pool: list[dict] = []
+
+    for ch_no in related_chapter_nos:
+        ch_layout = layout_db.get(str(ch_no), {})
+        for _sec_key, items in ch_layout.items():
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                for enemy in item.get("enemies", []):
+                    eid = enemy.get("enemy_id")
+                    evar = enemy.get("enemy_var", "")
+                    if eid is None or eid in seen_ids:
+                        continue
+                    seen_ids.add(eid)
+                    enemy_info = enemies_by_id.get(eid, {})
+                    pool.append({
+                        "enemy_id":  eid,
+                        "enemy_var": evar,
+                        "NameString": enemy_info.get("NameString"),
+                        "HP":  enemy_info.get("HP"),
+                        "ATK": enemy_info.get("ATK"),
+                        "DEF": enemy_info.get("DEF"),
+                        "LV":  enemy_info.get("LV"),
+                        "ImageID": enemy_info.get("ImageID"),
+                    })
+
+    return pool
 
 @router.get('/api/chapters')
 def get_chapters():
@@ -47,6 +91,7 @@ def get_chapters():
             "chapterNo": ch_num,
             "title": chapter.get("title", ""),
             "icon": chapter.get("icon", ""),
+            "banner_url": get_chapter_banner(ch_num),
             "unlockType": chapter.get("unlockType", 0),
             "unlockValue": chapter.get("unlockValue", 0),
             "stories": stories,
@@ -73,14 +118,14 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
     filtered_chapters = []
     for ch in chapters:
         ch_no = ch.get("chapterNo", 0)
-        title = f"Chapter {ch_no}"
-        if strings_db.get("scenarioSet") and ch_no - 1 < len(strings_db["scenarioSet"]):
-            title = strings_db["scenarioSet"][ch_no - 1].get("en", title)
+        display_name = derive_chapter_display_name(ch, ch_no, strings_db, gamedata.get("translation_lookup", {}))
 
-        if q and not (q in str(ch_no) or q in title.lower()):
+
+        if q and not (q in str(ch_no) or q in display_name.lower()):
             continue
 
-        filtered_chapters.append(ch)
+        filtered_chapters.append((ch, display_name))
+
 
     total = len(filtered_chapters)
     if page is not None:
@@ -90,10 +135,18 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
         target_chapters = filtered_chapters
 
     result_chapters = []
-    for ch in target_chapters:
+    for ch, display_name in target_chapters:
         chapter_no = str(ch.get("chapterNo", ""))
+        ch_no_int = ch.get("chapterNo", 0)
         ch_layout = layout_db.get(chapter_no, {})
         book_sec_stories = get_chapter_stories_by_section(chapter_no)
+
+        # Pre-build the possible enemies pool for random sections of this chapter
+        related_chs = RANDOM_CHAPTER_RELATED.get(ch_no_int, [])
+        possible_enemies_pool = (
+            build_possible_enemies_pool(related_chs, layout_db, enemies_by_id)
+            if related_chs else []
+        )
 
         result_sections = []
         for idx, sec in enumerate(ch.get("sections", [])):
@@ -101,6 +154,8 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
             sec_id = str(idx + 1)
             sec_num = idx + 1
             sec_copy["section_index"] = sec_num
+            sec_copy["banner_url"] = get_section_banner(ch_no_int, sec_num)
+
 
             title_info = resolve_section_title(ch.get("chapterNo", chapter_no), sec_num, sec.get("title", ""))
             sec_copy["title"] = title_info["title"]
@@ -161,10 +216,17 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
                         })
             sec_copy["dropBuddies"] = resolved_buddies
 
+            # Surface the localized section info text (level range, tips, etc.)
+            sec_copy["info"] = sec.get("info", {})
+
+            # Detect if this section has a provably random enemy layout
+            sec_title_raw = sec.get("title", "")
+            random_reason = is_random_section(sec_title_raw)
+
             sec_layout = ch_layout.get(sec_id)  # list of {type:'story'|'wave', ...}
 
             if sec_layout:
-                # Use exact parsed Lua sequence (Chapters 1-7, 6000-6006)
+                # Use exact parsed Lua sequence (Chapters 1-7 via decompiled Lua, 6000-6006)
                 sequence = []
                 for item in sec_layout:
                     item_type = item.get("type", "wave")
@@ -202,7 +264,7 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
                                 enemy_detail["LV"] = enemy_info.get("LV")
                                 enemy_detail["ImageID"] = enemy_info.get("ImageID")
                             enemies_list.append(enemy_detail)
-                        sequence.append({
+                        wave_entry = {
                             "type": "wave",
                             "wave_index": item.get("wave_index"),
                             "battle_name": item.get("battle_name"),
@@ -211,10 +273,15 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
                             "bg_url": f"/api/bg/{w_bg}" if w_bg in BG_MAP else None,
                             "bgm_url": f"/api/play/BGM/{BGM_MAP[w_bgm]}" if w_bgm in BGM_MAP else None,
                             "enemies": enemies_list
-                        })
+                        }
+                        if random_reason:
+                            wave_entry["random_layout"] = True
+                            wave_entry["random_layout_reason"] = random_reason
+                            wave_entry["possible_enemies"] = possible_enemies_pool
+                        sequence.append(wave_entry)
                 sec_copy["sequence"] = sequence
             else:
-                # Synthesize section sequence from BattleData + BookData (Chapters 8-42, 100+, etc.)
+                # Synthesize section sequence from BattleData + BookData (native IL2CPP chapters: 8+, 100+, 1000+, etc.)
                 sequence = []
                 sec_stories = book_sec_stories.get(sec_num, [])
                 sequence.extend(sec_stories)
@@ -224,7 +291,7 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
 
                 battle_cnt = sec.get("battleCnt", 0)
                 for w in range(1, battle_cnt + 1):
-                    sequence.append({
+                    wave_entry = {
                         "type": "wave",
                         "wave_index": w,
                         "battle_name": f"Wave {w}",
@@ -233,7 +300,12 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
                         "bg_url": f"/api/bg/{default_bg}" if default_bg in BG_MAP else None,
                         "bgm_url": f"/api/play/BGM/{BGM_MAP[default_bgm]}" if default_bgm in BGM_MAP else None,
                         "enemies": []
-                    })
+                    }
+                    if random_reason:
+                        wave_entry["random_layout"] = True
+                        wave_entry["random_layout_reason"] = random_reason
+                        wave_entry["possible_enemies"] = possible_enemies_pool
+                    sequence.append(wave_entry)
                 sec_copy["sequence"] = sequence
 
             if sec.get("battleCnt", 0) > 0 or sec_layout or sec_copy.get("sequence"):
@@ -241,6 +313,9 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
 
         ch_copy = dict(ch)
         ch_copy["sections"] = result_sections
+        ch_copy["display_name"] = display_name
+        ch_copy["banner_url"] = get_chapter_banner(ch_no_int)
+
         result_chapters.append(ch_copy)
 
     if page is not None:

@@ -37,6 +37,8 @@ export function getSectionSubtitle(chapterNo, secNum, lang = 'en', strings) {
   return null;
 }
 
+import { translateStageTitleFallback } from './stageTranslations';
+
 export function translateStageTitle(titleOrSec, lang = 'en', strings, chapterNo, secNum) {
   if (!titleOrSec && !chapterNo) return 'Section Details';
 
@@ -62,36 +64,11 @@ export function translateStageTitle(titleOrSec, lang = 'en', strings, chapterNo,
     return ch && sec ? `Stage ${ch}-${sec}` : 'Section Details';
   }
 
-  const rawTitle = String(titleOrSec);
-  const match = rawTitle.match(/^\[(.*?)\]\s*(.*?)\s*-\s*(\d+)$/);
-  if (match) {
-    const chName = match[1];
-    const speciesName = match[2];
-    const num = match[3];
+  // If lang is Japanese, return original raw string
+  if (lang === 'ja') return String(titleOrSec);
 
-    let chTrans = chName;
-    if (strings?.scenarioSet) {
-      const entry = strings.scenarioSet.find(x => x.ja && x.ja.includes(chName));
-      if (entry && entry[lang]) {
-        chTrans = entry[lang].replace(/^Ch\s*\d+:\s*/i, '').replace(/^第\d+章\s*/, '');
-      }
-    }
-
-    const speciesMap = {
-      'ヒト': speciesTranslations[0],
-      'トカゲ': speciesTranslations[1],
-      'ケモノ': speciesTranslations[2],
-      '岩人': speciesTranslations[3]
-    };
-
-    let spTrans = speciesName;
-    if (speciesMap[speciesName]?.[lang]) {
-      spTrans = speciesMap[speciesName][lang];
-    }
-
-    return `[${chTrans}] ${spTrans} - ${num}`;
-  }
-
-  return rawTitle;
+  return translateStageTitleFallback(titleOrSec);
 }
+
+
 

@@ -434,7 +434,7 @@ def run_decompile_and_parse_all(output_dir: Path) -> None:
 
 
 def run_extract_native_stages(apk_path: Path, output_dir: Path) -> None:
-    """Merge native ARM64 stage layouts (chapters 8-42) into StagesLayout.json.
+    """Merge native ARM64 stage layouts (all IL2CPP chapters: 8+, 100+, 1000+, etc.) into StagesLayout.json.
     Requires dump.cs in user-data/ and llvm-objdump in PATH."""
     import subprocess, json as _json
     scripts_dir = Path(__file__).resolve().parent
@@ -453,7 +453,7 @@ def run_extract_native_stages(apk_path: Path, output_dir: Path) -> None:
         print("  Skipped: llvm-objdump not found in PATH.")
         return
 
-    print("  Running extract_native_stages.py (chapters 8–42)...")
+    print("  Running extract_native_stages.py (all IL2CPP chapters)...")
     try:
         result = subprocess.run(
             [sys.executable, str(scripts_dir / "extract_native_stages.py")],
@@ -829,8 +829,8 @@ def main() -> int:
     run_il2cppdumper(apk_path, output_dir)
     print()
 
-    # Step 8: Extract native ARM64 stage layouts (chapters 8-42)
-    print("[8/8] Extracting native stage layouts (chapters 8–42)...")
+    # Step 8: Extract all native IL2CPP stage layouts (chapters 8+, 100+, 1000+, 2000+, etc.)
+    print("[8/8] Extracting native stage layouts (all IL2CPP chapters)...")
     run_extract_native_stages(apk_path, output_dir)
     print()
 

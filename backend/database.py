@@ -8,14 +8,18 @@ gamedata: dict = {}
 
 BG_MAP: dict[int, str] = {}
 BGM_MAP: dict[int, str] = {}
+CHAPTER_BANNER_MAP: dict[int, str] = {}
+SECTION_BANNER_MAP: dict[tuple[int, int], str] = {}
 ASSET_INDEX: dict = {}
 
 
 def build_media_indices():
-    """Build fast lookup tables for background images and BGM track files."""
-    global BG_MAP, BGM_MAP
-    BG_MAP = {}
-    BGM_MAP = {}
+    """Build fast lookup tables for background images, BGM track files, and stage banners."""
+    global BG_MAP, BGM_MAP, CHAPTER_BANNER_MAP, SECTION_BANNER_MAP
+    BG_MAP.clear()
+    BGM_MAP.clear()
+    CHAPTER_BANNER_MAP.clear()
+    SECTION_BANNER_MAP.clear()
 
     bg_dir = os.path.join(EXTRACTED_DIR, "BG")
     if os.path.exists(bg_dir):
@@ -32,6 +36,56 @@ def build_media_indices():
                 m = _re.search(r"bgm_?(\d+)", f, _re.IGNORECASE)
                 if m:
                     BGM_MAP[int(m.group(1))] = f
+
+    banner_dir = os.path.join(EXTRACTED_DIR, "Banner")
+    if os.path.exists(banner_dir):
+        for f in os.listdir(banner_dir):
+            if f.endswith(".png"):
+                clean = _re.sub(r"^[0-9a-f]{32}", "", f)
+                base = clean[:-4]
+                img_url = f"/api/assets/image?path={EXTRACTED_DIR}/Banner/{f}".replace("\\", "/")
+
+                # Match section banners: sp{ch}-{sec}, mp{ch}-{sec}
+                m_sec = _re.match(r"^(?:sp|mp)(\d+)-(\d+)(?:_.*)?$", base)
+                if m_sec:
+                    cno, sno = int(m_sec.group(1)), int(m_sec.group(2))
+                    SECTION_BANNER_MAP[(cno, sno)] = img_url
+                    continue
+
+                # Match chapter banners: sp{ch}, mp{ch}
+                m_ch = _re.match(r"^(?:sp|mp)(\d+)(?:_.*)?$", base)
+                if m_ch:
+                    cno = int(m_ch.group(1))
+                    CHAPTER_BANNER_MAP[cno] = img_url
+                    continue
+
+
+def get_chapter_banner(chapter_no: int | str) -> str | None:
+    """Return the banner image URL for event/special chapters, or fallback to section 1 banner if available."""
+    try:
+        cno = int(chapter_no)
+    except (ValueError, TypeError):
+        return None
+    # Main story chapters (1-42, 100-119) are on the world map and have no banners
+    if (1 <= cno <= 42) or (100 <= cno <= 119):
+        return None
+    if cno in CHAPTER_BANNER_MAP:
+        return CHAPTER_BANNER_MAP[cno]
+    return SECTION_BANNER_MAP.get((cno, 1))
+
+
+def get_section_banner(chapter_no: int | str, sec_idx: int | str) -> str | None:
+    """Return the banner image URL for a specific chapter section."""
+    try:
+        cno = int(chapter_no)
+        sno = int(sec_idx)
+    except (ValueError, TypeError):
+        return None
+    # Main story chapters (1-42, 100-119) have no stage banners
+    if (1 <= cno <= 42) or (100 <= cno <= 119):
+        return None
+    return SECTION_BANNER_MAP.get((cno, sno))
+
 
 
 def strip_story_markup(text: str) -> str:
@@ -125,28 +179,51 @@ def get_chapter_stories_by_section(chapter_no: int | str) -> dict[int, list[dict
     return stories_by_sec
 
 
+from backend.stage_translations import (
+    translate_stage_title,
+    build_dynamic_translation_lookup,
+)
+
+
 def get_main_story_section_scenario_index(chapter_no: int | str, sec_idx: int | str) -> int | None:
-    """Return the 0-based scenarioSet index for a main story chapter (1-42) and section (1-indexed)."""
+    """Return the 0-based scenarioSet index for a main story chapter (1-42 or 100-119) and section (1-indexed)."""
     try:
         ch = int(chapter_no)
         sec = int(sec_idx)
     except (ValueError, TypeError):
         return None
-    if not (1 <= ch <= 42):
-        return None
-    if ch == 1:
-        base = 57
-    elif ch == 2:
-        base = 62
-    elif ch == 3:
-        base = 67
-    else:
-        base = 72 + (ch - 4) * 10
-    return base + (sec - 1)
+
+    # Chapters 1-42
+    if 1 <= ch <= 42:
+        if ch == 1:
+            base = 57
+        elif ch == 2:
+            base = 62
+        elif ch == 3:
+            base = 67
+        else:
+            base = 72 + (ch - 4) * 10
+        return base + (sec - 1)
+
+    # Chapters 100-104 (New Chapters 1-5)
+    if 100 <= ch <= 104:
+        ch_offsets = {100: 455, 101: 459, 102: 464, 103: 469, 104: 474}
+        base = ch_offsets.get(ch, 455)
+        return base + (sec - 1)
+
+    # Chapters 110-114 (Descent of the Five)
+    if 110 <= ch <= 114:
+        return 475 + (ch - 110)
+
+    # Chapters 115-119 (Descent of the Five Hard)
+    if 115 <= ch <= 119:
+        return 480 + (ch - 115)
+
+    return None
 
 
 def resolve_section_title(chapter_no: int | str, sec_idx: int | str, raw_title: str = "") -> dict:
-    """Resolve a localized section title dictionary and subtitle dictionary."""
+    """Resolve a localized section title dictionary and subtitle dictionary with full dynamic English translation."""
     sc_idx = get_main_story_section_scenario_index(chapter_no, sec_idx)
     scenario_set = gamedata.get("strings", {}).get("scenarioSet", [])
     langs = ["en", "ja", "fr", "de", "es", "zh_tw"]
@@ -172,12 +249,24 @@ def resolve_section_title(chapter_no: int | str, sec_idx: int | str, raw_title: 
             "title": title_loc.get("en", f"Stage {chapter_no}-{sec_idx}")
         }
 
-    # Non-main story chapters or stages without scenarioSet entry
-    fallback_title = raw_title.strip() if raw_title else f"Stage {chapter_no}-{sec_idx}"
+    # Non-scenario chapters: translate Japanese raw_title dynamically from game database terms
+    lookup = gamedata.get("translation_lookup", {})
+    en_title = translate_stage_title(raw_title, lookup) if raw_title else f"Stage {chapter_no}-{sec_idx}"
+    ja_title = raw_title.strip() if raw_title else f"Stage {chapter_no}-{sec_idx}"
+
+    title_loc = {
+        "en": en_title,
+        "ja": ja_title,
+        "fr": en_title,
+        "de": en_title,
+        "es": en_title,
+        "zh_tw": ja_title,
+    }
+
     return {
-        "subtitle": {},
-        "title_loc": {lang: fallback_title for lang in langs},
-        "title": fallback_title
+        "subtitle": {"en": en_title, "ja": ja_title},
+        "title_loc": title_loc,
+        "title": en_title
     }
 
 
@@ -216,6 +305,10 @@ def load_databases():
     # Build BG and BGM media indices
     build_media_indices()
     print(f"Built media indices: {len(BG_MAP)} BGs, {len(BGM_MAP)} BGMs")
+
+    # Build dynamic translation lookup
+    gamedata["translation_lookup"] = build_dynamic_translation_lookup(gamedata)
+    print(f"Built dynamic translation lookup: {len(gamedata['translation_lookup'])} terms")
 
 
 def build_asset_indices():

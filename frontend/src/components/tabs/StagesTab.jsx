@@ -24,12 +24,21 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
     setOpenSections(prev => ({ ...prev, [idx]: !prev[idx] }));
   };
 
-  const getChapterName = (chapterNo) => {
-    if (strings?.scenarioSet?.[chapterNo - 1]) {
+  /** Best display name for a chapter: prefer API-resolved display_name, fall back to scenarioSet, then "Chapter N". */
+  const getChapterName = (ch) => {
+    if (!ch) return '';
+    const chapterNo = ch.chapterNo;
+    if (lang === 'ja') {
+      if (ch.sections?.[0]?.title) return ch.sections[0].title;
+      if (strings?.scenarioSet?.[chapterNo - 1]?.ja) return strings.scenarioSet[chapterNo - 1].ja;
+    }
+    if (ch.display_name) return ch.display_name;
+    if (chapterNo >= 1 && chapterNo <= 42 && strings?.scenarioSet?.[chapterNo - 1]) {
       return loc(strings.scenarioSet[chapterNo - 1], lang);
     }
     return `Chapter ${chapterNo}`;
   };
+
 
   const isBgmPlaying = (bgmID) => {
     if (!isPlaying || !activeTrack || !bgmID) return false;
@@ -84,8 +93,18 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
           ) : (
             <>
               {stages.map(ch => (
-                <button key={ch.chapterNo} className={`chapter-btn ${currentChapter?.chapterNo === ch.chapterNo ? 'active' : ''}`} onClick={() => setCurrentChapter(ch)}>
-                  <span>{getChapterName(ch.chapterNo)}</span>
+                <button
+                  key={ch.chapterNo}
+                  className={`chapter-btn ${currentChapter?.chapterNo === ch.chapterNo ? 'active' : ''} ${ch.banner_url ? 'has-banner' : ''}`}
+                  onClick={() => setCurrentChapter(ch)}
+                >
+                  {ch.banner_url && (
+                    <div
+                      className="chapter-btn-bg"
+                      style={{ backgroundImage: `url(${ch.banner_url})` }}
+                    />
+                  )}
+                  <span className="chapter-btn-title">{getChapterName(ch)}</span>
                   <span className="badge" style={{ fontSize: 9, padding: '2px 6px' }}>{ch.sections ? ch.sections.length : 0} Sect</span>
                 </button>
               ))}
@@ -112,7 +131,19 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
               <i className="fa-solid fa-arrow-left"></i>
               <span>Back to Chapters</span>
             </button>
-            <h3 style={{ marginBottom: 20 }}>{getChapterName(currentChapter.chapterNo)}</h3>
+
+            {currentChapter.banner_url && (
+              <div className="chapter-banner-hero">
+                <img
+                  src={currentChapter.banner_url}
+                  alt={getChapterName(currentChapter)}
+                  className="chapter-banner-img"
+                  onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
+                />
+              </div>
+            )}
+
+            <h3 style={{ marginBottom: 20 }}>{getChapterName(currentChapter)}</h3>
 
             {(!currentChapter.sections || currentChapter.sections.length === 0) ? (
               <p className="stages-panel-placeholder">No stages/sections registered in this chapter.</p>
@@ -160,12 +191,32 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
               const sequence = sec.sequence || [];
               const waveItems = sequence.filter(i => i.type === 'wave');
               const storyItems = sequence.filter(i => i.type === 'story');
+              const hasRandomWaves = waveItems.some(w => w.random_layout);
+              const randomReason = hasRandomWaves ? waveItems.find(w => w.random_layout)?.random_layout_reason : null;
+              // Info text from BattleData (level range, tips, etc.)
+              const infoText = sec.info ? (sec.info[lang] || sec.info.en || '') : '';
 
               return (
                 <div key={idx} className="stage-item-card">
+                  {sec.banner_url && (
+                    <div className="stage-section-banner">
+                      <img
+                        src={sec.banner_url}
+                        alt={translateStageTitle(sec, lang, strings, currentChapter.chapterNo, idx + 1)}
+                        className="stage-section-banner-img"
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
+                      />
+                    </div>
+                  )}
                   <div className="stage-item-header">
                     <span className="stage-item-title">{translateStageTitle(sec, lang, strings, currentChapter.chapterNo, idx + 1)}</span>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {hasRandomWaves && (
+                        <span className="badge" style={{ background: 'rgba(234,179,8,0.15)', color: '#fde68a', border: '1px solid rgba(234,179,8,0.35)', fontSize: 9, padding: '2px 7px' }}>
+                          <i className="fa-solid fa-shuffle" style={{ marginRight: 3 }}></i>Random
+                        </span>
+                      )}
                       {storyItems.length > 0 && (
                         <span className="badge" style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)', fontSize: 9, padding: '2px 7px' }}>
                           <i className="fa-solid fa-book" style={{ marginRight: 3 }}></i>{storyItems.length}
@@ -179,6 +230,15 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
                     <span><i className="fa-solid fa-circle-exclamation"></i> Rec. Level: {sec.assumedLevel || '-'}</span>
                     <span><i className="fa-solid fa-coins"></i> Coins: {sec.coins || 0}</span>
                   </div>
+
+                  {/* Section info text (level range, tips, vulnerability hints, etc.) */}
+                  {infoText && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(99,179,237,0.06)', border: '1px solid rgba(99,179,237,0.18)', borderRadius: 6, padding: '7px 10px', marginBottom: 10, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                      <i className="fa-solid fa-circle-info" style={{ marginRight: 5, color: 'var(--accent-blue)', opacity: 0.8 }}></i>
+                      {infoText}
+                    </div>
+                  )}
+
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid var(--border-color)', paddingTop: 10 }}>
                     <span><i className="fa-solid fa-gem"></i> {dropItems}</span>
                     <span><i className="fa-solid fa-paw"></i> {buddiesDisplay}</span>
@@ -190,7 +250,7 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
                         <i className={`fa-solid ${isOpen ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
                         {isOpen ? 'Hide Section Details' : `View Section Details`}
                         <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.6 }}>
-                          ({storyItems.length} {storyItems.length === 1 ? 'scene' : 'scenes'} · {waveItems.length} {waveItems.length === 1 ? 'wave' : 'waves'})
+                          ({storyItems.length} {storyItems.length === 1 ? 'scene' : 'scenes'} · {waveItems.length} {waveItems.length === 1 ? 'wave' : 'waves'}{hasRandomWaves ? ' · random' : ''})
                         </span>
                       </button>
                       {isOpen && (
@@ -207,6 +267,7 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
                 </div>
               );
             })}
+
           </div>
         )}
       </div>
@@ -259,6 +320,8 @@ function SectionSequenceView({ sequence, lang, onOpenBg, onToggleBgm, isBgmPlayi
         const wavePos = waves.indexOf(item);
         const isActive = activeWaveIdx === wavePos;
         const isPlayingThisBgm = isBgmPlaying(item.bgmID);
+        const isRandom = !!item.random_layout;
+        const possibleEnemies = item.possible_enemies || [];
 
         return (
           <div key={i} className="sequence-wave-block">
@@ -269,11 +332,13 @@ function SectionSequenceView({ sequence, lang, onOpenBg, onToggleBgm, isBgmPlayi
                 style={{ flex: 1, display: 'flex', alignItems: 'center', cursor: 'pointer' }}
               >
                 <span className="sequence-wave-label">
-                  <i className="fa-solid fa-swords" style={{ marginRight: 6 }}></i>
+                  <i className={`fa-solid ${isRandom ? 'fa-shuffle' : 'fa-swords'}`} style={{ marginRight: 6 }}></i>
                   Wave {item.wave_index}
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>
-                  {item.enemies?.length || 0} {item.enemies?.length === 1 ? 'enemy' : 'enemies'}
+                  {isRandom
+                    ? `${possibleEnemies.length} possible enemies`
+                    : `${item.enemies?.length || 0} ${item.enemies?.length === 1 ? 'enemy' : 'enemies'}`}
                 </span>
               </div>
 
@@ -307,11 +372,74 @@ function SectionSequenceView({ sequence, lang, onOpenBg, onToggleBgm, isBgmPlayi
               ></i>
             </div>
             {isActive && (
-              <WaveBoard waves={[item]} lang={lang} />
+              isRandom
+                ? <RandomLayoutPanel reason={item.random_layout_reason} possibleEnemies={possibleEnemies} lang={lang} />
+                : <WaveBoard waves={[item]} lang={lang} />
             )}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ── Random Layout Panel ────────────────────────────────────────────────────────
+
+function RandomLayoutPanel({ reason, possibleEnemies, lang }) {
+  return (
+    <div style={{ padding: '12px 14px' }}>
+      {/* Random layout notice */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.3)',
+        borderRadius: 8, padding: '10px 14px', marginBottom: possibleEnemies.length ? 14 : 0,
+        fontSize: 12, color: '#fde68a', lineHeight: 1.5
+      }}>
+        <i className="fa-solid fa-shuffle" style={{ marginTop: 2, flexShrink: 0 }}></i>
+        <div>
+          <strong style={{ display: 'block', marginBottom: 3 }}>Layout is randomized</strong>
+          <span style={{ opacity: 0.85 }}>{reason || 'Enemy placement is procedurally generated at runtime — positions and specific foes will vary each run.'}</span>
+        </div>
+      </div>
+
+      {/* Possible enemy pool */}
+      {possibleEnemies.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            <i className="fa-solid fa-list" style={{ marginRight: 5 }}></i>
+            Possible Enemies ({possibleEnemies.length})
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 6 }}>
+            {possibleEnemies.map((enemy, i) => {
+              const name = enemy.NameString
+                ? (enemy.NameString[lang] || enemy.NameString.en || enemy.NameString.ja || enemy.enemy_var)
+                : enemy.enemy_var;
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)',
+                  borderRadius: 6, padding: '5px 9px', fontSize: 11
+                }}>
+                  <i className="fa-solid fa-skull" style={{ fontSize: 9, opacity: 0.5, flexShrink: 0 }}></i>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                    {enemy.LV != null && (
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Lv. {enemy.LV}</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* No pool available */}
+      {possibleEnemies.length === 0 && (
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', margin: '10px 0 0' }}>
+          Enemy pool data not yet available for this stage type.
+        </p>
+      )}
     </div>
   );
 }
