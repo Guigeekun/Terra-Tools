@@ -1,0 +1,115 @@
+/* TAB 1: DASHBOARD STYLINGS */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    box-shadow: var(--shadow-premium);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-blue);
+    background: var(--gradient-card-hover);
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-right: 20px;
+}
+
+.char-bg {
+    background-color: rgba(56, 189, 248, 0.1);
+    color: var(--accent-blue);
+}
+
+.buddy-bg {
+    background-color: rgba(99, 102, 241, 0.1);
+    color: var(--accent-indigo);
+}
+
+.skill-bg {
+    background-color: rgba(236, 72, 153, 0.1);
+    color: var(--accent-pink);
+}
+
+.item-bg {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: var(--accent-amber);
+}
+
+.stage-bg {
+    background-color: rgba(56, 189, 248, 0.1);
+    color: var(--accent-blue);
+}
+
+.audio-bg {
+    background-color: rgba(99, 102, 241, 0.1);
+    color: var(--accent-indigo);
+}
+
+.stat-info h3 {
+    font-size: 28px;
+    line-height: 1.1;
+}
+
+.stat-info p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.welcome-box {
+    background: var(--gradient-primary);
+    border-radius: 24px;
+    padding: 36px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-text h3 {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.welcome-text p {
+    font-size: 14px;
+    max-width: 700px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.welcome-decoration-img {
+    height: 120px;
+    width: auto;
+    object-fit: contain;
+    position: absolute;
+    right: 24px;
+    bottom: -10px;
+    opacity: 0.35;
+    filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.2));
+    pointer-events: none;
+    user-select: none;
+}
+

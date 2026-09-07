@@ -1,0 +1,474 @@
+/* ==========================================================================
+   Interactive Storybook Tab Styling (In-Game Presentation: Text on Artwork)
+   ========================================================================== */
+
+.storybook-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 140px);
+    overflow: hidden;
+    position: relative;
+    user-select: none;
+}
+
+.storybook-container.fullscreen-mode {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 99999;
+    background: #030611;
+    padding: 14px;
+    border-radius: 0;
+}
+
+/* Timeline Header - Sticky Top */
+.storybook-timeline-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 8px 18px;
+    box-shadow: var(--shadow-premium);
+    flex-shrink: 0;
+    margin-bottom: 10px;
+}
+
+.storybook-timeline-title {
+    display: flex;
+    align-items: center;
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.storybook-timeline-scroll {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 4px 0;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+.storybook-timeline-node {
+    min-width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.storybook-timeline-node:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    border-color: var(--accent-blue);
+}
+
+.storybook-timeline-node.active {
+    background: var(--gradient-primary);
+    color: #fff;
+    border-color: var(--accent-blue);
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+    transform: scale(1.08);
+}
+
+.storybook-chapter-select select {
+    background: rgba(14, 18, 36, 0.9);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 6px 12px;
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    max-width: 220px;
+    color-scheme: dark;
+}
+
+.storybook-chapter-select select:hover {
+    border-color: var(--accent-blue);
+}
+
+.storybook-chapter-select select option {
+    background-color: #0b0e1b;
+    color: #f8fafc;
+    padding: 6px 10px;
+}
+
+/* In-Game Visual Story Stage: Artwork Canvas + Narrative Overlay */
+.storybook-game-stage {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    border-radius: 20px;
+    border: 1px solid var(--border-glow);
+    background: #04060d;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+}
+
+.storybook-stage-bg-wrapper {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.storybook-stage-bg-ambient {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(44px) brightness(0.4) saturate(1.3);
+    transform: scale(1.15);
+    pointer-events: none;
+    user-select: none;
+}
+
+.storybook-stage-bg-main {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: 100%;
+    object-fit: contain;
+    position: relative;
+    z-index: 2;
+    transition: transform 0.4s ease, filter 0.4s ease;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.8));
+    pointer-events: none;
+    user-select: none;
+}
+
+.storybook-game-stage.ui-hidden .storybook-stage-bg-main {
+    transform: scale(1.03);
+}
+
+.storybook-stage-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+    color: rgba(255, 255, 255, 0.05);
+}
+
+/* Floating Stage Tools: Hide UI, Fullscreen */
+.storybook-stage-floating-actions {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stage-tool-pill {
+    background: rgba(10, 14, 28, 0.75);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 6px 14px;
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    transition: var(--transition-smooth);
+}
+
+.stage-tool-pill:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: var(--accent-blue);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.stage-tool-pill.active {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: var(--accent-amber);
+    color: var(--accent-amber);
+}
+
+/* Narrative Dialog Box (Rendered DIRECTLY on top of background image) */
+.storybook-dialog-box {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    z-index: 20;
+    background: linear-gradient(180deg, rgba(12, 17, 34, 0.62) 0%, rgba(7, 10, 22, 0.72) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 20px;
+    padding: 20px 24px 16px 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 24px rgba(56, 189, 248, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    max-height: 52%;
+    display: flex;
+    flex-direction: column;
+    cursor: default;
+    user-select: text;
+    animation: dialogSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dialogSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes dialogCenterFadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, calc(-50% + 16px)) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.storybook-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.storybook-chapter-badge .ch-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: var(--accent-blue);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.storybook-chapter-badge .ch-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    text-shadow: 
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000,
+         0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.storybook-meta-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.meta-pill {
+    font-size: 11px;
+    font-family: monospace;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+}
+
+.meta-pill.bgm-pill {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #c7d2fe;
+}
+
+.storybook-dialog-body {
+    flex: 1;
+    font-size: 15px;
+    line-height: 1.85;
+    color: #ffffff;
+    font-weight: 500;
+    text-shadow: 
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000,
+         0 2px 4px rgba(0, 0, 0, 0.95),
+         0 0 8px rgba(0, 0, 0, 0.9);
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+}
+
+.storybook-dialog-body p {
+    margin-bottom: 12px;
+}
+
+.storybook-dialog-body p:last-child {
+    margin-bottom: 0;
+}
+
+.storybook-dialog-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.dialog-tap-hint {
+    color: var(--accent-blue);
+    opacity: 0.8;
+}
+
+/* Bottom Navigation Bar */
+.storybook-bottom-nav {
+    position: sticky;
+    bottom: 0;
+    z-index: 40;
+    flex-shrink: 0;
+    background: rgba(14, 18, 36, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glow);
+    border-radius: 18px;
+    padding: 8px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.storybook-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 8px 16px;
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    white-space: nowrap;
+}
+
+.storybook-nav-btn:hover:not(:disabled) {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    transform: translateY(-2px);
+}
+
+.storybook-nav-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.storybook-nav-btn.autoplay-btn.active {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.4);
+    color: var(--accent-green);
+}
+
+.storybook-nav-btn.ui-toggle-btn.active {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: var(--accent-amber);
+}
+
+.storybook-scene-counter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.storybook-dots {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.storybook-dots .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.storybook-dots .dot:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.storybook-dots .dot.active {
+    background: var(--accent-blue);
+    width: 14px;
+    border-radius: 4px;
+}
+
+.storybook-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+

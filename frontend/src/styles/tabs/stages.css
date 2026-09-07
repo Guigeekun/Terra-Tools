@@ -1,0 +1,590 @@
+/* Stages Tab Layout */
+.stages-layout {
+    display: flex;
+    gap: 24px;
+    height: calc(100vh - 200px);
+}
+
+.stages-mobile-back-btn {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.stages-mobile-back-btn:hover {
+    background: rgba(56, 189, 248, 0.22);
+}
+
+.chapters-panel {
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.chapters-list {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 6px;
+    background-color: rgba(255, 255, 255, 0.01);
+}
+
+.chapter-btn {
+    width: 100%;
+    text-align: left;
+    padding: 14px 16px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: var(--font-heading);
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 4px;
+    transition: var(--transition-smooth);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chapter-btn:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.chapter-btn.active {
+    background-color: rgba(56, 189, 248, 0.06);
+    border-color: rgba(56, 189, 248, 0.15);
+    color: var(--accent-blue);
+}
+
+.stages-panel {
+    flex: 1;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 32px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.stages-panel-placeholder {
+    margin: auto;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.stages-panel-placeholder i {
+    font-size: 56px;
+    margin-bottom: 16px;
+}
+
+.stages-panel-placeholder p {
+    font-size: 14px;
+    max-width: 360px;
+    line-height: 1.6;
+}
+
+.stage-item-card {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.stage-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.stage-item-title {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.stage-meta-row {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* ── Section Sequence: Interleaved Story Scenes + Waves ── */
+.section-sequence {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 14px;
+    border-left: 2px solid rgba(99, 102, 241, 0.15);
+    padding-left: 16px;
+}
+
+/* Story scene inline card */
+.sequence-story-block {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(56, 189, 248, 0.02) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    animation: fadeInUp 0.2s ease;
+    position: relative;
+}
+
+.sequence-story-block::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.5);
+}
+
+.sequence-story-empty {
+    background: rgba(255, 255, 255, 0.01);
+    border-color: rgba(255, 255, 255, 0.05);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+}
+
+.sequence-story-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.sequence-story-id {
+    font-size: 11px;
+    font-weight: 600;
+    color: #a5b4fc;
+    letter-spacing: 0.2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sequence-story-text {
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+}
+
+.sequence-story-text p {
+    margin: 0 0 6px 0;
+}
+
+.sequence-story-text p:last-child {
+    margin-bottom: 0;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Wave block inside sequence */
+.sequence-wave-block {
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.sequence-wave-block::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 18px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(56, 189, 248, 0.5);
+}
+
+.sequence-wave-header {
+    width: 100%;
+    background: rgba(56, 189, 248, 0.04);
+    border: 1px solid rgba(56, 189, 248, 0.12);
+    border-radius: 10px;
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    transition: all 0.15s ease;
+    text-align: left;
+}
+
+.sequence-wave-header:hover {
+    background: rgba(56, 189, 248, 0.08);
+    border-color: rgba(56, 189, 248, 0.25);
+    color: var(--accent-blue);
+}
+
+.sequence-wave-header.active {
+    background: rgba(56, 189, 248, 0.08);
+    border-color: rgba(56, 189, 248, 0.3);
+    color: var(--accent-blue);
+    border-radius: 10px 10px 0 0;
+}
+
+.sequence-wave-label {
+    display: flex;
+    align-items: center;
+}
+
+/* Story meta badges (shared) */
+.story-scene-meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.story-meta-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    color: var(--accent-blue);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Clickable Media Badges */
+.media-badge-btn {
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.media-badge-btn:hover {
+    background: rgba(56, 189, 248, 0.2) !important;
+    border-color: var(--accent-blue) !important;
+    color: #fff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.media-badge-btn.bgm-playing {
+    background: rgba(99, 102, 241, 0.25) !important;
+    border-color: rgba(99, 102, 241, 0.6) !important;
+    color: #a5b4fc !important;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+
+/* --------------------------------------------------------------------------
+   STAGES WAVE GRID LAYOUT
+   -------------------------------------------------------------------------- */
+.stage-layout-expander {
+    margin-top: 14px;
+    border-top: 1px dashed var(--border-color);
+    padding-top: 12px;
+}
+
+.toggle-layout-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggle-layout-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.1);
+}
+
+.stage-layout-content {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wave-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.wave-tab-btn {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.wave-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+}
+
+.wave-tab-btn.active {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+}
+
+.wave-layout-workspace {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.board-grid-wrapper {
+    background: rgba(15, 23, 42, 0.6);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+}
+
+.board-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 32px);
+    grid-template-rows: repeat(8, 32px);
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px;
+    border-radius: 4px;
+}
+
+.board-cell {
+    width: 32px;
+    height: 32px;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-size: 10px;
+    color: var(--text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.board-cell::after {
+    content: attr(data-coord);
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: 6px;
+    opacity: 0.25;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.board-cell.has-enemy {
+    background: rgba(220, 38, 38, 0.1);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.enemy-token {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent-orange);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);
+    cursor: help;
+    transition: transform 0.2s ease;
+    user-select: none;
+}
+
+.enemy-token:hover {
+    transform: scale(1.15);
+}
+
+.enemy-token.boss {
+    background: var(--accent-red);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+    animation: pulseGlow 2s infinite alternate;
+}
+
+@keyframes pulseGlow {
+    from {
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+    }
+
+    to {
+        box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
+    }
+}
+
+/* Tooltip on token */
+.enemy-token .tooltip-content {
+    visibility: hidden;
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid var(--accent-blue);
+    padding: 10px;
+    border-radius: 6px;
+    width: 180px;
+    z-index: 10;
+    color: var(--text-primary);
+    font-size: 11px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.enemy-token:hover .tooltip-content {
+    visibility: visible;
+    opacity: 1;
+}
+
+.enemy-token .tooltip-content::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--accent-blue) transparent transparent transparent;
+}
+
+.tooltip-title {
+    font-weight: 700;
+    color: var(--accent-blue);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+    text-align: center;
+}
+
+.tooltip-stat-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.tooltip-stat-val {
+    font-weight: 600;
+    color: var(--accent-orange);
+}
+
+.wave-enemies-list {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.wave-enemy-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.wave-enemy-name-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.wave-enemy-name-text {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.wave-enemy-stat-badge {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.wave-enemy-coord-col {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-blue);
+    background: rgba(56, 189, 248, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.clickable-preview {
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.clickable-preview:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+

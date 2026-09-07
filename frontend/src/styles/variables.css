@@ -1,0 +1,36 @@
+/* ==========================================================================
+   Terra Battle Visualizer - Core Design System & Styling
+   ========================================================================== */
+
+/* Design Tokens & Theme Variables */
+:root {
+    --bg-dark: #0a0d16;
+    --bg-card: rgba(20, 26, 46, 0.6);
+    --bg-sidebar: rgba(14, 18, 36, 0.9);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-glow: rgba(56, 189, 248, 0.15);
+
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+
+    /* Harmonious Vibrant Accent Gradients */
+    --accent-blue: #38bdf8;
+    --accent-indigo: #6366f1;
+    --accent-pink: #ec4899;
+    --accent-amber: #f59e0b;
+    --accent-orange: #f97316;
+    --accent-red: #ef4444;
+    --accent-green: #22c55e;
+
+    --gradient-primary: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+    --gradient-card-hover: linear-gradient(135deg, rgba(56, 189, 248, 0.05) 0%, rgba(99, 102, 241, 0.05) 100%);
+    --gradient-badge: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'Inter', sans-serif;
+
+    --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+

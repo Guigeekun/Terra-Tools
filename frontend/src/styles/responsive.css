@@ -1,0 +1,473 @@
+/* ==========================================================================
+   Responsive Design Breakpoints & Touch-Friendly Adaptations
+   ========================================================================== */
+
+/* Tablets & Small Laptops (<= 1024px) */
+@media (max-width: 1024px) {
+    .content-container {
+        padding: 24px 20px;
+    }
+
+    .job-detail-layout {
+        gap: 20px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+    }
+}
+
+/* Tablets & Mobile Screens (<= 900px): Collapsible Drawer Sidebar */
+@media (max-width: 900px) {
+    .app-container {
+        position: relative;
+        overflow-x: hidden;
+    }
+
+    /* Off-screen Drawer Sidebar */
+    .app-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        max-width: 80vw;
+        height: 100vh;
+        z-index: 1200;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .app-sidebar.open {
+        transform: translateX(0);
+    }
+
+    /* Touch Backdrop */
+    .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(6px);
+        z-index: 1100;
+        animation: fadeIn 0.25s ease;
+    }
+
+    /* Mobile Menu Toggle & Header adjustments */
+    .mobile-menu-btn {
+        display: flex;
+    }
+
+    .sidebar-close-btn {
+        display: flex;
+    }
+
+    .main-header {
+        height: 64px;
+        padding: 0 16px;
+    }
+
+    .header-title h2 {
+        font-size: 17px;
+    }
+
+    .header-title p {
+        display: none;
+    }
+
+    .lang-selector {
+        padding: 6px 10px;
+    }
+
+    .lang-selector select {
+        font-size: 12px;
+    }
+
+    .content-container {
+        padding: 16px 12px;
+    }
+
+    /* Audio Layout: Stacked instead of side-by-side */
+    .audio-layout {
+        flex-direction: column;
+        height: auto;
+        gap: 16px;
+    }
+
+    .player-controls-panel {
+        width: 100%;
+    }
+
+    .audio-table-panel {
+        height: 450px;
+    }
+
+    /* Storybook adjustments */
+    .storybook-container {
+        height: calc(100vh - 90px);
+    }
+
+    .storybook-dialog-box {
+        padding: 16px;
+        max-height: 58%;
+    }
+
+    .storybook-dialog-body {
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    .floating-player-reopen-btn.storybook-offset,
+    .floating-player-minimized.storybook-offset,
+    .floating-player-card.storybook-offset {
+        bottom: 80px;
+    }
+}
+
+/* Mobile Phones (<= 768px): Master-Detail Stages & Stacked Modals */
+@media (max-width: 768px) {
+    /* Stages Tab: Mobile Master-Detail View */
+    .stages-layout {
+        flex-direction: column;
+        height: calc(100vh - 100px);
+    }
+
+    .stages-layout.has-active-chapter .chapters-panel {
+        display: none;
+    }
+
+    .stages-layout:not(.has-active-chapter) .stages-panel {
+        display: none;
+    }
+
+    .stages-layout .chapters-panel {
+        width: 100%;
+        height: 100%;
+    }
+
+    .stages-layout .stages-panel {
+        width: 100%;
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    .stages-mobile-back-btn {
+        display: inline-flex;
+    }
+
+    /* Modals Responsive */
+    .modal-card {
+        width: 95%;
+        max-height: 92vh;
+        padding: 20px 16px;
+        border-radius: 20px;
+    }
+
+    .modal-close-btn {
+        top: 14px;
+        right: 14px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .job-detail-layout {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .modal-char-meta {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .modal-tabs {
+        overflow-x: auto;
+        padding-bottom: 8px;
+        scrollbar-width: thin;
+    }
+
+    .modal-tab-btn {
+        padding: 6px 14px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    /* Storybook Mobile: Centered & See-through Dialog Card */
+    .storybook-dialog-box {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        bottom: auto;
+        right: auto;
+        width: calc(100% - 28px);
+        max-width: 480px;
+        max-height: 68%;
+        background: linear-gradient(180deg, rgba(8, 12, 28, 0.48) 0%, rgba(5, 8, 20, 0.60) 100%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(56, 189, 248, 0.28);
+        border-radius: 18px;
+        padding: 16px 20px 14px 20px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 20px rgba(56, 189, 248, 0.1);
+        text-align: center;
+        animation: dialogCenterFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .storybook-dialog-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+    }
+
+    .storybook-chapter-badge {
+        text-align: center;
+    }
+
+    .storybook-dialog-body {
+        text-align: center;
+        font-size: 14.5px;
+        line-height: 1.75;
+        color: #ffffff;
+        font-weight: 500;
+        text-shadow: 
+            -1px -1px 0 #000,
+             1px -1px 0 #000,
+            -1px  1px 0 #000,
+             1px  1px 0 #000,
+             0 2px 4px rgba(0, 0, 0, 0.95),
+             0 0 8px rgba(0, 0, 0, 0.9);
+    }
+
+    .storybook-dialog-footer {
+        justify-content: center;
+        gap: 12px;
+    }
+}
+
+/* Small Mobile Phones (<= 640px): Full Touch Polish */
+@media (max-width: 640px) {
+    .content-container {
+        padding: 10px 8px;
+    }
+
+    /* Dashboard */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        padding: 14px 12px;
+        border-radius: 14px;
+    }
+
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+        margin-right: 10px;
+        border-radius: 12px;
+    }
+
+    .stat-info h3 {
+        font-size: 15px;
+    }
+
+    .stat-info p {
+        font-size: 11px;
+    }
+
+    .welcome-box {
+        padding: 18px 16px;
+        border-radius: 18px;
+    }
+
+    .welcome-text h3 {
+        font-size: 18px;
+    }
+
+    .welcome-text p {
+        font-size: 12px;
+    }
+
+    .welcome-decoration-img {
+        display: none;
+    }
+
+    /* Grids: Characters, Companions, Items, Skills, Assets */
+    .characters-grid,
+    .buddies-grid,
+    .items-grid,
+    .skills-grid,
+    .assets-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 10px;
+    }
+
+    .filter-bar {
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .search-input-wrapper {
+        min-width: 100%;
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .filters-group {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .filters-group select {
+        flex: 1;
+        min-width: 110px;
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    /* Storybook Mobile Polish */
+    .storybook-container {
+        height: calc(100vh - 84px);
+    }
+
+    .storybook-timeline-header {
+        padding: 6px 12px;
+        gap: 8px;
+    }
+
+    .storybook-timeline-title {
+        display: none;
+    }
+
+    .storybook-timeline-node {
+        min-width: 28px;
+        height: 28px;
+        font-size: 10px;
+    }
+
+    .storybook-chapter-select select {
+        max-width: 130px;
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+
+    .storybook-dialog-box {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        bottom: auto;
+        right: auto;
+        width: calc(100% - 20px);
+        max-width: 420px;
+        padding: 14px 16px 10px 16px;
+        max-height: 72%;
+        background: linear-gradient(180deg, rgba(8, 12, 28, 0.44) 0%, rgba(5, 8, 20, 0.56) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 16px;
+        text-align: center;
+    }
+
+    .storybook-chapter-badge .ch-title {
+        font-size: 15px;
+    }
+
+    .storybook-dialog-body {
+        text-align: center;
+        font-size: 13.5px;
+        line-height: 1.65;
+        color: #ffffff;
+        font-weight: 500;
+        text-shadow: 
+            -1px -1px 0 #000,
+             1px -1px 0 #000,
+            -1px  1px 0 #000,
+             1px  1px 0 #000,
+             0 2px 4px rgba(0, 0, 0, 0.95),
+             0 0 8px rgba(0, 0, 0, 0.9);
+    }
+
+    .storybook-bottom-nav {
+        padding: 6px 10px;
+        border-radius: 14px;
+        margin-top: 6px;
+    }
+
+    .storybook-nav-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .nav-btn-text {
+        display: none;
+    }
+
+    .storybook-scene-counter .counter-label {
+        font-size: 11px;
+    }
+
+    .stage-pill-label {
+        display: none;
+    }
+
+    .stage-tool-pill {
+        padding: 6px 10px;
+    }
+
+    /* Floating Audio Player on Mobile */
+    .floating-player-card {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: 12px;
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .floating-player-minimized {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: 12px;
+    }
+
+    .floating-player-reopen-btn {
+        bottom: 12px;
+        right: 10px;
+        max-width: calc(100vw - 20px);
+    }
+
+    /* In Storybook on mobile: elevate above bottom nav bar */
+    .floating-player-reopen-btn.storybook-offset {
+        bottom: 74px;
+        right: 12px;
+    }
+
+    .floating-player-minimized.storybook-offset {
+        bottom: 74px;
+        right: 12px;
+        left: auto;
+        width: auto;
+        max-width: calc(100vw - 24px);
+    }
+
+    .floating-player-card.storybook-offset {
+        bottom: 74px;
+        left: 10px;
+        right: 10px;
+    }
+}

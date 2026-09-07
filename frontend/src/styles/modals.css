@@ -1,0 +1,208 @@
+/* Modal Backdrops & Cards */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-card {
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background-color: #0d111e;
+    border: 1px solid var(--border-color);
+    border-radius: 28px;
+    padding: 36px;
+    position: relative;
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8);
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: var(--transition-smooth);
+}
+
+.modal-close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+}
+
+.modal-header {
+    margin-bottom: 24px;
+}
+
+.modal-char-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+.modal-tabs {
+    display: flex;
+    gap: 12px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+}
+
+.modal-tab-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px 18px;
+    color: var(--text-secondary);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.modal-tab-btn.active {
+    background-color: rgba(56, 189, 248, 0.08);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+.job-detail-layout {
+    display: flex;
+    gap: 32px;
+}
+
+.job-info-col {
+    flex: 1.2;
+}
+
+.job-stats-col {
+    flex: 1;
+}
+
+.job-profile-box,
+.job-assets-box,
+.stats-table-box,
+.job-skills-box {
+    background-color: rgba(255, 255, 255, 0.01);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.job-profile-box h5,
+.job-assets-box h5,
+.stats-table-box h5,
+.job-skills-box h5 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.job-profile-box p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.asset-reference-item {
+    font-size: 12px;
+}
+
+.asset-label {
+    display: block;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.asset-reference-item code {
+    display: block;
+    font-family: monospace;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: var(--accent-blue);
+    word-break: break-all;
+}
+
+.asset-notice {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 12px;
+    line-height: 1.4;
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stats-row:last-child {
+    border-bottom: none;
+}
+
+.stats-row .stat-lbl {
+    color: var(--text-secondary);
+}
+
+.stats-row .stat-val {
+    font-weight: 600;
+}
+
+.job-skills-list {
+    list-style: none;
+}
+
+.job-skills-list li {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.job-skills-list li:last-child {
+    border-bottom: none;
+}
+

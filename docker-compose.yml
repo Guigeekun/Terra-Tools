@@ -10,6 +10,9 @@ services:
         - action: sync+restart
           path: ./app.py
           target: /app/app.py
+        - action: sync+restart
+          path: ./backend
+          target: /app/backend
         # Sync runtime config and restart container
         - action: sync+restart
           path: ./config.json
