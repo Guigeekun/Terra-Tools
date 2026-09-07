@@ -9,6 +9,7 @@ dist/
 *.apk
 *.ipa
 *.zip
+*.zip.*
 *.7z
 *.bin
 *.key
