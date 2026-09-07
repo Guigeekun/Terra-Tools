@@ -456,7 +456,7 @@ def run_extract_native_stages(apk_path: Path, output_dir: Path) -> None:
     print("  Running extract_native_stages.py (chapters 8–42)...")
     try:
         result = subprocess.run(
-            ["python3", str(scripts_dir / "extract_native_stages.py")],
+            [sys.executable, str(scripts_dir / "extract_native_stages.py")],
             capture_output=True, text=True
         )
         for line in result.stdout.splitlines():
@@ -631,6 +631,18 @@ def run_il2cppdumper(apk_path: Path, output_dir: Path) -> None:
     lib_path = user_data_dir / "libil2cpp.so"
     metadata_path = user_data_dir / "global-metadata.dat"
     dump_cs_path = user_data_dir / "dump.cs"
+
+    if dump_cs_path.exists():
+        print(f"  dump.cs already exists at {dump_cs_path}")
+        return
+
+    # Check fallback paths
+    for fb in [Path("../project-liminal-gate/user-data/il2cpp/dump.cs"), Path("g:/Terra/project-liminal-gate/user-data/il2cpp/dump.cs")]:
+        if fb.exists():
+            import shutil
+            shutil.copy2(fb, dump_cs_path)
+            print(f"  Copied existing dump.cs from {fb} -> {dump_cs_path}")
+            return
 
     # Check if Il2CppDumper is available
     try:
