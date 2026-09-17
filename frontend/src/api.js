@@ -7,7 +7,6 @@ const endpoints = {
   chapters:   '/api/chapters',
   strings:    '/api/strings',
   audio:      '/api/audio',
-  assets:     '/api/assets',
 };
 
 export async function fetchChapters() {
