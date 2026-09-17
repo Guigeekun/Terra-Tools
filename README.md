@@ -4,6 +4,7 @@ An interactive web-based database viewer for *Terra Battle*.
 
 This editor provides comprehensive access to game assets, character stats, companion drop rates, skills, audio players (BGM/SE), and stage wave board layouts.
 
+Live version : https://terratools.ggkfigment.fr/
 ---
 
 ## Key Features
