@@ -233,6 +233,14 @@ Both support `--repo`, `--target-dir`, `--force` and `--check-only`, handle
 multi-part archives transparently, and reuse local `.zip`/`.zip.00N` archives
 found next to the target directory when available.
 
+Fetches normally resolve the release through `api.github.com`, which allows
+only 60 unauthenticated requests/hour per IP — shared build hosts often
+exhaust that quota. When the API is rate-limited, the fetcher falls back to
+the API-less `releases/latest/download/...` URLs (not subject to that quota),
+and an optional `GITHUB_TOKEN` environment variable raises the API limit:
+the Docker build accepts it as a secret, e.g.
+`docker build --secret id=github_token,env=GITHUB_TOKEN .`
+
 ---
 
 ## Running the Web Server

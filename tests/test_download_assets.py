@@ -3,7 +3,9 @@ import os
 import sys
 import tempfile
 import unittest
+import urllib.error
 import zipfile
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__))))
 
@@ -12,6 +14,7 @@ from scripts.download_user_data import (
     ensure_user_data,
     extract_assets,
     find_local_archives,
+    get_latest_release_via_direct_urls,
     is_gdresources_present,
     is_user_data_present,
 )
@@ -149,6 +152,125 @@ class TestGdresourcesFetch(unittest.TestCase):
             f.write(b"b")
 
         self.assertTrue(ensure_user_data(target_dir=local_input, asset="gdresources"))
+
+
+class FakeResponse(io.BytesIO):
+    def __init__(self, data=b"", status=200):
+        super().__init__(data)
+        self.status = status
+        self.headers = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+
+def rate_limited(url, code=403):
+    return urllib.error.HTTPError(url, code, "rate limit exceeded", None, None)
+
+
+def direct_url(repo, name):
+    return f"https://github.com/{repo}/releases/latest/download/{name}"
+
+
+def zip_bytes(entries):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for name, data in entries.items():
+            zf.writestr(name, data)
+    return buf.getvalue()
+
+
+class TestDirectUrlFallback(unittest.TestCase):
+    """The API-less fallback used when api.github.com rate-limits the host."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = self.tmp.name
+        self.repo = "acme/tools"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def fake_urlopen_factory(self, existing, bodies):
+        def fake_urlopen(req, timeout=None):
+            url = req.full_url
+            if "api.github.com" in url:
+                raise rate_limited(url)
+            name = url.rsplit("/", 1)[1]
+            if req.get_method() == "HEAD":
+                if name in existing:
+                    return FakeResponse(status=200)
+                raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
+            if name in bodies:
+                return FakeResponse(bodies[name])
+            raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
+        return fake_urlopen
+
+    def test_multipart_fallback_when_api_rate_limited(self):
+        archive = zip_bytes({
+            "user-data/extracted-gamedata/game_data/EnemyData.json": b"{}",
+        })
+        split = len(archive) // 2
+        existing = {"user-data.zip.001", "user-data.zip.002"}
+        bodies = {
+            "user-data.zip.001": archive[:split],
+            "user-data.zip.002": archive[split:],
+        }
+
+        target = os.path.join(self.root, "user-data")
+        with mock.patch("scripts.download_user_data.urllib.request.urlopen",
+                        self.fake_urlopen_factory(existing, bodies)):
+            result = ensure_user_data(repo=self.repo, target_dir=target, asset="user-data")
+
+        self.assertTrue(result)
+        self.assertTrue(is_user_data_present(target))
+        with open(os.path.join(target, "extracted-gamedata", "game_data", "EnemyData.json")) as f:
+            self.assertEqual(f.read(), "{}")
+
+    def test_single_zip_fallback(self):
+        archive = zip_bytes({
+            "user-data/extracted-gamedata/game_data/SkillData.json": b"[]",
+        })
+        target = os.path.join(self.root, "user-data")
+        with mock.patch("scripts.download_user_data.urllib.request.urlopen",
+                        self.fake_urlopen_factory({"user-data.zip"}, {"user-data.zip": archive})):
+            result = ensure_user_data(repo=self.repo, target_dir=target, asset="user-data")
+
+        self.assertTrue(result)
+        self.assertTrue(is_user_data_present(target))
+
+    def test_fallback_without_matching_assets_fails(self):
+        target = os.path.join(self.root, "user-data")
+        with mock.patch("scripts.download_user_data.urllib.request.urlopen",
+                        self.fake_urlopen_factory(set(), {})):
+            result = ensure_user_data(repo=self.repo, target_dir=target, asset="user-data")
+
+        self.assertFalse(result)
+        self.assertFalse(is_user_data_present(target))
+
+    def test_direct_probe_skips_missing_parts(self):
+        def fake_urlopen(req, timeout=None):
+            if "api.github.com" in req.full_url:
+                raise rate_limited(req.full_url)
+            name = req.full_url.rsplit("/", 1)[1]
+            if name == "user-data.zip.001":
+                return FakeResponse(status=200)
+            raise urllib.error.HTTPError(req.full_url, 404, "Not Found", None, None)
+
+        with mock.patch("scripts.download_user_data.urllib.request.urlopen", fake_urlopen):
+            release = get_latest_release_via_direct_urls(self.repo, ["user-data"])
+
+        self.assertEqual([a["name"] for a in release["assets"]], ["user-data.zip.001"])
+        self.assertEqual(release["assets"][0]["browser_download_url"],
+                         direct_url(self.repo, "user-data.zip.001"))
+
+    def test_gdresources_direct_names(self):
+        self.assertEqual(ASSETS["gdresources"]["direct_names"],
+                         ["gdresources", "gdresources-light"])
+        self.assertEqual(ASSETS["user-data"]["direct_names"], ["user-data"])
 
 
 if __name__ == "__main__":

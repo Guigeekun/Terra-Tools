@@ -73,18 +73,22 @@ def is_gdresources_present(target_dir):
 
 
 # Asset registry driving the shared download/unpack workflow below.
+# "direct_names" lists the archive base names to probe on the API-less
+# releases/latest/download endpoint when api.github.com is unavailable.
 ASSETS = {
     "user-data": {
         "pattern": ASSET_PATTERN_USER_DATA,
         "present": is_user_data_present,
         "default_target": DEFAULT_TARGET,
         "label": "user-data",
+        "direct_names": ["user-data"],
     },
     "gdresources": {
         "pattern": ASSET_PATTERN_GDRESOURCES,
         "present": is_gdresources_present,
         "default_target": os.environ.get("LOCAL_INPUT_DIR", "local-input"),
         "label": "gdresources",
+        "direct_names": ["gdresources", "gdresources-light"],
     },
 }
 
@@ -198,11 +202,73 @@ def get_latest_release(repo, token=None):
     raise RuntimeError(f"Failed to fetch releases for repository '{repo}': {last_err}")
 
 
-def download_file(url, dest_path, expected_size=None, token=None):
-    """Download a file with progress reporting and resume capability."""
+def direct_download_url(repo, name):
+    return f"https://github.com/{repo}/releases/latest/download/{name}"
+
+
+def head_exists(url):
+    """Cheap existence probe for non-API download URLs (no auth, no body)."""
+    req = urllib.request.Request(url, headers={"User-Agent": "TerraTools-Fetcher"}, method="HEAD")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return 200 <= getattr(resp, "status", 200) < 300
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return False
+        raise
+
+
+def get_latest_release_via_direct_urls(repo, base_names):
+    """Build a release dict from the API-less 'releases/latest/download' URLs.
+
+    api.github.com enforces a strict per-IP quota (60 requests/hour
+    unauthenticated) that shared build hosts routinely exhaust, while the web
+    download endpoints are not subject to it. Asset names cannot be listed
+    without the API, so the known candidate names are probed instead: the plain
+    zip if present, otherwise consecutive .001/.002/... parts up to the first
+    missing one.
+    """
+    assets = []
+    for base in base_names:
+        plain = f"{base}.zip"
+        if head_exists(direct_download_url(repo, plain)):
+            assets.append({
+                "name": plain,
+                "size": None,
+                "browser_download_url": direct_download_url(repo, plain),
+            })
+            break
+        parts = []
+        index = 1
+        while index <= 99:
+            name = f"{base}.zip.{index:03d}"
+            if not head_exists(direct_download_url(repo, name)):
+                break
+            parts.append({
+                "name": name,
+                "size": None,
+                "browser_download_url": direct_download_url(repo, name),
+            })
+            index += 1
+        if parts:
+            assets.extend(parts)
+            break
+
+    return {
+        "tag_name": "latest",
+        "name": "latest release (direct download)",
+        "assets": assets,
+    }
+
+
+def download_file(url, dest_path, expected_size=None):
+    """Download a file with progress reporting and resume capability.
+
+    Never sends the GitHub token: browser download URLs redirect to the CDN and
+    urllib forwards the Authorization header to it, which S3 presigned URLs
+    reject. Public-repo assets download fine unauthenticated.
+    """
     headers = {"User-Agent": "TerraTools-Fetcher"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
 
     downloaded = 0
     if os.path.exists(dest_path):
@@ -405,7 +471,11 @@ def ensure_user_data(repo=DEFAULT_REPO, target_dir=None, force=False, asset="use
     token = os.environ.get("GITHUB_TOKEN")
 
     try:
-        release = get_latest_release(repo, token=token)
+        try:
+            release = get_latest_release(repo, token=token)
+        except Exception as api_err:
+            print(f"GitHub API unavailable ({api_err}); falling back to direct download URLs...")
+            release = get_latest_release_via_direct_urls(repo, config["direct_names"])
         tag = release.get("tag_name", "unknown")
         print(f"Found release: {tag} ({release.get('name', '')})")
 
@@ -433,7 +503,7 @@ def ensure_user_data(repo=DEFAULT_REPO, target_dir=None, force=False, asset="use
             url = asset_file["browser_download_url"]
             size = asset_file.get("size")
             part_path = os.path.join(temp_dir, name)
-            download_file(url, part_path, expected_size=size, token=token)
+            download_file(url, part_path, expected_size=size)
             downloaded_files.append(part_path)
 
         # Unpack files into target_dir
