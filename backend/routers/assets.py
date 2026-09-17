@@ -1,7 +1,7 @@
 import os
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-from backend.config import LOCAL_INPUT_DIR
+from backend.config import get_local_input_dir
 
 router = APIRouter(tags=["assets"])
 
@@ -11,20 +11,21 @@ def get_assets_inventory(page: int = None, limit: int = 30, search: str = "", ca
     """List all assets present in local-input with pagination."""
     inventory = []
     categories = ["BG", "BGM", "Banner", "BuddyImages", "BuddyThumbs", "Illust", "Pieces", "SE", "Scenario"]
-    
+    local_input_dir = get_local_input_dir()
+
     q = search.lower().strip()
     for cat in categories:
         if category and cat.lower() != category.lower():
             continue
-            
-        directory = os.path.join(LOCAL_INPUT_DIR, cat)
+
+        directory = os.path.join(local_input_dir, cat)
         if os.path.exists(directory):
             try:
                 for f in os.listdir(directory):
                     if f.endswith(".bin"):
                         if q and not (q in f.lower() or q in cat.lower()):
                             continue
-                            
+
                         path = os.path.join(directory, f)
                         size = os.path.getsize(path)
                         sig = "Unknown"
@@ -37,14 +38,14 @@ def get_assets_inventory(page: int = None, limit: int = 30, search: str = "", ca
                                     sig = "UnityFS (AssetBundle)"
                         except Exception:
                             pass
-                            
+
                         if signature and signature.lower() not in sig.lower():
                             continue
-                            
+
                         inventory.append({
                             "category": cat,
                             "filename": f,
-                            "path": f"{LOCAL_INPUT_DIR}/{cat}/{f}".replace("\\", "/"),
+                            "path": f"{local_input_dir}/{cat}/{f}".replace("\\", "/"),
                             "size_bytes": size,
                             "signature": sig
                         })
