@@ -58,3 +58,34 @@ export async function fetchItemDetails(itemId) {
   const res = await fetch(`/api/item/${itemId}`);
   return res.json();
 }
+
+export async function inspectSave(saveData) {
+  const res = await fetch('/api/saves/inspect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(saveData)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to inspect save' }));
+    throw new Error(err.detail || 'Inspection failed');
+  }
+  return res.json();
+}
+
+export async function convertSave(saveData, targetFormat = null, accountId = null) {
+  const res = await fetch('/api/saves/convert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      data: saveData,
+      target_format: targetFormat,
+      account_id: accountId
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to convert save' }));
+    throw new Error(err.detail || 'Conversion failed');
+  }
+  return res.json();
+}
+

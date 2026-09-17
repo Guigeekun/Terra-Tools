@@ -22,6 +22,7 @@
 @import './styles/tabs/stages.css';
 @import './styles/tabs/audio.css';
 @import './styles/tabs/storybook.css';
+@import './styles/tabs/save-converter.css';
 
 /* Shared interactive floating player */
 @import './styles/floating-player.css';

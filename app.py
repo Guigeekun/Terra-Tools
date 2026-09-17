@@ -38,7 +38,8 @@ from backend.routers import (
     stages,
     audio,
     assets,
-    system
+    system,
+    saves
 )
 
 # Initialize FastAPI App using lifespan context manager
@@ -72,6 +73,7 @@ app.include_router(stages.router)
 app.include_router(audio.router)
 app.include_router(assets.router)
 app.include_router(system.router)
+app.include_router(saves.router)
 
 
 @app.get('/TerraToolbox.png')
