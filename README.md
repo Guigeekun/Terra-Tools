@@ -111,7 +111,7 @@ local-input/
 3. **`gdresources/data_u2017/android/`** *(Optional / Recommended for Media & Live Browsing)*
    - **Path**: any `local-input/gdresources*/` folder (see [gdresources discovery](#gdresources-discovery))
    - **Source**: Downloaded game client asset cache folder. Both the full `gdresources` and trimmed variants such as `gdresources-light` (as distributed for the reTB server emulator) are supported.
-   - **Used By**: `scripts/extract_everything.py` (steps 5c & 5d) and `app.py` (`/api/assets` inventory endpoint).
+   - **Used By**: `scripts/extract_everything.py` (steps 5c & 5d; reads `gdresources/data_u2017/android` directly).
    - **Bundles & Categories**:
      - `BG/`: Stage background images (ENCA-encrypted Unity asset bundles).
      - `BGM/`: Background Music audio clips (`.bin` containing `AudioClip` streams).
@@ -125,14 +125,15 @@ local-input/
 
 #### gdresources Discovery
 
-The web server does not assume a fixed resources path: at request time it scans
+The toolbox does not assume a fixed resources path: `backend/config.py` scans
 `local-input/` for any folder named `gdresources*` (`gdresources`,
-`gdresources-light`, ...) and picks the platform directory inside it that holds
-the most asset categories (BG, BGM, ...). On ties it prefers `data_u2017`
+`gdresources-light`, ...) and resolves the platform directory inside it that
+holds the most asset categories (BG, BGM, ...). On ties it prefers `data_u2017`
 CDN revisions (the one the extraction pipeline reads from), then `android`
-layouts. This means you can swap the full resources for the much smaller
-`gdresources-light` by simply dropping it in `local-input/` — no configuration
-change needed.
+layouts. `LOCAL_INPUT_DIR` is resolved at startup and
+`backend.config.get_local_input_dir()` re-resolves on demand. This means you
+can swap the full resources for the much smaller `gdresources-light` by simply
+dropping it in `local-input/` — no configuration change needed.
 
 Note: the extraction pipeline (`scripts/extract_everything.py`) still reads
 from `gdresources/data_u2017/android` directly.

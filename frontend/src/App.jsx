@@ -14,7 +14,6 @@ import SkillsTab from './components/tabs/SkillsTab';
 import ItemsTab from './components/tabs/ItemsTab';
 import StagesTab from './components/tabs/StagesTab';
 import AudioTab from './components/tabs/AudioTab';
-import AssetsTab from './components/tabs/AssetsTab';
 
 import CharacterModal from './components/modals/CharacterModal';
 import ItemModal from './components/modals/ItemModal';
@@ -60,7 +59,6 @@ function AppContent() {
             {activeTab === 'items' && <ItemsTab onSelectItem={setSelectedItemId} />}
             {activeTab === 'stages' && <StagesTab onSelectItem={setSelectedItemId} onSelectBuddy={setSelectedBuddy} />}
             {activeTab === 'audio' && <AudioTab />}
-            {activeTab === 'assets' && <AssetsTab />}
           </div>
         </main>
       </div>
