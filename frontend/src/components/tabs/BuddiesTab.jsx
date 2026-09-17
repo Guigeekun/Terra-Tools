@@ -3,10 +3,13 @@ import { loc } from '../../utils/localization';
 import { rarityLabels } from '../../utils/constants';
 import { TabSpinner, useLazyCategory } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
+import { usePersistentState } from '../../hooks/usePersistentState';
 
-export default function BuddiesTab({ onSelectBuddy }) {
-  const [search, setSearch] = useState('');
-  const [rarity, setRarity] = useState('');
+export default function BuddiesTab({ onSelectBuddy, initialSearch = '' }) {
+  // Search stays session-local so source-chip navigation (initialSearch) always wins;
+  // dropdown filters persist in localStorage across sessions.
+  const [search, setSearch] = useState(initialSearch);
+  const [rarity, setRarity] = usePersistentState('buddies.rarity', '');
   const [selectedBuddy, setSelectedBuddy] = useState(null);
 
   useLazyCategory('skills');

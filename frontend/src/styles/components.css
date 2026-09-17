@@ -226,3 +226,222 @@
     font-size: 12px;
 }
 
+/* Sortable Table Headers */
+.th-sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.th-sortable i {
+    margin-left: 6px;
+    font-size: 10px;
+    opacity: 0.45;
+}
+
+.th-sortable:hover {
+    color: var(--text-primary);
+}
+
+.th-sortable:hover i,
+.th-sortable.active i {
+    opacity: 1;
+}
+
+.th-sortable.active {
+    color: var(--accent-blue);
+}
+
+/* Results Meta Line */
+.results-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin: -16px 0 14px;
+}
+
+.results-meta i {
+    margin-right: 6px;
+    color: var(--accent-indigo);
+}
+
+.results-reset {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 11.5px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.results-reset:hover {
+    border-color: var(--accent-blue);
+    color: var(--text-primary);
+}
+
+.results-reset i {
+    margin-right: 4px;
+    font-size: 10px;
+}
+
+/* Skills Table: Skill Cell */
+.skill-name-cell {
+    min-width: 230px;
+    max-width: 300px;
+}
+
+.skill-name {
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    font-size: 14px;
+}
+
+.skill-kind-tag {
+    display: inline-block;
+    margin-left: 8px;
+    vertical-align: 1px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+}
+
+.skill-desc {
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--text-muted);
+    max-width: 300px;
+}
+
+.element-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.trigger-badge.equip {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--accent-green);
+}
+
+.trigger-badge.active {
+    background-color: rgba(56, 189, 248, 0.1);
+    color: var(--accent-blue);
+}
+
+.area-badge {
+    background-color: rgba(236, 72, 153, 0.08);
+    border: 1px solid rgba(236, 72, 153, 0.2);
+    color: var(--accent-pink);
+}
+
+/* Skills Table: Source Chips */
+.skills-table-container {
+    overflow-x: auto;
+}
+
+.sources-cell {
+    min-width: 215px;
+}
+
+.source-chips {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.source-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 190px;
+    padding: 3px 10px 3px 4px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background-color: rgba(255, 255, 255, 0.03);
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    transition: var(--transition-smooth);
+}
+
+.source-chip:hover {
+    border-color: var(--chip-color, var(--border-color));
+    color: var(--text-primary);
+}
+
+.source-chip.clickable {
+    cursor: pointer;
+}
+
+.source-chip.clickable:hover {
+    background-color: color-mix(in srgb, var(--chip-color) 8%, transparent);
+    box-shadow: 0 0 0 1px var(--chip-color);
+}
+
+.source-chip img {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: rgba(0, 0, 0, 0.35);
+    flex-shrink: 0;
+}
+
+.chip-type-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    flex-shrink: 0;
+}
+
+.chip-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chip-count {
+    flex-shrink: 0;
+    font-size: 9.5px;
+    color: var(--text-muted);
+}
+
+.chip-boss {
+    color: #fbbf24;
+}
+
+.source-chip.chip-more {
+    padding: 3px 10px;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    background: transparent;
+    border-style: dashed;
+}
+
+.source-none {
+    font-size: 12px;
+    font-style: italic;
+    color: var(--text-muted);
+    opacity: 0.65;
+    white-space: nowrap;
+}
+
+

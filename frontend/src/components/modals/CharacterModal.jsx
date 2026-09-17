@@ -143,7 +143,7 @@ export default function CharacterModal({ character, onClose, onOpenItem }) {
                       ? <li style={{ color: 'var(--text-muted)' }}>No active skills found.</li>
                       : (job.skills || []).map((skillID, i) => {
                         const unlockLv = (job.skillMasterLevel && job.skillMasterLevel[i]) || 1;
-                        const skill = skills[skillID];
+                        const skill = skills[skillID - 1];
                         return (
                           <li key={i}>
                             {skill ? (

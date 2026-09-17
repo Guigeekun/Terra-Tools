@@ -25,6 +25,8 @@ This editor provides comprehensive access to game assets, character stats, compa
 
 ### 4. Items & Skills Viewer
 * Browse all game items and skills databases with dynamic translation support (English, Japanese, French, German, Spanish, Traditional Chinese).
+* Every skill lists its potential sources — characters (with granting jobs), companions, and enemies (aggregated variants, boss-flagged) — with clickable companion links.
+* Server-side filtering (source type, element, skill kind, trigger type, search across skills *and* source names) and column sorting (ID, name, trigger, power, sources).
 
 ---
 
