@@ -32,6 +32,59 @@ export const elementMeta = {
   22: { name: 'Lunar', color: '#e9d5ff', icon: '/api/assets/image?path=user-data/extracted-gamedata/ui_icons/moon_01.png' }
 };
 
+// SkillAttrib enum values (SkillData `attrib` field), with visual styling.
+// Physical variants reuse their base element color with a lighter shade.
+export const skillAttribMeta = {
+  0:  { name: 'None', color: '#6b7280' },
+  1:  { name: 'Fire', color: '#fb923c', ...pickElementIcon(1) },
+  2:  { name: 'Ice', color: '#38bdf8', ...pickElementIcon(2) },
+  3:  { name: 'Lightning', color: '#fde047', ...pickElementIcon(3) },
+  4:  { name: 'Darkness', color: '#c084fc', ...pickElementIcon(4) },
+  5:  { name: 'Healing', color: '#22c55e', ...pickElementIcon(5) },
+  6:  { name: 'Status', color: '#e879f9', svg: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle;"><path d="M12 3l1.9 4.6L19 9l-4 3.4.9 5.1-3.9-2.7-3.9 2.7.9-5.1L5 9l5.1-1.4z"></path></svg>` },
+  7:  { name: 'Non-elem. Magic', color: '#94a3b8' },
+  10: { name: 'Absorb', color: '#f43f5e' },
+  11: { name: 'Absorb (No Kill)', color: '#fb7185' },
+  12: { name: 'Phys. Fire', color: '#fdba74', ...pickElementIcon(1) },
+  13: { name: 'Phys. Ice', color: '#7dd3fc', ...pickElementIcon(2) },
+  14: { name: 'Phys. Lightning', color: '#fef08a', ...pickElementIcon(3) },
+  15: { name: 'Phys. Darkness', color: '#d8b4fe', ...pickElementIcon(4) },
+  16: { name: 'Phys. Non-elem.', color: '#cbd5e1' },
+  17: { name: 'Photon', color: '#fbbf24', ...pickElementIcon(17) },
+  18: { name: 'Graviton', color: '#818cf8', ...pickElementIcon(18) },
+  19: { name: 'Phys. Photon', color: '#fcd34d', ...pickElementIcon(17) },
+  20: { name: 'Phys. Graviton', color: '#a5b4fc', ...pickElementIcon(18) },
+  21: { name: 'Solar', color: '#fda4af', ...pickElementIcon(21) },
+  22: { name: 'Lunar', color: '#e9d5ff', ...pickElementIcon(22) },
+  23: { name: 'Phys. Solar', color: '#fecdd3', ...pickElementIcon(21) },
+  24: { name: 'Phys. Lunar', color: '#f3e8ff', ...pickElementIcon(22) }
+};
+
+function pickElementIcon(attribId) {
+  const meta = elementMeta[attribId] || {};
+  const out = {};
+  if (meta.icon) out.icon = meta.icon;
+  if (meta.svg) out.svg = meta.svg;
+  return out;
+}
+
+// SkillKind enum values (SkillData `kind` field)
+export const skillKindLabels = {
+  0: 'Attack', 1: 'Heal', 2: 'Counter', 3: 'Status Attack', 4: 'Status Apply',
+  5: 'Equip Status', 6: 'Chain Point', 7: 'Constant Damage', 8: 'Constant Heal',
+  9: 'Capsule', 10: 'Text', 11: 'Special', 12: 'Party Counter', 13: 'Powered Point',
+  14: 'Lockon', 15: 'Emit Lockon', 16: 'Time Bomb', 17: 'Special Effect', 18: 'Gather',
+  19: 'Magic Bomb', 20: 'Hop Break', 21: 'Fixed Lockon', 22: 'Attack + Status',
+  23: 'Equip Display', 24: 'Wildcard', 25: 'Attack + Resist'
+};
+
+// Where a skill can come from
+export const sourceTypeMeta = {
+  character: { label: 'Character', icon: 'fa-user', color: '#38bdf8' },
+  buddy:     { label: 'Companion', icon: 'fa-paw', color: '#34d399' },
+  enemy:     { label: 'Enemy', icon: 'fa-skull', color: '#f87171' }
+};
+
 export const TAB_META = {
   dashboard:   { title: 'Dashboard Overview', desc: 'High-level statistics and category index of the exported game data.', icon: 'fa-chart-pie', label: 'Dashboard' },
   storybook:   { title: 'Interactive Storybook', desc: 'Experience the full Terra Battle narrative with background art, soundtracks, and chapter timeline.', icon: 'fa-book-open-reader', label: 'Storybook' },

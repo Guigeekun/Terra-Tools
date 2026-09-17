@@ -4,13 +4,16 @@ import { rarityLabels, speciesTranslations, weaponMeta, elementMeta } from '../.
 import JobBadge from '../shared/JobBadge';
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
+import { usePersistentState } from '../../hooks/usePersistentState';
 
-export default function CharactersTab({ onSelectCharacter }) {
-  const [search, setSearch] = useState('');
-  const [species, setSpecies] = useState('');
-  const [rarity, setRarity] = useState('');
-  const [weapon, setWeapon] = useState('');
-  const [element, setElement] = useState('');
+export default function CharactersTab({ onSelectCharacter, initialSearch = '' }) {
+  // Search stays session-local so source-chip navigation (initialSearch) always wins;
+  // dropdown filters persist in localStorage across sessions.
+  const [search, setSearch] = useState(initialSearch);
+  const [species, setSpecies] = usePersistentState('characters.species', '');
+  const [rarity, setRarity] = usePersistentState('characters.rarity', '');
+  const [weapon, setWeapon] = usePersistentState('characters.weapon', '');
+  const [element, setElement] = usePersistentState('characters.element', '');
 
   const filters = useMemo(() => ({
     search, species, rarity, weapon, element
