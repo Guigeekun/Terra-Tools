@@ -40,8 +40,7 @@ export const TAB_META = {
   skills:      { title: 'Skills Catalog', desc: 'List of active skills, status triggers, powers, and area calculations.', icon: 'fa-wand-magic-sparkles', label: 'Skills' },
   items:       { title: 'Items Inventory', desc: 'Browse equipment, job evolve materials, tokens, and materials.', icon: 'fa-gem', label: 'Items' },
   stages:      { title: 'Chapters & Stages', desc: 'Select chapters to view sections, recommended levels, enemy detail and drops.', icon: 'fa-map-location-dot', label: 'Chapters & Stages' },
-  audio:       { title: 'Audio Asset Player', desc: 'Stream background music and sound effects directly extracted from the game files.', icon: 'fa-music', label: 'Audio Player' },
-  assets:      { title: 'Asset Files Inventory', desc: 'Browse all loaded resources inside local-input, size stats and containers.', icon: 'fa-box-open', label: 'Asset Files' }
+  audio:       { title: 'Audio Asset Player', desc: 'Stream background music and sound effects directly extracted from the game files.', icon: 'fa-music', label: 'Audio Player' }
 };
 
 export const TAB_KEYS = Object.keys(TAB_META);
