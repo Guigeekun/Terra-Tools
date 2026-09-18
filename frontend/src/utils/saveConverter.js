@@ -1,16 +1,7 @@
-import { JOB_NAME_MAP } from './character_names';
-
-
-
-
-function resolveCharacterName(jobId, char) {
-  const nameFromMap = JOB_NAME_MAP[jobId];
-  if (nameFromMap) return nameFromMap;
-  return char.name || `Character #${char.id}`;
-}
-
 /**
  * Savefile Converter utilities for Project Liminal Gate and ReTB formats.
+ * Character display names are resolved in the UI from the loaded game data;
+ * summaries only carry the raw character ids.
  */
 
 export function detectSaveFormat(data) {
@@ -116,13 +107,12 @@ export function parseAccountSummaryLiminal(accountId, acc) {
     quest_clears: questClears,
     progress_code: ud.progressCode || 0,
     tutorial_phase: acc.tutorial_phase || 'free_roam',
-    top_characters: chrdata.slice(0, 12).map(c => ({
+    top_characters: chrdata.map(c => ({
       id: c.id,
       job_id: c.jobID || 0,
       luck: c.luck || 0,
       sb: c.skillBoost || 0,
-      job_levels: c.jobLevels || [1, 0, 0],
-      name: resolveCharacterName(c.jobID, c)
+      job_levels: c.jobLevels || [1, 0, 0]
     }))
   };
 }
@@ -176,7 +166,7 @@ export function parseAccountSummaryRetb(retbData) {
 
   let topChrs = [];
   if (sessionChrs.length > 0) {
-    topChrs = sessionChrs.slice(0, 12).map(c => ({
+    topChrs = sessionChrs.map(c => ({
       id: c.id,
       job_id: c.jobID || 0,
       luck: c.luck || 0,
@@ -184,7 +174,7 @@ export function parseAccountSummaryRetb(retbData) {
       job_levels: c.jobLevels || [1, 0, 0]
     }));
   } else if (chrRows.length > 0) {
-    topChrs = chrRows.slice(0, 12).map(r => {
+    topChrs = chrRows.map(r => {
       let jl = r[5];
       if (typeof jl === 'string') {
         try { jl = JSON.parse(jl); } catch (e) { jl = [1, 0, 0]; }
@@ -662,5 +652,141 @@ export function convertSaveData(data, targetFormat = null, accountId = null) {
     suggested_filename: `save-${targetFmt}-${now}.json`,
     data
   };
+}
+
+/**
+ * Inline save editing: the tab keeps a sparse "edits" overlay and folds it
+ * into a deep clone of the source save before conversion, so both the
+ * converted output and its suggested filename automatically reflect edits
+ * while the loaded file on disk stays untouched.
+ */
+export const EMPTY_SAVE_EDITS = Object.freeze({
+  username: '',
+  coins: null,
+  freeEnergy: null,
+  characters: {}
+});
+
+// '' / invalid / negative -> null (= leave the original value untouched).
+export function sanitizeCountInput(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.floor(n);
+}
+
+export function hasSaveEdits(edits) {
+  if (!edits) return false;
+  if (edits.username && edits.username.trim()) return true;
+  if (edits.coins !== null && edits.coins !== undefined) return true;
+  if (edits.freeEnergy !== null && edits.freeEnergy !== undefined) return true;
+  const characters = edits.characters || {};
+  return Object.keys(characters).length > 0;
+}
+
+export function applySaveEdits(data, edits, accountId = null) {
+  if (!data || typeof data !== 'object' || !hasSaveEdits(edits)) return data;
+
+  const fmt = detectSaveFormat(data);
+  if (fmt === 'unknown') return data;
+
+  const next = JSON.parse(JSON.stringify(data));
+  const username = (edits.username || '').trim();
+  const coins = edits.coins ?? null;
+  const freeEnergy = edits.freeEnergy ?? null;
+  const charEdits = edits.characters || {};
+  const hasCharEdits = Object.keys(charEdits).length > 0;
+
+  const applyCharEdits = (chrdata) => {
+    if (!hasCharEdits || !Array.isArray(chrdata)) return;
+    chrdata.forEach(c => {
+      const e = c && charEdits[c.id];
+      if (!e) return;
+      if (e.sb !== null && e.sb !== undefined) c.skillBoost = e.sb;
+      if (e.luck !== null && e.luck !== undefined) c.luck = e.luck;
+    });
+  };
+
+  if (fmt === 'liminal') {
+    const accounts = next.accounts || {};
+    const accId = accountId || next.active_account_id || Object.keys(accounts)[0];
+    const acc = accounts[accId];
+    if (!acc) return data;
+    const ud = acc.userdata || (acc.userdata = {});
+
+    if (username) {
+      acc.username = username;
+      ud.username = username;
+    }
+    if (coins !== null) {
+      ud.coins = coins;
+      if (ud.valuables && typeof ud.valuables === 'object') ud.valuables.coins = coins;
+    }
+    if (freeEnergy !== null) {
+      ud.freeEnergy = freeEnergy;
+      if (ud.valuables && typeof ud.valuables === 'object') ud.valuables.freeEnergy = freeEnergy;
+    }
+    applyCharEdits(ud.chrdata);
+  } else {
+    const tables = next.tables || {};
+
+    if (username) {
+      next.username = username;
+      if (tables.users?.rows?.[0]) tables.users.rows[0][1] = username;
+    }
+
+    // Session blob is stored as a JSON string row; parse, patch, and write it
+    // back through coerceJsonDoubles so integral doubles (chrdata date etc.)
+    // survive and the file stays bootable.
+    const sessionRow = tables.session?.rows?.[0];
+    if (sessionRow && sessionRow[1]) {
+      const wasString = typeof sessionRow[1] === 'string';
+      let sd = null;
+      try {
+        sd = wasString ? JSON.parse(sessionRow[1]) : sessionRow[1];
+      } catch (err) {
+        sd = null;
+      }
+      if (sd && typeof sd === 'object') {
+        if (username) sd.username = username;
+        if (coins !== null) {
+          if (sd.valuables && typeof sd.valuables === 'object') sd.valuables.coins = coins;
+          if ('coins' in sd) sd.coins = coins;
+        }
+        if (freeEnergy !== null) {
+          if (sd.valuables && typeof sd.valuables === 'object') sd.valuables.freeEnergy = freeEnergy;
+          if ('freeEnergy' in sd) sd.freeEnergy = freeEnergy;
+        }
+        applyCharEdits(sd.chrdata);
+        sessionRow[1] = wasString ? coerceJsonDoubles(JSON.stringify(sd)) : sd;
+      }
+    }
+
+    // Mirror the currencies into the typed valuables table when present.
+    const vrow = tables.user_valuables?.rows?.[0];
+    const vcols = tables.user_valuables?.cols || [];
+    if (Array.isArray(vrow)) {
+      if (coins !== null) {
+        const i = vcols.indexOf('coins');
+        if (i >= 0) vrow[i] = coins;
+      }
+      if (freeEnergy !== null) {
+        const i = vcols.indexOf('max_free_energy');
+        if (i >= 0) vrow[i] = freeEnergy;
+      }
+    }
+
+    // characters table rows: [userid, chr_id, luck, sb, job_id, job_levels, updated]
+    if (hasCharEdits && Array.isArray(tables.characters?.rows)) {
+      tables.characters.rows.forEach(r => {
+        const e = r && charEdits[r[1]];
+        if (!e) return;
+        if (e.luck !== null && e.luck !== undefined && r.length > 2) r[2] = e.luck;
+        if (e.sb !== null && e.sb !== undefined && r.length > 3) r[3] = e.sb;
+      });
+    }
+  }
+
+  return next;
 }
 
