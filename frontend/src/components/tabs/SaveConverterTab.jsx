@@ -1,21 +1,30 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useGameData } from '../../contexts/GameDataContext';
 import { loc } from '../../utils/localization';
-import { detectSaveFormat, inspectSaveData, convertSaveData, applySaveEdits, EMPTY_SAVE_EDITS, hasSaveEdits, sanitizeCountInput } from '../../utils/saveConverter';
+import { detectSaveFormat, inspectSaveData, convertSaveData, applySaveEdits, EMPTY_SAVE_EDITS, hasSaveEdits, sanitizeCountInput, ITEM_MAX_STACK } from '../../utils/saveConverter';
 import { inspectSave, convertSave } from '../../api';
 
 // Characters visible in the roster box (roughly) before the "scroll to see all" hint shows.
 const ROSTER_HINT_THRESHOLD = 12;
 
+// Add-item search results shown before the list needs scrolling.
+const ITEM_PICKER_LIMIT = 8;
+
 export default function SaveConverterTab() {
   const { data: gameData, lang, loadCategory } = useGameData();
   const gamedataCharacters = gameData?.characters || null;
+  const gamedataItems = gameData?.items || null;
 
-  // Character names come from the game database; load the catalog lazily and
-  // cache it in the shared context so the Characters tab reuses it.
+  // Character + item names come from the game database; load the catalogs
+  // lazily and cache them in the shared context so the Characters/Items tabs
+  // reuse them.
   useEffect(() => {
     if (!gamedataCharacters) loadCategory('characters');
   }, [gamedataCharacters, loadCategory]);
+
+  useEffect(() => {
+    if (!gamedataItems) loadCategory('items');
+  }, [gamedataItems, loadCategory]);
 
   const charNameById = useMemo(() => {
     const map = {};
@@ -24,6 +33,14 @@ export default function SaveConverterTab() {
     });
     return map;
   }, [gamedataCharacters, lang]);
+
+  const itemNameById = useMemo(() => {
+    const map = {};
+    (gamedataItems || []).forEach(it => {
+      if (it && it.item_index !== undefined) map[it.item_index] = loc(it.NameString, lang, `Item #${it.item_index}`);
+    });
+    return map;
+  }, [gamedataItems, lang]);
 
   const [sourceData, setSourceData] = useState(null);
   const [fileName, setFileName] = useState('');
@@ -39,6 +56,8 @@ export default function SaveConverterTab() {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
   const [error, setError] = useState(null);
+  const [itemSearch, setItemSearch] = useState('');
+  const [itemAddCount, setItemAddCount] = useState('1');
 
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
@@ -230,6 +249,24 @@ export default function SaveConverterTab() {
     });
   };
 
+  // Item counts: '' clears the edit (back to the loaded save), an explicit 0
+  // removes the item from the pouch.
+  const handleItemEdit = (itemId, raw) => {
+    setEdits(prev => {
+      const items = { ...prev.items };
+      const value = sanitizeCountInput(raw);
+      if (value === null) delete items[itemId];
+      else items[itemId] = Math.min(value, ITEM_MAX_STACK);
+      return { ...prev, items };
+    });
+  };
+
+  const handleAddItem = (itemId) => {
+    const count = Math.max(1, Math.min(sanitizeCountInput(itemAddCount) ?? 1, ITEM_MAX_STACK));
+    setEdits(prev => ({ ...prev, items: { ...prev.items, [itemId]: count } }));
+    setItemSearch('');
+  };
+
   const handleDownload = () => {
     if (!convertedResult?.data) return;
     const jsonStr = JSON.stringify(convertedResult.data, null, 2);
@@ -265,9 +302,48 @@ export default function SaveConverterTab() {
 
   const getCharName = (id) => charNameById[id] || `Character #${id}`;
 
+  const getItemName = (id) => itemNameById[id] || `Item #${id}`;
+
+  const itemIconUrl = (id) => `/api/assets/item/item_${String(id).padStart(2, '0')}.png`;
+
   const editsActive = hasSaveEdits(edits);
 
   const activeAccountSummary = inspection?.accounts?.find(a => a.account_id === selectedAccountId) || inspection?.accounts?.[0];
+
+  // Effective item pouch: the loaded save's held items overlaid with count
+  // edits (a zeroed edit removes the item entirely).
+  const heldItems = useMemo(() => {
+    const map = new Map();
+    (activeAccountSummary?.items || []).forEach(it => map.set(it.id, { count: it.count, edited: false }));
+    Object.entries(edits.items || {}).forEach(([k, v]) => {
+      const id = Number(k);
+      if (!Number.isFinite(id) || v === null || v === undefined) return;
+      map.set(id, { count: v, edited: true });
+    });
+    return [...map.entries()]
+      .filter(([, it]) => it.count > 0)
+      .sort((a, b) => a[0] - b[0])
+      .map(([id, it]) => ({ id, count: it.count, edited: it.edited }));
+  }, [activeAccountSummary, edits.items]);
+
+  const heldItemIds = useMemo(() => new Set(heldItems.map(it => it.id)), [heldItems]);
+
+  // Add-item picker: search the game catalog by name or id, held items excluded.
+  const itemMatches = useMemo(() => {
+    const q = itemSearch.trim().toLowerCase();
+    if (!q || !gamedataItems) return [];
+    const matches = [];
+    for (const it of gamedataItems) {
+      const id = it?.item_index;
+      if (id === undefined || heldItemIds.has(id)) continue;
+      const name = (itemNameById[id] || '').toLowerCase();
+      if (name.includes(q) || String(id) === q) {
+        matches.push(id);
+        if (matches.length >= ITEM_PICKER_LIMIT) break;
+      }
+    }
+    return matches;
+  }, [gamedataItems, itemSearch, heldItemIds, itemNameById]);
 
   return (
     <div className="save-converter-container">
@@ -448,6 +524,16 @@ export default function SaveConverterTab() {
               </div>
 
               <div className="mini-stat-card">
+                <div className="mini-stat-icon" style={{ background: 'rgba(74, 222, 128, 0.1)', color: '#4ade80' }}>
+                  <i className="fa-solid fa-flask"></i>
+                </div>
+                <div className="mini-stat-content">
+                  <h5>Items Held</h5>
+                  <p>{heldItems.length}</p>
+                </div>
+              </div>
+
+              <div className="mini-stat-card">
                 <div className="mini-stat-icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24' }}>
                   <i className="fa-solid fa-coins"></i>
                 </div>
@@ -608,6 +694,105 @@ export default function SaveConverterTab() {
               </div>
             </div>
           )}
+
+          {/* Item Inventory (counts editable, any game item addable) */}
+          <div className="roster-preview-card">
+            <div className="roster-header">
+              <h4>
+                <i className="fa-solid fa-flask"></i>
+                Item Inventory ({heldItems.length} {heldItems.length === 1 ? 'Item' : 'Items'} Held)
+              </h4>
+              <span className="roster-scroll-hint" title={`Stacks are capped at ${ITEM_MAX_STACK}; clearing a count reverts to the loaded save`}>
+                <i className="fa-solid fa-pen"></i>
+                Edit counts, or search to add items
+              </span>
+            </div>
+
+            <div className="item-picker">
+              <div className="item-picker-controls">
+                <div className="item-picker-search">
+                  <i className="fa-solid fa-magnifying-glass"></i>
+                  <input
+                    type="text"
+                    value={itemSearch}
+                    placeholder="Search an item to add (name or ID)..."
+                    onChange={(e) => setItemSearch(e.target.value)}
+                  />
+                </div>
+                <label className="item-picker-count">
+                  <span>Qty</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={ITEM_MAX_STACK}
+                    value={itemAddCount}
+                    onChange={(e) => setItemAddCount(e.target.value)}
+                    title="Count given to newly added items"
+                  />
+                </label>
+              </div>
+
+              {itemSearch.trim() !== '' && (
+                itemMatches.length > 0 ? (
+                  <div className="item-picker-results">
+                    {itemMatches.map(id => (
+                      <div key={id} className="item-picker-result">
+                        <img src={itemIconUrl(id)} alt="" onError={(e) => { e.target.style.visibility = 'hidden'; }} />
+                        <span className="item-picker-name">{getItemName(id)}</span>
+                        <span className="item-picker-id">ID {id}</span>
+                        <button type="button" className="item-add-btn" onClick={() => handleAddItem(id)}>
+                          <i className="fa-solid fa-plus"></i>
+                          Add
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="item-picker-empty">No matching item in the game catalog (already held items are listed below).</p>
+                )
+              )}
+            </div>
+
+            {heldItems.length === 0 ? (
+              <p className="item-empty-note">
+                The pouch is empty — search above to add an item.
+              </p>
+            ) : (
+              <div className="roster-grid">
+                {heldItems.map(({ id, count, edited }) => (
+                  <div key={id} className={`char-badge-card${edited ? ' edited' : ''}`}>
+                    <img
+                      className="item-thumb"
+                      src={itemIconUrl(id)}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
+                    />
+                    <div className="item-thumb-fallback">
+                      <i className="fa-solid fa-gem"></i>
+                    </div>
+                    <div className="char-badge-info">
+                      <h5>{getItemName(id)}</h5>
+                      <div className="char-edit-row">
+                        <span className="char-job-tag">Item {id}</span>
+                        <label className="char-edit-field">
+                          <span>Qty</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max={ITEM_MAX_STACK}
+                            value={edits.items[id] ?? count}
+                            onChange={(e) => handleItemEdit(id, e.target.value)}
+                            title={`Count 0–${ITEM_MAX_STACK}; 0 removes the item, clearing the field reverts`}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* JSON Viewer */}
           {showJsonViewer && convertedResult?.data && (

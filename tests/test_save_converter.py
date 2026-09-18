@@ -42,6 +42,22 @@ class TestSaveConverter(unittest.TestCase):
         self.assertEqual(lim_summary["buddy_count"], 138)
         self.assertEqual(lim_summary["coins"], 18916)
 
+    def test_summary_items(self):
+        # Held items surface as {id, count} pairs with 1-BASED ids:
+        # itemList[slot - 1] holds the count of item `slot`.
+        item_list = self.liminal_data["accounts"][self.liminal_data["active_account_id"]]["userdata"]["itemList"]
+        summary = parse_account_summary_liminal(self.liminal_data["active_account_id"],
+                                                self.liminal_data["accounts"][self.liminal_data["active_account_id"]])
+        expected = [{"id": idx + 1, "count": int(v)} for idx, v in enumerate(item_list) if v and v > 0]
+        self.assertEqual(summary["items"], expected)
+        self.assertEqual(len(summary["items"]), summary["item_count"])
+
+        retb_summary = parse_account_summary_retb(self.tb_data)
+        session_data = json.loads(self.tb_data["tables"]["session"]["rows"][0][1])
+        expected_retb = [{"id": idx + 1, "count": int(v)}
+                         for idx, v in enumerate(session_data.get("itemList", [])) if v and v > 0]
+        self.assertEqual(retb_summary["items"], expected_retb)
+
     def test_retb_to_liminal_conversion(self):
         converted = retb_to_liminal(self.tb_data)
         self.assertIn("accounts", converted)

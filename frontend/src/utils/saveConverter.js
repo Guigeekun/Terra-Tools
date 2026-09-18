@@ -4,6 +4,19 @@
  * summaries only carry the raw character ids.
  */
 
+// Item inventory shape the game client expects: itemList[slot - 1] holds the
+// count of item `slot` (ids are 1-based, exactly 181 slots, stack cap 999) --
+// mirrors project-liminal-gate save_validation.py and its save editor.
+export const ITEM_SLOTS = 181;
+export const ITEM_MAX_STACK = 999;
+
+// Held items as {id, count} pairs (ids 1-based) for summaries and the UI.
+export function parseHeldItems(itemList) {
+  return (Array.isArray(itemList) ? itemList : [])
+    .map((count, index) => ({ id: index + 1, count: Number(count) || 0 }))
+    .filter(it => it.count > 0);
+}
+
 export function detectSaveFormat(data) {
   if (!data || typeof data !== 'object') return 'unknown';
   if (data.format === 'retb-save/1' || (data.tables && data.tables.session)) {
@@ -104,6 +117,7 @@ export function parseAccountSummaryLiminal(accountId, acc) {
     energy_paid: ud.energy || (ud.valuables && ud.valuables.energy) || 0,
     stamina: 20,
     item_count: itemCount,
+    items: parseHeldItems(itemList),
     quest_clears: questClears,
     progress_code: ud.progressCode || 0,
     tutorial_phase: acc.tutorial_phase || 'free_roam',
@@ -163,7 +177,6 @@ export function parseAccountSummaryRetb(retbData) {
   const itemList = sessionData.itemList || [];
   const itemCount = itemList.filter(n => n && n > 0).length;
   const questClears = Object.keys(sessionData.extra_quest_clears || {}).length;
-
   let topChrs = [];
   if (sessionChrs.length > 0) {
     topChrs = sessionChrs.map(c => ({
@@ -199,6 +212,7 @@ export function parseAccountSummaryRetb(retbData) {
     energy_paid: paidEnergy,
     stamina,
     item_count: itemCount,
+    items: parseHeldItems(itemList),
     quest_clears: questClears,
     progress_code: sessionData.progressCode || 0,
     tutorial_phase: 'free_roam',
@@ -664,7 +678,8 @@ export const EMPTY_SAVE_EDITS = Object.freeze({
   username: '',
   coins: null,
   freeEnergy: null,
-  characters: {}
+  characters: {},
+  items: {}
 });
 
 // '' / invalid / negative -> null (= leave the original value untouched).
@@ -680,8 +695,8 @@ export function hasSaveEdits(edits) {
   if (edits.username && edits.username.trim()) return true;
   if (edits.coins !== null && edits.coins !== undefined) return true;
   if (edits.freeEnergy !== null && edits.freeEnergy !== undefined) return true;
-  const characters = edits.characters || {};
-  return Object.keys(characters).length > 0;
+  if (Object.keys(edits.characters || {}).length > 0) return true;
+  return Object.keys(edits.items || {}).length > 0;
 }
 
 export function applySaveEdits(data, edits, accountId = null) {
@@ -696,6 +711,8 @@ export function applySaveEdits(data, edits, accountId = null) {
   const freeEnergy = edits.freeEnergy ?? null;
   const charEdits = edits.characters || {};
   const hasCharEdits = Object.keys(charEdits).length > 0;
+  const itemEdits = edits.items || {};
+  const hasItemEdits = Object.keys(itemEdits).length > 0;
 
   const applyCharEdits = (chrdata) => {
     if (!hasCharEdits || !Array.isArray(chrdata)) return;
@@ -705,6 +722,19 @@ export function applySaveEdits(data, edits, accountId = null) {
       if (e.sb !== null && e.sb !== undefined) c.skillBoost = e.sb;
       if (e.luck !== null && e.luck !== undefined) c.luck = e.luck;
     });
+  };
+
+  // Grow the list to the full 181 slots and write each edited count into its
+  // slot (itemList[slot - 1]); a count of 0 removes the item from the pouch.
+  const applyItemEdits = (itemList) => {
+    const list = Array.isArray(itemList) ? itemList.slice(0, ITEM_SLOTS) : [];
+    while (list.length < ITEM_SLOTS) list.push(0);
+    Object.entries(itemEdits).forEach(([k, v]) => {
+      const slot = Math.floor(Number(k));
+      if (!Number.isFinite(slot) || slot < 1 || slot > ITEM_SLOTS) return;
+      list[slot - 1] = Math.max(0, Math.min(ITEM_MAX_STACK, Math.floor(Number(v) || 0)));
+    });
+    return list;
   };
 
   if (fmt === 'liminal') {
@@ -727,6 +757,7 @@ export function applySaveEdits(data, edits, accountId = null) {
       if (ud.valuables && typeof ud.valuables === 'object') ud.valuables.freeEnergy = freeEnergy;
     }
     applyCharEdits(ud.chrdata);
+    if (hasItemEdits) ud.itemList = applyItemEdits(ud.itemList);
   } else {
     const tables = next.tables || {};
 
@@ -758,6 +789,7 @@ export function applySaveEdits(data, edits, accountId = null) {
           if ('freeEnergy' in sd) sd.freeEnergy = freeEnergy;
         }
         applyCharEdits(sd.chrdata);
+        if (hasItemEdits) sd.itemList = applyItemEdits(sd.itemList);
         sessionRow[1] = wasString ? coerceJsonDoubles(JSON.stringify(sd)) : sd;
       }
     }
