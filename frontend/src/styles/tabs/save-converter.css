@@ -235,6 +235,54 @@
   color: var(--text-secondary);
 }
 
+.meta-tag.modified {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-amber);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+/* Inline stat editing (player name, coins, energy) */
+.stat-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.25);
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 0 0 2px;
+  outline: none;
+  transition: var(--transition-smooth);
+}
+
+.stat-input:focus {
+  border-bottom-color: var(--accent-blue);
+}
+
+.stat-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
+.stat-input-num,
+.char-edit-field input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.stat-input-num::-webkit-outer-spin-button,
+.stat-input-num::-webkit-inner-spin-button,
+.char-edit-field input::-webkit-outer-spin-button,
+.char-edit-field input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.reset-edits-btn {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: var(--accent-amber);
+}
+
 .file-actions {
   display: flex;
   gap: 10px;
@@ -579,6 +627,51 @@
 .char-badge-info p {
   font-size: 0.75rem;
   color: var(--text-secondary);
+}
+
+.char-badge-card.edited {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.char-edit-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.char-job-tag {
+  white-space: nowrap;
+}
+
+.char-edit-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.char-edit-field input {
+  width: 52px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  outline: none;
+  transition: var(--transition-smooth);
+}
+
+.char-edit-field input:focus {
+  border-color: var(--accent-blue);
+  background: rgba(56, 189, 248, 0.08);
 }
 
 /* JSON Code Viewer */

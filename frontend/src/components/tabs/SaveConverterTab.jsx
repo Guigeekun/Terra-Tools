@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useGameData } from '../../contexts/GameDataContext';
 import { loc } from '../../utils/localization';
-import { detectSaveFormat, inspectSaveData, convertSaveData } from '../../utils/saveConverter';
+import { detectSaveFormat, inspectSaveData, convertSaveData, applySaveEdits, EMPTY_SAVE_EDITS, hasSaveEdits, sanitizeCountInput } from '../../utils/saveConverter';
 import { inspectSave, convertSave } from '../../api';
 
 // Characters visible in the roster box (roughly) before the "scroll to see all" hint shows.
@@ -32,6 +32,7 @@ export default function SaveConverterTab() {
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [targetFormat, setTargetFormat] = useState('retb');
   const [convertedResult, setConvertedResult] = useState(null);
+  const [edits, setEdits] = useState(EMPTY_SAVE_EDITS);
   const [isWindowDragging, setIsWindowDragging] = useState(false);
   const [showJsonViewer, setShowJsonViewer] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -117,12 +118,11 @@ export default function SaveConverterTab() {
       setFileSize(sizeStr);
       setInspection(inspectRes);
       setSelectedAccountId(inspectRes.active_account_id);
-      
+      setEdits(EMPTY_SAVE_EDITS);
+
       const defaultTarget = inspectRes.format === 'liminal' ? 'retb' : 'liminal';
       setTargetFormat(defaultTarget);
 
-      setLoadingText('Converting savefile...');
-      await doConvert(jsonObj, defaultTarget, inspectRes.active_account_id);
       showToast(`Loaded ${name} (${inspectRes.format_label})`);
     } catch (err) {
       setError(err.message || 'Failed to parse savefile JSON.');
@@ -145,6 +145,18 @@ export default function SaveConverterTab() {
       setError(`Conversion error: ${err.message}`);
     }
   };
+
+  // Single conversion trigger: any change to the loaded file, target format,
+  // selected account, or inline edits re-runs the conversion (debounced so
+  // typing in an edit field doesn't convert every keystroke).
+  useEffect(() => {
+    if (!sourceData) return;
+    const handle = setTimeout(() => {
+      const dataToConvert = applySaveEdits(sourceData, edits, selectedAccountId);
+      doConvert(dataToConvert, targetFormat, selectedAccountId);
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [sourceData, edits, targetFormat, selectedAccountId]);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -186,16 +198,36 @@ export default function SaveConverterTab() {
 
   const handleTargetFormatChange = (newTarget) => {
     setTargetFormat(newTarget);
-    if (sourceData) {
-      doConvert(sourceData, newTarget, selectedAccountId);
-    }
   };
 
   const handleAccountSelect = (accId) => {
     setSelectedAccountId(accId);
-    if (sourceData) {
-      doConvert(sourceData, targetFormat, accId);
-    }
+    setEdits(EMPTY_SAVE_EDITS);
+  };
+
+  const handleResetEdits = () => {
+    setEdits(EMPTY_SAVE_EDITS);
+    showToast('Edits reverted to the loaded save.');
+  };
+
+  const handleEditChange = (field, value) => {
+    setEdits(prev => ({
+      ...prev,
+      [field]: field === 'username' ? value : sanitizeCountInput(value)
+    }));
+  };
+
+  const handleCharEdit = (charId, field, raw) => {
+    setEdits(prev => {
+      const characters = { ...prev.characters };
+      const entry = { ...(characters[charId] || {}) };
+      const value = sanitizeCountInput(raw);
+      if (value === null) delete entry[field];
+      else entry[field] = value;
+      if (Object.keys(entry).length === 0) delete characters[charId];
+      else characters[charId] = entry;
+      return { ...prev, characters };
+    });
   };
 
   const handleDownload = () => {
@@ -227,10 +259,13 @@ export default function SaveConverterTab() {
     setFileName('');
     setFileSize('');
     setError(null);
+    setEdits(EMPTY_SAVE_EDITS);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const getCharName = (id) => charNameById[id] || `Character #${id}`;
+
+  const editsActive = hasSaveEdits(edits);
 
   const activeAccountSummary = inspection?.accounts?.find(a => a.account_id === selectedAccountId) || inspection?.accounts?.[0];
 
@@ -320,11 +355,18 @@ export default function SaveConverterTab() {
                   </span>
                   {fileSize && <span className="meta-tag size">{fileSize}</span>}
                   <span className="meta-tag size">{inspection.account_count} {inspection.account_count === 1 ? 'Account' : 'Accounts'}</span>
+                  {editsActive && <span className="meta-tag modified">Modified</span>}
                 </div>
               </div>
             </div>
 
             <div className="file-actions">
+              {editsActive && (
+                <button className="secondary-btn reset-edits-btn" onClick={handleResetEdits} title="Revert all inline edits">
+                  <i className="fa-solid fa-eraser"></i>
+                  Reset Changes
+                </button>
+              )}
               <button className="secondary-btn" onClick={handleReset} title="Load another save file">
                 <i className="fa-solid fa-arrow-rotate-left"></i>
                 Load Another
@@ -364,7 +406,7 @@ export default function SaveConverterTab() {
             </div>
           )}
 
-          {/* Account Summary Stats */}
+          {/* Account Summary Stats (name / coins / energy are inline-editable) */}
           {activeAccountSummary && (
             <div className="stats-summary-row">
               <div className="mini-stat-card">
@@ -373,7 +415,15 @@ export default function SaveConverterTab() {
                 </div>
                 <div className="mini-stat-content">
                   <h5>Player Name</h5>
-                  <p>{activeAccountSummary.username || 'Player'}</p>
+                  <input
+                    className="stat-input"
+                    type="text"
+                    value={edits.username}
+                    placeholder={activeAccountSummary.username || 'Player'}
+                    onChange={(e) => handleEditChange('username', e.target.value)}
+                    title="Edit player name"
+                    maxLength={32}
+                  />
                 </div>
               </div>
 
@@ -403,7 +453,15 @@ export default function SaveConverterTab() {
                 </div>
                 <div className="mini-stat-content">
                   <h5>Coins</h5>
-                  <p>{activeAccountSummary.coins.toLocaleString()}</p>
+                  <input
+                    className="stat-input stat-input-num"
+                    type="number"
+                    min="0"
+                    value={edits.coins ?? ''}
+                    placeholder={activeAccountSummary.coins.toLocaleString()}
+                    onChange={(e) => handleEditChange('coins', e.target.value)}
+                    title="Edit coins"
+                  />
                 </div>
               </div>
 
@@ -412,8 +470,16 @@ export default function SaveConverterTab() {
                   <i className="fa-solid fa-bolt"></i>
                 </div>
                 <div className="mini-stat-content">
-                  <h5>Energy</h5>
-                  <p>{activeAccountSummary.energy_free} Free</p>
+                  <h5>Energy (Free)</h5>
+                  <input
+                    className="stat-input stat-input-num"
+                    type="number"
+                    min="0"
+                    value={edits.freeEnergy ?? ''}
+                    placeholder={String(activeAccountSummary.energy_free)}
+                    onChange={(e) => handleEditChange('freeEnergy', e.target.value)}
+                    title="Edit free energy"
+                  />
                 </div>
               </div>
 
@@ -502,19 +568,43 @@ export default function SaveConverterTab() {
               </div>
 
               <div className="roster-grid">
-                {activeAccountSummary.top_characters.map((c, i) => (
-                  <div key={`${c.id}-${i}`} className="char-badge-card">
-                    <div className="char-icon-circle">
-                      {c.id}
+                {activeAccountSummary.top_characters.map((c, i) => {
+                  const charEdit = edits.characters[c.id];
+                  const isEdited = Boolean(charEdit);
+                  return (
+                    <div key={`${c.id}-${i}`} className={`char-badge-card${isEdited ? ' edited' : ''}`}>
+                      <div className="char-icon-circle">
+                        {c.id}
+                      </div>
+                      <div className="char-badge-info">
+                        <h5>{getCharName(c.id)}</h5>
+                        <div className="char-edit-row">
+                          <span className="char-job-tag">Job {c.job_id + 1}</span>
+                          <label className="char-edit-field">
+                            <span>SB</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={charEdit?.sb ?? c.sb}
+                              onChange={(e) => handleCharEdit(c.id, 'sb', e.target.value)}
+                              title="Skill Boost %"
+                            />
+                          </label>
+                          <label className="char-edit-field">
+                            <span>LCK</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={charEdit?.luck ?? c.luck}
+                              onChange={(e) => handleCharEdit(c.id, 'luck', e.target.value)}
+                              title="Luck"
+                            />
+                          </label>
+                        </div>
+                      </div>
                     </div>
-                    <div className="char-badge-info">
-                      <h5>{getCharName(c.id)}</h5>
-                      <p>
-                        <span>Job {c.job_id + 1}</span> • <span>SB: {c.sb}%</span> • <span>Luck: {c.luck}</span>
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
