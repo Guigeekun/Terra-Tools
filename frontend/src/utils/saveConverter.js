@@ -1,16 +1,7 @@
-import { JOB_NAME_MAP } from './character_names';
-
-
-
-
-function resolveCharacterName(jobId, char) {
-  const nameFromMap = JOB_NAME_MAP[jobId];
-  if (nameFromMap) return nameFromMap;
-  return char.name || `Character #${char.id}`;
-}
-
 /**
  * Savefile Converter utilities for Project Liminal Gate and ReTB formats.
+ * Character display names are resolved in the UI from the loaded game data;
+ * summaries only carry the raw character ids.
  */
 
 export function detectSaveFormat(data) {
@@ -116,13 +107,12 @@ export function parseAccountSummaryLiminal(accountId, acc) {
     quest_clears: questClears,
     progress_code: ud.progressCode || 0,
     tutorial_phase: acc.tutorial_phase || 'free_roam',
-    top_characters: chrdata.slice(0, 12).map(c => ({
+    top_characters: chrdata.map(c => ({
       id: c.id,
       job_id: c.jobID || 0,
       luck: c.luck || 0,
       sb: c.skillBoost || 0,
-      job_levels: c.jobLevels || [1, 0, 0],
-      name: resolveCharacterName(c.jobID, c)
+      job_levels: c.jobLevels || [1, 0, 0]
     }))
   };
 }
@@ -176,7 +166,7 @@ export function parseAccountSummaryRetb(retbData) {
 
   let topChrs = [];
   if (sessionChrs.length > 0) {
-    topChrs = sessionChrs.slice(0, 12).map(c => ({
+    topChrs = sessionChrs.map(c => ({
       id: c.id,
       job_id: c.jobID || 0,
       luck: c.luck || 0,
@@ -184,7 +174,7 @@ export function parseAccountSummaryRetb(retbData) {
       job_levels: c.jobLevels || [1, 0, 0]
     }));
   } else if (chrRows.length > 0) {
-    topChrs = chrRows.slice(0, 12).map(r => {
+    topChrs = chrRows.map(r => {
       let jl = r[5];
       if (typeof jl === 'string') {
         try { jl = JSON.parse(jl); } catch (e) { jl = [1, 0, 0]; }

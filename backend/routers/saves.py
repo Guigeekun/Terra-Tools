@@ -204,7 +204,7 @@ def parse_account_summary_liminal(account_id: str, acc: dict) -> dict:
                 "sb": c.get("skillBoost", 0) or 0,
                 "job_levels": c.get("jobLevels", [1, 0, 0]),
             }
-            for c in chrdata[:10]
+            for c in chrdata
         ],
     }
 
@@ -263,10 +263,10 @@ def parse_account_summary_retb(retb_data: dict) -> dict:
                 "sb": c.get("skillBoost", 0) or 0,
                 "job_levels": c.get("jobLevels", [1, 0, 0]),
             }
-            for c in session_chrs[:10]
+            for c in session_chrs
         ]
     elif chr_rows:
-        for r in chr_rows[:10]:
+        for r in chr_rows:
             jl = r[5]
             if isinstance(jl, str):
                 try:

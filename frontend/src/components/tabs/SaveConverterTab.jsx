@@ -1,10 +1,30 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useGameData } from '../../contexts/GameDataContext';
+import { loc } from '../../utils/localization';
 import { detectSaveFormat, inspectSaveData, convertSaveData } from '../../utils/saveConverter';
 import { inspectSave, convertSave } from '../../api';
 
+// Characters visible in the roster box (roughly) before the "scroll to see all" hint shows.
+const ROSTER_HINT_THRESHOLD = 12;
+
 export default function SaveConverterTab() {
-  const { characters = [] } = useGameData();
+  const { data: gameData, lang, loadCategory } = useGameData();
+  const gamedataCharacters = gameData?.characters || null;
+
+  // Character names come from the game database; load the catalog lazily and
+  // cache it in the shared context so the Characters tab reuses it.
+  useEffect(() => {
+    if (!gamedataCharacters) loadCategory('characters');
+  }, [gamedataCharacters, loadCategory]);
+
+  const charNameById = useMemo(() => {
+    const map = {};
+    (gamedataCharacters || []).forEach(c => {
+      if (c && c.ID !== undefined) map[c.ID] = loc(c.NameString, lang, `Character #${c.ID}`);
+    });
+    return map;
+  }, [gamedataCharacters, lang]);
+
   const [sourceData, setSourceData] = useState(null);
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('');
@@ -210,10 +230,7 @@ export default function SaveConverterTab() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const getCharName = (id) => {
-    const char = characters.find(c => c.id === id || c.ID === id);
-    return char ? (char.name || char.Name || `Character #${id}`) : `Character #${id}`;
-  };
+  const getCharName = (id) => charNameById[id] || `Character #${id}`;
 
   const activeAccountSummary = inspection?.accounts?.find(a => a.account_id === selectedAccountId) || inspection?.accounts?.[0];
 
@@ -467,19 +484,26 @@ export default function SaveConverterTab() {
             </div>
           </div>
 
-          {/* Character Roster Preview */}
+          {/* Character Roster Preview (full roster, scrollable) */}
           {activeAccountSummary?.top_characters && activeAccountSummary.top_characters.length > 0 && (
             <div className="roster-preview-card">
               <div className="roster-header">
                 <h4>
                   <i className="fa-solid fa-id-card"></i>
-                  Character Roster Preview ({activeAccountSummary.character_count} Total)
+                  Character Roster ({activeAccountSummary.top_characters.length}{' '}
+                  {activeAccountSummary.top_characters.length === 1 ? 'Character' : 'Characters'})
                 </h4>
+                {activeAccountSummary.top_characters.length > ROSTER_HINT_THRESHOLD && (
+                  <span className="roster-scroll-hint">
+                    <i className="fa-solid fa-computer-mouse"></i>
+                    Scroll to see all
+                  </span>
+                )}
               </div>
 
               <div className="roster-grid">
                 {activeAccountSummary.top_characters.map((c, i) => (
-                  <div key={i} className="char-badge-card">
+                  <div key={`${c.id}-${i}`} className="char-badge-card">
                     <div className="char-icon-circle">
                       {c.id}
                     </div>
