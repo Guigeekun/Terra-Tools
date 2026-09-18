@@ -193,6 +193,12 @@ def parse_account_summary_liminal(account_id: str, acc: dict) -> dict:
         "energy_free": ud.get("freeEnergy", 0),
         "energy_paid": ud.get("energy", 0),
         "item_count": item_count,
+        # itemList[slot - 1] holds the count of 1-based item `slot`.
+        "items": [
+            {"id": idx + 1, "count": int(v)}
+            for idx, v in enumerate(item_list)
+            if isinstance(v, (int, float)) and v and v > 0
+        ],
         "quest_clears": quest_clears,
         "progress_code": ud.get("progressCode", 0),
         "tutorial_phase": acc.get("tutorial_phase", "unknown"),
@@ -291,6 +297,12 @@ def parse_account_summary_retb(retb_data: dict) -> dict:
         "energy_paid": paid_energy,
         "stamina": stamina,
         "item_count": item_count,
+        # itemList[slot - 1] holds the count of 1-based item `slot`.
+        "items": [
+            {"id": idx + 1, "count": int(v)}
+            for idx, v in enumerate(item_list)
+            if isinstance(v, (int, float)) and v and v > 0
+        ],
         "quest_clears": quest_clears,
         "progress_code": session_data.get("progressCode", 0),
         "tutorial_phase": "free_roam",
