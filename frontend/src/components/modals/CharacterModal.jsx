@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { loc } from '../../utils/localization';
-import { rarityLabels, speciesTranslations, weaponMeta, elementMeta } from '../../utils/constants';
+import { rarityShortLabels, weaponMeta, elementMeta } from '../../utils/constants';
 import { useGameData } from '../../contexts/GameDataContext';
 import { useLazyCategory } from '../../hooks/useLazyCategory';
 import LightboxModal from './LightboxModal';
 
-export default function CharacterModal({ character, onClose, onOpenItem }) {
+export default function CharacterModal({ character, onClose, onOpenItem, onOpenCharacter }) {
   const { lang, data } = useGameData();
   useLazyCategory('skills');
   const [jobIndex, setJobIndex] = useState(0);
+  const [showRecode, setShowRecode] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState(null);
 
   if (!character) return null;
@@ -17,9 +18,9 @@ export default function CharacterModal({ character, onClose, onOpenItem }) {
   const job = jobs[jobIndex];
   const skills = data?.skills || [];
 
-  const speciesTrans = speciesTranslations[character.Species];
-  const speciesStr = speciesTrans ? (speciesTrans[lang] || speciesTrans['en']) : 'Unknown';
-  const genderStr = character.Gender === 1 ? 'Male' : character.Gender === 2 ? 'Female' : 'Unknown';
+  // Species/Gender only exist on job entries, not on the character info
+  const genderVal = jobs.find(j => j.Gender === 1 || j.Gender === 2)?.Gender;
+  const genderStr = genderVal === 1 ? 'Male' : genderVal === 2 ? 'Female' : 'Unknown';
 
   const weap = job ? (weaponMeta[job.Attrib] || weaponMeta[4]) : null;
   const elem = job ? (elementMeta[job.SkillAttrib] || elementMeta[0]) : null;
@@ -35,25 +36,97 @@ export default function CharacterModal({ character, onClose, onOpenItem }) {
 
           {/* Header */}
           <div className="modal-header">
-            <span className="badge badge-species">{speciesStr}</span>
-            <h3 style={{ marginTop: 8 }}>{loc(character.NameString, lang)}</h3>
+            <h3>{loc(character.NameString, lang)}</h3>
             <div className="modal-char-meta">
               <span><i className="fa-solid fa-venus-mars"></i> Gender: {genderStr}</span>
-              <span><i className="fa-solid fa-star"></i> Class: {rarityLabels[character.rarity] || 'Class ' + character.rarity}</span>
+              <span><i className="fa-solid fa-star"></i> Class: {rarityShortLabels[character.rarity] || character.rarity}</span>
             </div>
+            {character.recode_source && (
+              <button
+                className="recode-source-note"
+                title={`View ${loc(character.recode_source.name, lang)}`}
+                onClick={() => onOpenCharacter?.(character.recode_source.ID)}
+              >
+                <i className="fa-solid fa-arrows-rotate"></i>
+                <span>Acquired by recoding <strong>{loc(character.recode_source.name, lang)}</strong></span>
+                <i className="fa-solid fa-chevron-right" style={{ fontSize: 9 }}></i>
+              </button>
+            )}
           </div>
 
           {/* Job Tabs */}
           <div className="modal-tabs">
             {jobs.map((_, i) => (
-              <button key={i} className={`modal-tab-btn ${i === jobIndex ? 'active' : ''}`} onClick={() => setJobIndex(i)}>
+              <button key={i} className={`modal-tab-btn ${!showRecode && i === jobIndex ? 'active' : ''}`} onClick={() => { setJobIndex(i); setShowRecode(false); }}>
                 Job {i + 1}
               </button>
             ))}
+            {character.recode?.length > 0 && (
+              <button className={`modal-tab-btn recode-tab ${showRecode ? 'active' : ''}`} onClick={() => setShowRecode(true)}>
+                <i className="fa-solid fa-arrows-rotate"></i> Recode
+              </button>
+            )}
           </div>
 
-          {/* Job Detail */}
-          {job ? (
+          {/* Recode Tab */}
+          {showRecode && character.recode?.length > 0 ? (
+            <div className="recode-detail">
+              {character.recode.map((option, optionIdx) => (
+                <div key={optionIdx} className="job-skills-box recode-box">
+                  {option.result && (
+                    <button
+                      className="recode-target clickable"
+                      title={`View ${loc(option.result.name, lang)}`}
+                      onClick={() => onOpenCharacter?.(option.result.ID)}
+                    >
+                      {option.result.piece_file && (
+                        <img src={`/api/assets/image?path=${encodeURIComponent(option.result.piece_file)}`} alt="" className="recode-piece" />
+                      )}
+                      <span className="recode-arrow"><i className="fa-solid fa-arrow-right-long"></i></span>
+                      <strong>{loc(option.result.name, lang)}</strong>
+                      <span className="recode-open-hint"><i className="fa-solid fa-chevron-right"></i></span>
+                    </button>
+                  )}
+                  {option.coins > 0 && (
+                    <div className="stats-row">
+                      <span className="stat-lbl"><i className="fa-solid fa-coins" style={{ marginRight: 6 }}></i>Coin Cost</span>
+                      <span className="stat-val" style={{ color: 'var(--accent-amber)' }}>{option.coins.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {!option.coins && !(option.items || []).length && !(option.units || []).length && (
+                    <p className="recode-empty">No recode materials listed in game data.</p>
+                  )}
+                  <ul className="job-skills-list" style={{ marginTop: 8 }}>
+                    {(option.items || []).map((mat, i) => (
+                      <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                        title="Click to view item details & drop locations"
+                        onClick={() => { onClose(); onOpenItem(mat.item_id); }}>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          {mat.icon_url && <img src={mat.icon_url} alt="" style={{ width: 24, height: 24, objectFit: 'contain', imageRendering: 'pixelated', marginRight: 8, borderRadius: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }} />}
+                          <span>{loc(mat.name, lang)}</span>
+                        </div>
+                        <span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>x {mat.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {(option.units || []).length > 0 && (
+                    <ul className="job-skills-list" style={{ marginTop: 8 }}>
+                      {option.units.map((unit, i) => (
+                        <li key={i} className="recode-unit-row" title={`View ${loc(unit.name, lang)}`}
+                          onClick={() => onOpenCharacter?.(unit.ID)}>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            {unit.piece_file && <img src={`/api/assets/image?path=${encodeURIComponent(unit.piece_file)}`} alt="" style={{ width: 24, height: 24, objectFit: 'contain', imageRendering: 'pixelated', marginRight: 8, borderRadius: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }} />}
+                            <span>{loc(unit.name, lang)}</span>
+                          </div>
+                          <span className="badge" style={{ fontSize: 10, padding: '2px 6px', backgroundColor: 'rgba(99,102,241,0.08)', borderColor: 'rgba(99,102,241,0.2)', color: 'var(--accent-indigo)' }}>Lv {unit.level}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : job ? (
             <div className="job-detail-layout">
               {/* Left Column */}
               <div className="job-info-col">
@@ -97,6 +170,24 @@ export default function CharacterModal({ character, onClose, onOpenItem }) {
 
               {/* Right Column */}
               <div className="job-stats-col">
+                {/* Recruitment (chapter drops) */}
+                {character.recruitment?.length > 0 && (
+                  <div className="job-skills-box recruitment-box">
+                    <h5><i className="fa-solid fa-map-pin" style={{ marginRight: 6 }}></i>Recruitment</h5>
+                    <p className="recruitment-hint">Defeat this enemy in these stages for a chance to recruit it:</p>
+                    <ul className="job-skills-list">
+                      {character.recruitment.map((site, i) => (
+                        <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span className="badge" style={{ fontSize: 10, padding: '2px 7px', backgroundColor: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.2)', color: 'var(--accent-green)', flexShrink: 0 }}>
+                            Ch {site.chapter}-{site.section}
+                          </span>
+                          <span style={{ fontSize: 12 }}>{site.title.replace(/^Stage\s+\S+:\s*/, '')}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="stats-table-box">
                   <h5>Job Base Statistics</h5>
                   {[['HP', job.HP], ['ATK', job.ATK], ['DEF', job.DEF], ['MATK', job.SATK], ['MDEF', job.SDEF]].map(([label, val]) => (

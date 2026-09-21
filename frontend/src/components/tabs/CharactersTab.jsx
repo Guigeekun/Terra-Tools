@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { loc } from '../../utils/localization';
-import { rarityLabels, speciesTranslations, weaponMeta, elementMeta } from '../../utils/constants';
+import { rarityLabels, rarityShortLabels, speciesTranslations, weaponMeta, elementMeta } from '../../utils/constants';
 import JobBadge from '../shared/JobBadge';
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
@@ -71,7 +71,12 @@ export default function CharactersTab({ onSelectCharacter, initialSearch = '' })
               const pieceUrl = firstJob?.piece_file ? `/api/assets/image?path=${encodeURIComponent(firstJob.piece_file)}` : null;
               return (
                 <div key={char.ID} className="card-item" onClick={() => onSelectCharacter(char)}>
-                  <span className="card-badge badge-rarity">{rarityLabels[char.rarity] || 'Class ' + char.rarity}</span>
+                  <span className="card-badge badge-rarity">{rarityShortLabels[char.rarity] || char.rarity}</span>
+                  {char.recode && (
+                    <span className="card-badge badge-recode" title="This character can be recoded into its lambda form">
+                      <i className="fa-solid fa-arrows-rotate"></i> Λ
+                    </span>
+                  )}
                   {pieceUrl ? (
                     <div className="card-image" style={{ width: '100%', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, border: '1px solid var(--border-color)', overflow: 'hidden' }}>
                       <img src={pieceUrl} alt="Icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

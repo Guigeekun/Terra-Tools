@@ -3,6 +3,10 @@ export const rarityLabels = {
   6: 'S Class', 7: 'SS Class', 8: 'Z Class'
 };
 
+export const rarityShortLabels = {
+  2: 'D', 3: 'C', 4: 'B', 5: 'A', 6: 'S', 7: 'SS', 8: 'Z'
+};
+
 export const speciesTranslations = {
   0: { en: 'Human', ja: 'ヒト', fr: 'Humain', de: 'Mensch', es: 'Humano', zh_tw: '人族' },
   1: { en: 'Lizardfolk', ja: 'トカゲ', fr: 'Saurien', de: 'Echsenvolk', es: 'Lagarto', zh_tw: '爬蟲族' },

@@ -80,12 +80,6 @@ select option:hover {
     display: inline-block;
 }
 
-.badge-species {
-    background-color: rgba(99, 102, 241, 0.1);
-    border-color: rgba(99, 102, 241, 0.15);
-    color: var(--accent-indigo);
-}
-
 .badge-rarity {
     background-color: rgba(245, 158, 11, 0.1);
     border-color: rgba(245, 158, 11, 0.15);
