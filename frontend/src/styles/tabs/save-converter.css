@@ -396,6 +396,7 @@
 }
 
 .mini-stat-card {
+  position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 16px;
@@ -433,7 +434,6 @@
 /* Clickable count cards toggling their edit-family section */
 .mini-stat-toggle {
   cursor: pointer;
-  position: relative;
   width: 100%;
   font: inherit;
   color: inherit;
