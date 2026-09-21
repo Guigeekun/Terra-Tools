@@ -19,6 +19,7 @@ import SaveConverterTab from './components/tabs/SaveConverterTab';
 import CharacterModal from './components/modals/CharacterModal';
 import ItemModal from './components/modals/ItemModal';
 import BuddyModal from './components/modals/BuddyModal';
+import { fetchCharacter } from './api';
 
 function AppContent() {
   const { loading } = useGameData();
@@ -35,6 +36,11 @@ function AppContent() {
   const openSourceTab = (tab, search) => {
     setSourceSearch({ tab, search });
     setActiveTab(tab);
+  };
+
+  // Open a character modal by game-data ID (recode targets / recode material units)
+  const openCharacterById = (charId) => {
+    fetchCharacter(charId).then(setSelectedCharacter).catch(e => console.error('Error fetching character:', e));
   };
 
   const handleTabChange = (tab) => {
@@ -84,10 +90,12 @@ function AppContent() {
       />
 
       {selectedCharacter && (
-        <CharacterModal 
-          character={selectedCharacter} 
-          onClose={() => setSelectedCharacter(null)} 
+        <CharacterModal
+          key={selectedCharacter.ID}
+          character={selectedCharacter}
+          onClose={() => setSelectedCharacter(null)}
           onOpenItem={(id) => setSelectedItemId(id)}
+          onOpenCharacter={openCharacterById}
         />
       )}
       {selectedItemId && (

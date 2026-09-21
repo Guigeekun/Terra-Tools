@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from backend.database import gamedata, find_local_asset
 
 router = APIRouter(tags=["characters"])
@@ -60,6 +60,83 @@ def _resolve_recode(rebirth, jobs_by_id, item_set, infos_by_id):
         "units": units,
         "result": _unit_brief(dst_info, jobs_by_id) if dst_info else None,
     }
+
+
+def _build_character_lookups():
+    """Shared lookups (jobs, infos, recode indexes, items) for character enrichment."""
+    char_db = gamedata.get("characters", {})
+    infos = char_db.get("infos", [])
+    jobs_by_id = {job["ID"]: job for job in char_db.get("data", [])}
+    infos_by_id = {info["ID"]: info for info in infos}
+
+    rebirth_by_src: dict[int, list] = {}
+    rebirth_by_dst = {}
+    for r in char_db.get("rebirthInfo", []):
+        if not r:
+            continue
+        rebirth_by_src.setdefault(r["srcChrID"], []).append(r)
+        rebirth_by_dst[r["dstChrID"]] = r
+
+    item_set = gamedata.get("items", {}).get("itemSet", [])
+    return infos, jobs_by_id, infos_by_id, rebirth_by_src, rebirth_by_dst, item_set
+
+
+def _enrich_character(info, jobs_by_id, infos_by_id, rebirth_by_src, rebirth_by_dst, item_set):
+    """Attach job details and recode payloads to a character info entry."""
+    char_jobs = []
+    for job_id in info.get("Jobs", []):
+        job = jobs_by_id.get(job_id)
+        if job:
+            image_id = job.get("ImageID", 0)
+            piece_path = find_local_asset("Pieces", image_id, "img")
+            illust_path = find_local_asset("Illust", image_id, "illust")
+
+            job_copy = dict(job)
+            job_copy["piece_file"] = piece_path
+            job_copy["illust_file"] = illust_path
+
+            unlock_materials = []
+            for item_entry in job.get("items", []):
+                code = item_entry.get("code", 0)
+                if code > 0:
+                    item_id = code // 256
+                    count = code % 256
+                    idx = item_id - 1
+                    if 0 <= idx < len(item_set):
+                        item = item_set[idx]
+                        unlock_materials.append({
+                            "item_id": item_id,
+                            "count": count,
+                            "name": item.get("NameString", {}),
+                            "icon_url": f"/api/assets/item/item_{item_id:02d}.png"
+                        })
+                    else:
+                        unlock_materials.append({
+                            "item_id": item_id,
+                            "count": count,
+                            "name": {"en": f"Unknown Item (ID {item_id})"},
+                            "icon_url": None
+                        })
+            job_copy["unlock_materials"] = unlock_materials
+            job_copy["unlock_coin"] = job.get("COIN", 0)
+            char_jobs.append(job_copy)
+
+    char_copy = dict(info)
+    char_copy["JobsInfo"] = char_jobs
+
+    rebirth_options = rebirth_by_src.get(info.get("ID"))
+    if rebirth_options:
+        char_copy["recode"] = [
+            _resolve_recode(rebirth, jobs_by_id, item_set, infos_by_id)
+            for rebirth in rebirth_options
+        ]
+    source_rebirth = rebirth_by_dst.get(info.get("ID"))
+    if source_rebirth:
+        src_info = infos_by_id.get(source_rebirth.get("srcChrID"))
+        if src_info:
+            char_copy["recode_source"] = _unit_brief(src_info, jobs_by_id)
+
+    return char_copy
 
 
 @router.get('/api/characters')
@@ -124,61 +201,8 @@ def get_characters(
 
     result = []
     for info in target_infos:
-        char_jobs = []
-        for job_id in info.get("Jobs", []):
-            job = jobs_by_id.get(job_id)
-            if job:
-                image_id = job.get("ImageID", 0)
-                piece_path = find_local_asset("Pieces", image_id, "img")
-                illust_path = find_local_asset("Illust", image_id, "illust")
-                
-                job_copy = dict(job)
-                job_copy["piece_file"] = piece_path
-                job_copy["illust_file"] = illust_path
-                
-                unlock_materials = []
-                for item_entry in job.get("items", []):
-                    code = item_entry.get("code", 0)
-                    if code > 0:
-                        item_id = code // 256
-                        count = code % 256
-                        idx = item_id - 1
-                        if 0 <= idx < len(item_set):
-                            item = item_set[idx]
-                            unlock_materials.append({
-                                "item_id": item_id,
-                                "count": count,
-                                "name": item.get("NameString", {}),
-                                "icon_url": f"/api/assets/item/item_{item_id:02d}.png"
-                            })
-                        else:
-                            unlock_materials.append({
-                                "item_id": item_id,
-                                "count": count,
-                                "name": {"en": f"Unknown Item (ID {item_id})"},
-                                "icon_url": None
-                            })
-                job_copy["unlock_materials"] = unlock_materials
-                job_copy["unlock_coin"] = job.get("COIN", 0)
-                char_jobs.append(job_copy)
-        
-        char_copy = dict(info)
-        char_copy["JobsInfo"] = char_jobs
+        result.append(_enrich_character(info, jobs_by_id, infos_by_id, rebirth_by_src, rebirth_by_dst, item_set))
 
-        rebirth_options = rebirth_by_src.get(info.get("ID"))
-        if rebirth_options:
-            char_copy["recode"] = [
-                _resolve_recode(rebirth, jobs_by_id, item_set, infos_by_id)
-                for rebirth in rebirth_options
-            ]
-        source_rebirth = rebirth_by_dst.get(info.get("ID"))
-        if source_rebirth:
-            src_info = infos_by_id.get(source_rebirth.get("srcChrID"))
-            if src_info:
-                char_copy["recode_source"] = _unit_brief(src_info, jobs_by_id)
-
-        result.append(char_copy)
-        
     if page is not None:
         return {
             "items": result,
@@ -187,4 +211,14 @@ def get_characters(
             "has_more": (page * limit) < total
         }
     return result
+
+
+@router.get('/api/characters/{char_id}')
+def get_character(char_id: int):
+    """Retrieve a single fully-enriched character (jobs, recode, recode source)."""
+    infos, jobs_by_id, infos_by_id, rebirth_by_src, rebirth_by_dst, item_set = _build_character_lookups()
+    info = infos_by_id.get(char_id)
+    if not info:
+        raise HTTPException(status_code=404, detail=f"Character {char_id} not found")
+    return _enrich_character(info, jobs_by_id, infos_by_id, rebirth_by_src, rebirth_by_dst, item_set)
 

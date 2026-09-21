@@ -5,10 +5,11 @@ import { useGameData } from '../../contexts/GameDataContext';
 import { useLazyCategory } from '../../hooks/useLazyCategory';
 import LightboxModal from './LightboxModal';
 
-export default function CharacterModal({ character, onClose, onOpenItem }) {
+export default function CharacterModal({ character, onClose, onOpenItem, onOpenCharacter }) {
   const { lang, data } = useGameData();
   useLazyCategory('skills');
   const [jobIndex, setJobIndex] = useState(0);
+  const [showRecode, setShowRecode] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState(null);
 
   if (!character) return null;
@@ -42,24 +43,91 @@ export default function CharacterModal({ character, onClose, onOpenItem }) {
               <span><i className="fa-solid fa-star"></i> Class: {rarityLabels[character.rarity] || 'Class ' + character.rarity}</span>
             </div>
             {character.recode_source && (
-              <div className="recode-source-note" title={`Obtained by recoding ${loc(character.recode_source.name, lang)}`}>
+              <button
+                className="recode-source-note"
+                title={`View ${loc(character.recode_source.name, lang)}`}
+                onClick={() => onOpenCharacter?.(character.recode_source.ID)}
+              >
                 <i className="fa-solid fa-arrows-rotate"></i>
                 <span>Acquired by recoding <strong>{loc(character.recode_source.name, lang)}</strong></span>
-              </div>
+                <i className="fa-solid fa-chevron-right" style={{ fontSize: 9 }}></i>
+              </button>
             )}
           </div>
 
           {/* Job Tabs */}
           <div className="modal-tabs">
             {jobs.map((_, i) => (
-              <button key={i} className={`modal-tab-btn ${i === jobIndex ? 'active' : ''}`} onClick={() => setJobIndex(i)}>
+              <button key={i} className={`modal-tab-btn ${!showRecode && i === jobIndex ? 'active' : ''}`} onClick={() => { setJobIndex(i); setShowRecode(false); }}>
                 Job {i + 1}
               </button>
             ))}
+            {character.recode?.length > 0 && (
+              <button className={`modal-tab-btn recode-tab ${showRecode ? 'active' : ''}`} onClick={() => setShowRecode(true)}>
+                <i className="fa-solid fa-arrows-rotate"></i> Recode
+              </button>
+            )}
           </div>
 
-          {/* Job Detail */}
-          {job ? (
+          {/* Recode Tab */}
+          {showRecode && character.recode?.length > 0 ? (
+            <div className="recode-detail">
+              {character.recode.map((option, optionIdx) => (
+                <div key={optionIdx} className="job-skills-box recode-box">
+                  {option.result && (
+                    <button
+                      className="recode-target clickable"
+                      title={`View ${loc(option.result.name, lang)}`}
+                      onClick={() => onOpenCharacter?.(option.result.ID)}
+                    >
+                      {option.result.piece_file && (
+                        <img src={`/api/assets/image?path=${encodeURIComponent(option.result.piece_file)}`} alt="" className="recode-piece" />
+                      )}
+                      <span className="recode-arrow"><i className="fa-solid fa-arrow-right-long"></i></span>
+                      <strong>{loc(option.result.name, lang)}</strong>
+                      <span className="recode-open-hint"><i className="fa-solid fa-chevron-right"></i></span>
+                    </button>
+                  )}
+                  {option.coins > 0 && (
+                    <div className="stats-row">
+                      <span className="stat-lbl"><i className="fa-solid fa-coins" style={{ marginRight: 6 }}></i>Coin Cost</span>
+                      <span className="stat-val" style={{ color: 'var(--accent-amber)' }}>{option.coins.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {!option.coins && !(option.items || []).length && !(option.units || []).length && (
+                    <p className="recode-empty">No recode materials listed in game data.</p>
+                  )}
+                  <ul className="job-skills-list" style={{ marginTop: 8 }}>
+                    {(option.items || []).map((mat, i) => (
+                      <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                        title="Click to view item details & drop locations"
+                        onClick={() => { onClose(); onOpenItem(mat.item_id); }}>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          {mat.icon_url && <img src={mat.icon_url} alt="" style={{ width: 24, height: 24, objectFit: 'contain', imageRendering: 'pixelated', marginRight: 8, borderRadius: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }} />}
+                          <span>{loc(mat.name, lang)}</span>
+                        </div>
+                        <span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>x {mat.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {(option.units || []).length > 0 && (
+                    <ul className="job-skills-list" style={{ marginTop: 8 }}>
+                      {option.units.map((unit, i) => (
+                        <li key={i} className="recode-unit-row" title={`View ${loc(unit.name, lang)}`}
+                          onClick={() => onOpenCharacter?.(unit.ID)}>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            {unit.piece_file && <img src={`/api/assets/image?path=${encodeURIComponent(unit.piece_file)}`} alt="" style={{ width: 24, height: 24, objectFit: 'contain', imageRendering: 'pixelated', marginRight: 8, borderRadius: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }} />}
+                            <span>{loc(unit.name, lang)}</span>
+                          </div>
+                          <span className="badge" style={{ fontSize: 10, padding: '2px 6px', backgroundColor: 'rgba(99,102,241,0.08)', borderColor: 'rgba(99,102,241,0.2)', color: 'var(--accent-indigo)' }}>Lv {unit.level}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : job ? (
             <div className="job-detail-layout">
               {/* Left Column */}
               <div className="job-info-col">
@@ -103,62 +171,6 @@ export default function CharacterModal({ character, onClose, onOpenItem }) {
 
               {/* Right Column */}
               <div className="job-stats-col">
-                {/* Recode */}
-                {character.recode?.length > 0 && (
-                  <div className="job-skills-box recode-box">
-                    <h5><i className="fa-solid fa-arrows-rotate" style={{ marginRight: 6 }}></i>Recode</h5>
-                    {character.recode.map((option, optionIdx) => (
-                      <div key={optionIdx} className="recode-option">
-                        {optionIdx > 0 && <hr className="recode-divider" />}
-                        {option.result && (
-                          <div className="recode-target">
-                            {option.result.piece_file && (
-                              <img src={`/api/assets/image?path=${encodeURIComponent(option.result.piece_file)}`} alt="" className="recode-piece" />
-                            )}
-                            <span className="recode-arrow"><i className="fa-solid fa-arrow-right-long"></i></span>
-                            <strong>{loc(option.result.name, lang)}</strong>
-                          </div>
-                        )}
-                        {option.coins > 0 && (
-                          <div className="stats-row">
-                            <span className="stat-lbl"><i className="fa-solid fa-coins" style={{ marginRight: 6 }}></i>Coin Cost</span>
-                            <span className="stat-val" style={{ color: 'var(--accent-amber)' }}>{option.coins.toLocaleString()}</span>
-                          </div>
-                        )}
-                        {!option.coins && !(option.items || []).length && !(option.units || []).length && (
-                          <p className="recode-empty">No recode materials listed in game data.</p>
-                        )}
-                        <ul className="job-skills-list" style={{ marginTop: 8 }}>
-                          {(option.items || []).map((mat, i) => (
-                            <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-                              title="Click to view item details & drop locations"
-                              onClick={() => { onClose(); onOpenItem(mat.item_id); }}>
-                              <div style={{ display: 'flex', alignItems: 'center' }}>
-                                {mat.icon_url && <img src={mat.icon_url} alt="" style={{ width: 24, height: 24, objectFit: 'contain', imageRendering: 'pixelated', marginRight: 8, borderRadius: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }} />}
-                                <span>{loc(mat.name, lang)}</span>
-                              </div>
-                              <span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>x {mat.count}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        {(option.units || []).length > 0 && (
-                          <ul className="job-skills-list" style={{ marginTop: 8 }}>
-                            {option.units.map((unit, i) => (
-                              <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                  {unit.piece_file && <img src={`/api/assets/image?path=${encodeURIComponent(unit.piece_file)}`} alt="" style={{ width: 24, height: 24, objectFit: 'contain', imageRendering: 'pixelated', marginRight: 8, borderRadius: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }} />}
-                                  <span>{loc(unit.name, lang)}</span>
-                                </div>
-                                <span className="badge" style={{ fontSize: 10, padding: '2px 6px', backgroundColor: 'rgba(99,102,241,0.08)', borderColor: 'rgba(99,102,241,0.2)', color: 'var(--accent-indigo)' }}>Lv {unit.level}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 <div className="stats-table-box">
                   <h5>Job Base Statistics</h5>
                   {[['HP', job.HP], ['ATK', job.ATK], ['DEF', job.DEF], ['MATK', job.SATK], ['MDEF', job.SDEF]].map(([label, val]) => (
