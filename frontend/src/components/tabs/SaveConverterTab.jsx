@@ -4,9 +4,6 @@ import { loc } from '../../utils/localization';
 import { detectSaveFormat, inspectSaveData, convertSaveData, applySaveEdits, EMPTY_SAVE_EDITS, hasSaveEdits, sanitizeCountInput, ITEM_MAX_STACK } from '../../utils/saveConverter';
 import { inspectSave, convertSave } from '../../api';
 
-// Characters visible in the roster box (roughly) before the "scroll to see all" hint shows.
-const ROSTER_HINT_THRESHOLD = 12;
-
 // Add-picker search results shown before the list needs scrolling.
 const PICKER_LIMIT = 8;
 
@@ -65,6 +62,18 @@ export default function SaveConverterTab() {
     });
     return map;
   }, [gamedataBuddies]);
+
+  // Per-character job display names from the catalog (up to 3 job variants);
+  // an empty array means the catalog entry is unknown and slots stay editable.
+  const charJobsById = useMemo(() => {
+    const map = {};
+    (gamedataCharacters || []).forEach(c => {
+      if (c && c.ID !== undefined) {
+        map[c.ID] = (c.JobsInfo || []).map(j => (j ? loc(j.NameString, lang, '') : ''));
+      }
+    });
+    return map;
+  }, [gamedataCharacters, lang]);
 
   const [sourceData, setSourceData] = useState(null);
   const [fileName, setFileName] = useState('');
@@ -277,6 +286,24 @@ export default function SaveConverterTab() {
     });
   };
 
+  // Job unlock toggle: flipping a slot back to its loaded state clears the
+  // edit for it, keeping the modified indicators accurate.
+  const handleCharJobToggle = (charId, jobIndex, loadedUnlocked) => {
+    setEdits(prev => {
+      const characters = { ...prev.characters };
+      const entry = { ...(characters[charId] || {}) };
+      const jobs = { ...(entry.jobs || {}) };
+      const target = jobs[jobIndex] !== undefined ? (jobs[jobIndex] ? 0 : 1) : (loadedUnlocked ? 0 : 1);
+      if (target === (loadedUnlocked ? 1 : 0)) delete jobs[jobIndex];
+      else jobs[jobIndex] = target;
+      if (Object.keys(jobs).length === 0) delete entry.jobs;
+      else entry.jobs = jobs;
+      if (Object.keys(entry).length === 0) delete characters[charId];
+      else characters[charId] = entry;
+      return { ...prev, characters };
+    });
+  };
+
   // Item counts: '' clears the edit (back to the loaded save), an explicit 0
   // removes the item from the pouch.
   const handleItemEdit = (itemId, raw) => {
@@ -355,6 +382,9 @@ export default function SaveConverterTab() {
   };
 
   const getCharName = (id) => charNameById[id] || `Character #${id}`;
+
+  // Job slots are (exp << 12) | level wire values; level 0 = locked.
+  const jobLevelOf = (v) => Math.max(0, Math.min(90, Math.floor(Number(v) || 0) & 0xFFF));
 
   const getItemName = (id) => itemNameById[id] || `Item #${id}`;
 
@@ -798,18 +828,18 @@ export default function SaveConverterTab() {
                   Character Roster ({activeAccountSummary.top_characters.length}{' '}
                   {activeAccountSummary.top_characters.length === 1 ? 'Character' : 'Characters'})
                 </h4>
-                {activeAccountSummary.top_characters.length > ROSTER_HINT_THRESHOLD && (
-                  <span className="roster-scroll-hint">
-                    <i className="fa-solid fa-computer-mouse"></i>
-                    Scroll to see all
-                  </span>
-                )}
               </div>
 
               <div className="roster-grid">
                 {activeAccountSummary.top_characters.map((c, i) => {
                   const charEdit = edits.characters[c.id];
                   const isEdited = Boolean(charEdit);
+                  const jobNames = charJobsById[c.id] || [];
+                  const loadedUnlocked = (slot) => jobLevelOf(c.job_levels?.[slot]) > 0;
+                  const effUnlocked = (slot) => (charEdit?.jobs?.[slot] !== undefined
+                    ? Boolean(charEdit.jobs[slot])
+                    : loadedUnlocked(slot));
+                  const effJobId = charEdit?.jobs?.[c.job_id] === 0 ? 0 : (c.job_id || 0);
                   return (
                     <div key={`${c.id}-${i}`} className={`char-badge-card${isEdited ? ' edited' : ''}`}>
                       <div className="char-icon-circle">
@@ -818,7 +848,7 @@ export default function SaveConverterTab() {
                       <div className="char-badge-info">
                         <h5>{getCharName(c.id)}</h5>
                         <div className="char-edit-row">
-                          <span className="char-job-tag">Job {c.job_id + 1}</span>
+                          <span className="char-job-tag">Job {effJobId + 1}</span>
                           <label className="char-edit-field">
                             <span>SB</span>
                             <input
@@ -839,6 +869,33 @@ export default function SaveConverterTab() {
                               title="Luck"
                             />
                           </label>
+                        </div>
+                        <div className="char-edit-row job-chip-row">
+                          {[0, 1, 2].map(slot => {
+                            const unlocked = effUnlocked(slot);
+                            const jobName = jobNames[slot] || '';
+                            const absent = jobNames.length > 0 && !jobName;
+                            const equipped = effJobId === slot;
+                            const toggleable = slot > 0 && !absent;
+                            const title = absent
+                              ? 'This character has no additional job in the game data'
+                              : slot === 0
+                                ? `${jobName ? `${jobName} — ` : ''}Job 1 is always unlocked`
+                                : `${jobName ? `${jobName} — ` : ''}${unlocked ? 'Unlocked' : 'Locked'}${equipped ? ' — equipped' : ''} — click to ${unlocked ? 'lock' : 'unlock'}`;
+                            return (
+                              <button
+                                key={slot}
+                                type="button"
+                                className={`job-chip${unlocked ? ' unlocked' : ''}${absent ? ' absent' : ''}${equipped ? ' equipped' : ''}`}
+                                disabled={!toggleable}
+                                onClick={() => handleCharJobToggle(c.id, slot, loadedUnlocked(slot))}
+                                title={title}
+                              >
+                                <i className={`fa-solid ${unlocked ? 'fa-circle-check' : 'fa-lock'}`}></i>
+                                J{slot + 1}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>

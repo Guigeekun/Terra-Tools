@@ -834,6 +834,15 @@ export function applySaveEdits(data, edits, accountId = null) {
       if (!e) return;
       if (e.sb !== null && e.sb !== undefined) c.skillBoost = e.sb;
       if (e.luck !== null && e.luck !== undefined) c.luck = e.luck;
+      // Job unlock slots: jobLevels holds (exp << 12) | level wire values, a
+      // zero level means the job is locked. Unlock writes a level-1 slot and
+      // lock writes 0; locking the equipped job falls back to job 1.
+      if (e.jobs && Array.isArray(c.jobLevels)) {
+        c.jobLevels = c.jobLevels.map((v, i) => (
+          e.jobs[i] === undefined ? v : (e.jobs[i] ? 1 : 0)
+        ));
+        if (e.jobs[c.jobID] === 0) c.jobID = 0;
+      }
     });
   };
 
@@ -962,6 +971,18 @@ export function applySaveEdits(data, edits, accountId = null) {
         if (!e) return;
         if (e.luck !== null && e.luck !== undefined && r.length > 2) r[2] = e.luck;
         if (e.sb !== null && e.sb !== undefined && r.length > 3) r[3] = e.sb;
+        if (e.jobs && r.length > 5) {
+          let jl = r[5];
+          if (typeof jl === 'string') {
+            try { jl = JSON.parse(jl); } catch (err) { jl = null; }
+          }
+          if (Array.isArray(jl)) {
+            r[5] = JSON.stringify(jl.map((v, i) => (
+              e.jobs[i] === undefined ? v : (e.jobs[i] ? 1 : 0)
+            )));
+            if (e.jobs[r[4]] === 0) r[4] = 0;
+          }
+        }
       });
     }
   }

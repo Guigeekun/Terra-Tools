@@ -728,6 +728,59 @@
   background: rgba(56, 189, 248, 0.08);
 }
 
+/* Job unlock chips on character cards */
+.job-chip-row {
+  margin-top: 6px;
+}
+
+.job-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.job-chip i {
+  font-size: 0.62rem;
+}
+
+.job-chip.unlocked {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.job-chip.absent {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+.job-chip:disabled {
+  cursor: default;
+}
+
+.job-chip:disabled:not(.absent) {
+  opacity: 0.75;
+}
+
+.job-chip:not(:disabled):hover {
+  border-color: rgba(56, 189, 248, 0.6);
+  transform: translateY(-1px);
+}
+
+.job-chip.equipped {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.55);
+}
+
 /* Item Inventory */
 .item-picker {
   margin-bottom: 16px;
