@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { loc } from '../../utils/localization';
-import { rarityLabels, weaponMeta, elementMeta } from '../../utils/constants';
+import { rarityShortLabels, weaponMeta, elementMeta } from '../../utils/constants';
 import { useGameData } from '../../contexts/GameDataContext';
 import { useLazyCategory } from '../../hooks/useLazyCategory';
 import LightboxModal from './LightboxModal';
@@ -39,7 +39,7 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
             <h3>{loc(character.NameString, lang)}</h3>
             <div className="modal-char-meta">
               <span><i className="fa-solid fa-venus-mars"></i> Gender: {genderStr}</span>
-              <span><i className="fa-solid fa-star"></i> Class: {rarityLabels[character.rarity] || 'Class ' + character.rarity}</span>
+              <span><i className="fa-solid fa-star"></i> Class: {rarityShortLabels[character.rarity] || character.rarity}</span>
             </div>
             {character.recode_source && (
               <button
@@ -146,6 +146,24 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
                   )}
                   <p>{loc(job.ProfileString, lang, 'Profile description not available.')}</p>
                 </div>
+
+                {/* Recruitment (chapter drops) */}
+                {character.recruitment?.length > 0 && (
+                  <div className="job-skills-box recruitment-box">
+                    <h5><i className="fa-solid fa-map-pin" style={{ marginRight: 6 }}></i>Recruitment</h5>
+                    <p className="recruitment-hint">Defeat this enemy in these stages for a chance to recruit it:</p>
+                    <ul className="job-skills-list">
+                      {character.recruitment.map((site, i) => (
+                        <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span className="badge" style={{ fontSize: 10, padding: '2px 7px', backgroundColor: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.2)', color: 'var(--accent-green)', flexShrink: 0 }}>
+                            Ch {site.chapter}-{site.section}
+                          </span>
+                          <span style={{ fontSize: 12 }}>{site.title.replace(/^Stage\s+\S+:\s*/, '')}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <div className="job-assets-box">
                   <h5>Art Assets</h5>

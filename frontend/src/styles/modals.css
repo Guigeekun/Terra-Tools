@@ -313,3 +313,15 @@
     border-color: rgba(99, 102, 241, 0.45);
 }
 
+/* Recruitment (chapter drops) */
+.recruitment-box h5 {
+    color: var(--accent-green);
+}
+
+.recruitment-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin: -6px 0 10px;
+    line-height: 1.4;
+}
+
