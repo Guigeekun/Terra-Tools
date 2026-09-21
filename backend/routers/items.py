@@ -196,6 +196,53 @@ def get_item_details(item_id: int):
                 })
                 
     dropped_in_stages.sort(key=lambda x: (x["chapter_no"], x["section_index"]))
+
+    # 6. Where to Obtain: runtime-configured event boss drops (StageDrops.json)
+    stage_drops = gamedata.get("stage_drops", {})
+    native_by_stage = {}
+    for drop_chapter, sections in stage_drops.items():
+        for drop_section, records in sections.items():
+            for rec in records:
+                if rec.get("item_id") == item_id and rec.get("enemy_id") in enemies_by_id:
+                    native_by_stage.setdefault((int(drop_chapter), int(drop_section)), []).append(rec)
+
+    chapters_by_no = {ch["chapterNo"]: ch for ch in chapters}
+    for (chapter_no, sec_num), records in native_by_stage.items():
+        ch = chapters_by_no.get(chapter_no)
+        if not ch or sec_num > len(ch.get("sections", [])):
+            continue
+        spawning = {}
+        for rec in records:
+            eid = rec["enemy_id"]
+            if eid not in spawning:
+                spawning[eid] = {
+                    "enemy_id": eid,
+                    "enemy_name": enemies_by_id[eid].get("NameString"),
+                    "rate": rec.get("ratio"),
+                }
+        existing = next(
+            (e for e in dropped_in_stages
+             if e["chapter_no"] == chapter_no and e["section_index"] == sec_num),
+            None,
+        )
+        if existing:
+            # Regular EnemyData loot wins over a configured slot for the same enemy.
+            for row in spawning.values():
+                if all(row["enemy_id"] != e.get("enemy_id") for e in existing["spawning_enemies"]):
+                    existing["spawning_enemies"].append(row)
+        else:
+            title_info = resolve_section_title(chapter_no, sec_num, ch["sections"][sec_num - 1].get("title", ""))
+            dropped_in_stages.append({
+                "chapter_no": chapter_no,
+                "section_index": sec_num,
+                "section_title": title_info["title"],
+                "section_title_loc": title_info["title_loc"],
+                "subtitle": title_info["subtitle"],
+                "is_section_drop": False,
+                "section_drop_count": 0,
+                "spawning_enemies": list(spawning.values()),
+            })
+    dropped_in_stages.sort(key=lambda x: (x["chapter_no"], x["section_index"]))
     
     return {
         "item_id": item_id,

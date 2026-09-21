@@ -469,6 +469,47 @@ def run_extract_native_stages(apk_path: Path, output_dir: Path) -> None:
         print(f"  Failed to run extract_native_stages.py: {err}")
 
 
+def run_extract_native_drops(output_dir: Path) -> None:
+    """Recover runtime-configured event boss drops from the native chapter
+    classes into StageDrops.json. Requires dump.cs, BattleData.json and
+    StagesLayout.json (steps 5-8) plus llvm-objdump in PATH; libil2cpp.so is
+    extracted from the APK by the script itself when missing."""
+    import subprocess
+    scripts_dir = Path(__file__).resolve().parent
+    base_dir = Path(__file__).resolve().parent.parent
+    dump_cs_path = base_dir / "user-data" / "dump.cs"
+    battle_data_path = output_dir / "game_data" / "BattleData.json"
+    stages_layout_path = output_dir / "game_data" / "StagesLayout.json"
+
+    if not dump_cs_path.exists():
+        print(f"  Skipped: dump.cs not found at {dump_cs_path}")
+        return
+    if not battle_data_path.exists() or not stages_layout_path.exists():
+        print("  Skipped: BattleData.json / StagesLayout.json not extracted yet.")
+        return
+
+    try:
+        subprocess.run(["llvm-objdump", "--version"], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("  Skipped: llvm-objdump not found in PATH.")
+        return
+
+    print("  Running extract_native_drops.py (event boss drop configs)...")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(scripts_dir / "extract_native_drops.py")],
+            capture_output=True, text=True
+        )
+        for line in result.stdout.splitlines():
+            print(f"    {line}")
+        if result.returncode != 0:
+            print(f"  Warning: extract_native_drops exited with code {result.returncode}")
+            for line in result.stderr.splitlines():
+                print(f"    [ERR] {line}")
+    except Exception as err:
+        print(f"  Failed to run extract_native_drops.py: {err}")
+
+
 def extract_item_icons(env: Any, output_dir: Path) -> None:
     """Extract and crop item icons from ItemAtlas sprite atlas."""
     atlas_img = None
@@ -738,7 +779,7 @@ def main() -> int:
     print()
 
     # Step 1: Load inverse table
-    print("[1/8] Loading string decryption table...")
+    print("[1/9] Loading string decryption table...")
     try:
         inverse_table = load_inverse_table(apk_path)
         print("  Decryption table loaded successfully")
@@ -748,7 +789,7 @@ def main() -> int:
     print()
 
     # Step 2: Setup type tree generator
-    print("[2/8] Setting up IL2CPP type tree generator...")
+    print("[2/9] Setting up IL2CPP type tree generator...")
     try:
         with zipfile.ZipFile(apk_path) as archive:
             il2cpp = archive.read(IL2CPP_MEMBER)
@@ -763,7 +804,7 @@ def main() -> int:
     print()
 
     # Step 3: Load Unity environment
-    print("[3/8] Loading Unity resources.assets...")
+    print("[3/9] Loading Unity resources.assets...")
     try:
         with zipfile.ZipFile(apk_path) as archive:
             data_payload = archive.read(APK_DATA_MEMBER)
@@ -781,7 +822,7 @@ def main() -> int:
         print()
 
         # Step 4: TextAssets
-        print("[4/8] Extracting Lua scripts and TextAssets...")
+        print("[4/9] Extracting Lua scripts and TextAssets...")
         extract_text_assets(env, output_dir)
 
         # Scan Scenario directory for DLC chapter scripts
@@ -790,7 +831,7 @@ def main() -> int:
         print()
 
         # Step 5: MonoBehaviours (game data)
-        print("[5/8] Extracting and decrypting database objects...")
+        print("[5/9] Extracting and decrypting database objects...")
         extract_monobehaviours(env, output_dir, inverse_table)
         print()
 
@@ -820,18 +861,23 @@ def main() -> int:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
     # Step 6: Decompile Lua chapters and parse stage layouts (chapters 1-7)
-    print("[6/8] Decompiling Lua chapters and building StagesLayout.json (chapters 1–7)...")
+    print("[6/9] Decompiling Lua chapters and building StagesLayout.json (chapters 1–7)...")
     run_decompile_and_parse_all(output_dir)
     print()
 
     # Step 7: Generate dump.cs via Il2CppDumper
-    print("[7/8] Generating dump.cs via Il2CppDumper...")
+    print("[7/9] Generating dump.cs via Il2CppDumper...")
     run_il2cppdumper(apk_path, output_dir)
     print()
 
     # Step 8: Extract all native IL2CPP stage layouts (chapters 8+, 100+, 1000+, 2000+, etc.)
-    print("[8/8] Extracting native stage layouts (all IL2CPP chapters)...")
+    print("[8/9] Extracting native stage layouts (all IL2CPP chapters)...")
     run_extract_native_stages(apk_path, output_dir)
+    print()
+
+    # Step 9: Recover runtime-configured event boss drops from the native classes
+    print("[9/9] Extracting native event boss drop configs (StageDrops.json)...")
+    run_extract_native_drops(output_dir)
     print()
 
     print("=" * 60)
@@ -839,6 +885,7 @@ def main() -> int:
     print(f"Decrypted game databases: {output_dir / 'game_data'}")
     print(f"Lua/TextAssets scripts:   {output_dir / 'text_assets'}")
     print(f"Stage wave layouts:       {output_dir / 'game_data' / 'StagesLayout.json'}")
+    print(f"Event boss drop configs:  {output_dir / 'game_data' / 'StageDrops.json'}")
     return 0
 
 
