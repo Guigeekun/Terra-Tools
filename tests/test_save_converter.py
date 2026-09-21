@@ -58,6 +58,38 @@ class TestSaveConverter(unittest.TestCase):
                          for idx, v in enumerate(session_data.get("itemList", [])) if v and v > 0]
         self.assertEqual(retb_summary["items"], expected_retb)
 
+    def test_summary_buddies(self):
+        # Companion copies surface as {iid, bid, lv} entries keyed by the
+        # per-copy inventory id (iid) -- the save editor keys edits by it.
+        lim_active = self.liminal_data["active_account_id"]
+        lim_acc = self.liminal_data["accounts"][lim_active]
+        lim_summary = parse_account_summary_liminal(lim_active, lim_acc)
+        raw = lim_acc["userdata"]["buddyInfo"]["list"]
+        expected = sorted(
+            [{"iid": int(e["iid"]), "bid": int(e["bid"]), "lv": max(1, int(e.get("lv") or 1))} for e in raw],
+            key=lambda c: c["iid"],
+        )
+        self.assertEqual(lim_summary["buddies"], expected)
+        self.assertEqual(len(lim_summary["buddies"]), lim_summary["buddy_count"])
+
+        # ReTB reads the owned list from the session blob (this save holds none).
+        tb_data = json.loads(json.dumps(self.tb_data))
+        sess = json.loads(tb_data["tables"]["session"]["rows"][0][1])
+        sess["buddyInfo"] = [
+            {"bid": 128, "chrID": 0, "date": 0, "exp": 0, "flag": 1, "iid": 5, "lv": 7},
+            {"bid": 30, "chrID": 0, "date": 0, "exp": 0, "flag": 1, "iid": 2, "lv": 1},
+        ]
+        tb_data["tables"]["session"]["rows"][0][1] = json.dumps(sess)
+        retb_summary = parse_account_summary_retb(tb_data)
+        self.assertEqual(
+            retb_summary["buddies"],
+            [
+                {"iid": 2, "bid": 30, "lv": 1},
+                {"iid": 5, "bid": 128, "lv": 7},
+            ],
+        )
+        self.assertEqual(retb_summary["buddy_count"], 2)
+
     def test_retb_to_liminal_conversion(self):
         converted = retb_to_liminal(self.tb_data)
         self.assertIn("accounts", converted)

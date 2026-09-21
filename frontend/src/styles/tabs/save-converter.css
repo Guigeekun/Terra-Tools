@@ -396,6 +396,7 @@
 }
 
 .mini-stat-card {
+  position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 16px;
@@ -428,6 +429,56 @@
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+/* Clickable count cards toggling their edit-family section */
+.mini-stat-toggle {
+  cursor: pointer;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.mini-stat-toggle:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(56, 189, 248, 0.05);
+  transform: translateY(-2px);
+}
+
+.mini-stat-toggle .mini-stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toggle-chev {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* Card holding an unapplied edit (amber tint + dot), even when collapsed */
+.mini-stat-card.edited {
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.edit-dot {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent-amber);
+  color: #0f172a;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.45);
 }
 
 /* Conversion Control Bar */
@@ -583,6 +634,11 @@
   padding-right: 6px;
 }
 
+/* Character cards are wider so the SB/Luck fields and job chips share rows */
+.roster-grid-chars {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
 .roster-scroll-hint {
   display: flex;
   align-items: center;
@@ -625,6 +681,48 @@
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 2px;
+}
+
+/* Name + current job share the card's first line */
+.char-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 2px;
+}
+
+.char-name-row h5 {
+  margin-bottom: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.char-job-tag.new-tag {
+  color: var(--accent-amber);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+/* The current-job badge on the name row reads as a pill, not bare text */
+.char-name-row .char-job-tag:not(.new-tag) {
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .char-badge-info p {
@@ -675,6 +773,81 @@
 .char-edit-field input:focus {
   border-color: var(--accent-blue);
   background: rgba(56, 189, 248, 0.08);
+}
+
+/* Per-job level rows on character cards (chip = lock toggle, Lv = level) */
+.job-level-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.job-level-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.job-level-row .char-edit-field input {
+  width: 48px;
+}
+
+.job-level-row.absent {
+  opacity: 0.4;
+}
+
+.job-level-row.absent .job-chip {
+  border-style: dashed;
+  cursor: default;
+}
+
+.job-level-row.equipped .job-chip {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.55);
+}
+
+.job-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  flex-shrink: 0;
+}
+
+.job-chip i {
+  font-size: 0.62rem;
+}
+
+.job-chip.unlocked {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.job-chip.absent {
+  opacity: 0.4;
+}
+
+.job-chip:disabled {
+  cursor: default;
+}
+
+.job-chip:disabled:not(.absent) {
+  opacity: 0.75;
+}
+
+.job-chip:not(:disabled):hover {
+  border-color: rgba(56, 189, 248, 0.6);
+  transform: translateY(-1px);
 }
 
 /* Item Inventory */
@@ -842,6 +1015,65 @@
   justify-content: center;
   font-size: 16px;
   flex-shrink: 0;
+}
+
+/* Companion editing */
+.buddy-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.buddy-thumb-fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(236, 72, 153, 0.15);
+  color: #f472b6;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.buddy-thumb-fallback.picker {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.buddy-held-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #f472b6;
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.3);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.buddy-remove-btn {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: var(--transition-smooth);
+}
+
+.buddy-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
 }
 
 /* JSON Code Viewer */
