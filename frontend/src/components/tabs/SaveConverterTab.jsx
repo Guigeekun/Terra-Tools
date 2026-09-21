@@ -7,17 +7,21 @@ import { inspectSave, convertSave } from '../../api';
 // Characters visible in the roster box (roughly) before the "scroll to see all" hint shows.
 const ROSTER_HINT_THRESHOLD = 12;
 
-// Add-item search results shown before the list needs scrolling.
-const ITEM_PICKER_LIMIT = 8;
+// Add-picker search results shown before the list needs scrolling.
+const PICKER_LIMIT = 8;
+
+// Fallback level cap for companions missing from the game catalog.
+const BUDDY_LEVEL_FALLBACK = 99;
 
 export default function SaveConverterTab() {
   const { data: gameData, lang, loadCategory } = useGameData();
   const gamedataCharacters = gameData?.characters || null;
   const gamedataItems = gameData?.items || null;
+  const gamedataBuddies = gameData?.buddies || null;
 
-  // Character + item names come from the game database; load the catalogs
-  // lazily and cache them in the shared context so the Characters/Items tabs
-  // reuse them.
+  // Character + item + companion names come from the game database; load the
+  // catalogs lazily and cache them in the shared context so the Characters /
+  // Items / Buddies tabs reuse them.
   useEffect(() => {
     if (!gamedataCharacters) loadCategory('characters');
   }, [gamedataCharacters, loadCategory]);
@@ -25,6 +29,10 @@ export default function SaveConverterTab() {
   useEffect(() => {
     if (!gamedataItems) loadCategory('items');
   }, [gamedataItems, loadCategory]);
+
+  useEffect(() => {
+    if (!gamedataBuddies) loadCategory('buddies');
+  }, [gamedataBuddies, loadCategory]);
 
   const charNameById = useMemo(() => {
     const map = {};
@@ -42,6 +50,22 @@ export default function SaveConverterTab() {
     return map;
   }, [gamedataItems, lang]);
 
+  const buddyNameById = useMemo(() => {
+    const map = {};
+    (gamedataBuddies || []).forEach(b => {
+      if (b && b.ID !== undefined) map[b.ID] = loc(b.NameString, lang, `Companion #${b.ID}`);
+    });
+    return map;
+  }, [gamedataBuddies, lang]);
+
+  const buddyCatalogById = useMemo(() => {
+    const map = {};
+    (gamedataBuddies || []).forEach(b => {
+      if (b && b.ID !== undefined) map[b.ID] = b;
+    });
+    return map;
+  }, [gamedataBuddies]);
+
   const [sourceData, setSourceData] = useState(null);
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState('');
@@ -58,6 +82,10 @@ export default function SaveConverterTab() {
   const [error, setError] = useState(null);
   const [itemSearch, setItemSearch] = useState('');
   const [itemAddCount, setItemAddCount] = useState('1');
+  const [buddySearch, setBuddySearch] = useState('');
+  const [buddyAddLevel, setBuddyAddLevel] = useState('1');
+  // Which edit-family sections are expanded (toggled from the count cards).
+  const [openSections, setOpenSections] = useState({ characters: true, buddies: true, items: true });
 
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
@@ -267,6 +295,32 @@ export default function SaveConverterTab() {
     setItemSearch('');
   };
 
+  // Companion levels: '' clears the edit (back to the loaded save), an
+  // explicit 0 removes the copy from the roster.
+  const handleBuddyEdit = (iid, bid, raw) => {
+    setEdits(prev => {
+      const buddies = { ...prev.buddies };
+      const value = sanitizeCountInput(raw);
+      if (value === null) delete buddies[iid];
+      else buddies[iid] = { lv: Math.min(value, buddyMaxLevel(bid)) };
+      return { ...prev, buddies };
+    });
+  };
+
+  const handleAddBuddy = (bid) => {
+    const lv = Math.max(1, Math.min(sanitizeCountInput(buddyAddLevel) ?? 1, buddyMaxLevel(bid)));
+    setEdits(prev => ({ ...prev, buddyAdds: [...(prev.buddyAdds || []), { bid, lv }] }));
+    setBuddySearch('');
+  };
+
+  const handleRemoveBuddyAdd = (addIndex) => {
+    setEdits(prev => ({ ...prev, buddyAdds: (prev.buddyAdds || []).filter((_, i) => i !== addIndex) }));
+  };
+
+  const toggleSection = (key) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const handleDownload = () => {
     if (!convertedResult?.data) return;
     const jsonStr = JSON.stringify(convertedResult.data, null, 2);
@@ -304,9 +358,28 @@ export default function SaveConverterTab() {
 
   const getItemName = (id) => itemNameById[id] || `Item #${id}`;
 
+  const getBuddyName = (id) => buddyNameById[id] || `Companion #${id}`;
+
+  const buddyMaxLevel = (bid) => buddyCatalogById[bid]?.MaxLevel || BUDDY_LEVEL_FALLBACK;
+
+  const buddyThumbUrl = (bid) => {
+    const b = buddyCatalogById[bid];
+    return b?.thumb_file ? `/api/assets/image?path=${encodeURIComponent(b.thumb_file)}` : null;
+  };
+
   const itemIconUrl = (id) => `/api/assets/item/item_${String(id).padStart(2, '0')}.png`;
 
   const editsActive = hasSaveEdits(edits);
+
+  // Per-family edit counts driving the modified dots on the count cards.
+  const charEditCount = Object.keys(edits.characters).length;
+  const buddyEditCount = Object.keys(edits.buddies || {}).length + (edits.buddyAdds?.length || 0);
+  const itemEditCount = Object.keys(edits.items || {}).length;
+  const statEditDots = {
+    username: Boolean(edits.username && edits.username.trim()),
+    coins: edits.coins !== null && edits.coins !== undefined,
+    freeEnergy: edits.freeEnergy !== null && edits.freeEnergy !== undefined
+  };
 
   const activeAccountSummary = inspection?.accounts?.find(a => a.account_id === selectedAccountId) || inspection?.accounts?.[0];
 
@@ -339,11 +412,54 @@ export default function SaveConverterTab() {
       const name = (itemNameById[id] || '').toLowerCase();
       if (name.includes(q) || String(id) === q) {
         matches.push(id);
-        if (matches.length >= ITEM_PICKER_LIMIT) break;
+        if (matches.length >= PICKER_LIMIT) break;
       }
     }
     return matches;
   }, [gamedataItems, itemSearch, heldItemIds, itemNameById]);
+
+  // Effective companion roster: the loaded copies overlaid with level edits
+  // (a zeroed edit removes the copy) plus the freshly added copies.
+  const heldBuddies = useMemo(() => {
+    const out = [];
+    (activeAccountSummary?.buddies || []).forEach(b => {
+      const e = (edits.buddies || {})[b.iid];
+      if (e) {
+        if (!e.lv) return;
+        out.push({ ...b, lv: e.lv, edited: true });
+      } else {
+        out.push({ ...b, edited: false });
+      }
+    });
+    (edits.buddyAdds || []).forEach((a, idx) => {
+      out.push({ iid: 0, bid: a.bid, lv: a.lv, edited: true, added: true, addIndex: idx });
+    });
+    return out;
+  }, [activeAccountSummary, edits.buddies, edits.buddyAdds]);
+
+  const heldBuddySpeciesCounts = useMemo(() => {
+    const counts = {};
+    heldBuddies.forEach(b => { counts[b.bid] = (counts[b.bid] || 0) + 1; });
+    return counts;
+  }, [heldBuddies]);
+
+  // Add-companion picker: search the game catalog by name or id. Unlike items,
+  // held species stay searchable — multiple copies of a companion are legal.
+  const buddyMatches = useMemo(() => {
+    const q = buddySearch.trim().toLowerCase();
+    if (!q || !gamedataBuddies) return [];
+    const matches = [];
+    for (const b of gamedataBuddies) {
+      const id = b?.ID;
+      if (id === undefined) continue;
+      const name = (buddyNameById[id] || '').toLowerCase();
+      if (name.includes(q) || String(id) === q) {
+        matches.push(id);
+        if (matches.length >= PICKER_LIMIT) break;
+      }
+    }
+    return matches;
+  }, [gamedataBuddies, buddySearch, buddyNameById]);
 
   return (
     <div className="save-converter-container">
@@ -482,10 +598,12 @@ export default function SaveConverterTab() {
             </div>
           )}
 
-          {/* Account Summary Stats (name / coins / energy are inline-editable) */}
+          {/* Account Summary Stats (name / coins / energy are inline-editable;
+              the Characters / Companions / Items cards toggle their editors) */}
           {activeAccountSummary && (
             <div className="stats-summary-row">
-              <div className="mini-stat-card">
+              <div className={`mini-stat-card${statEditDots.username ? ' edited' : ''}`}>
+                {statEditDots.username && <span className="edit-dot" title="Name modified"></span>}
                 <div className="mini-stat-icon" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8' }}>
                   <i className="fa-solid fa-user"></i>
                 </div>
@@ -503,7 +621,17 @@ export default function SaveConverterTab() {
                 </div>
               </div>
 
-              <div className="mini-stat-card">
+              <button
+                type="button"
+                className={`mini-stat-card mini-stat-toggle${openSections.characters ? ' open' : ''}`}
+                onClick={() => toggleSection('characters')}
+                title={openSections.characters ? 'Hide the character editor' : 'Show the character editor'}
+              >
+                {charEditCount > 0 && (
+                  <span className="edit-dot" title={`${charEditCount} modified character${charEditCount > 1 ? 's' : ''}`}>
+                    {charEditCount}
+                  </span>
+                )}
                 <div className="mini-stat-icon" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#818cf8' }}>
                   <i className="fa-solid fa-users"></i>
                 </div>
@@ -511,19 +639,41 @@ export default function SaveConverterTab() {
                   <h5>Characters</h5>
                   <p>{activeAccountSummary.character_count}</p>
                 </div>
-              </div>
+                <i className={`fa-solid fa-chevron-${openSections.characters ? 'up' : 'down'} toggle-chev`}></i>
+              </button>
 
-              <div className="mini-stat-card">
+              <button
+                type="button"
+                className={`mini-stat-card mini-stat-toggle${openSections.buddies ? ' open' : ''}`}
+                onClick={() => toggleSection('buddies')}
+                title={openSections.buddies ? 'Hide the companion editor' : 'Show the companion editor'}
+              >
+                {buddyEditCount > 0 && (
+                  <span className="edit-dot" title={`${buddyEditCount} modified companion${buddyEditCount > 1 ? 's' : ''}`}>
+                    {buddyEditCount}
+                  </span>
+                )}
                 <div className="mini-stat-icon" style={{ background: 'rgba(236, 72, 153, 0.1)', color: '#f472b6' }}>
                   <i className="fa-solid fa-paw"></i>
                 </div>
                 <div className="mini-stat-content">
                   <h5>Companions</h5>
-                  <p>{activeAccountSummary.buddy_count}</p>
+                  <p>{heldBuddies.length}</p>
                 </div>
-              </div>
+                <i className={`fa-solid fa-chevron-${openSections.buddies ? 'up' : 'down'} toggle-chev`}></i>
+              </button>
 
-              <div className="mini-stat-card">
+              <button
+                type="button"
+                className={`mini-stat-card mini-stat-toggle${openSections.items ? ' open' : ''}`}
+                onClick={() => toggleSection('items')}
+                title={openSections.items ? 'Hide the item editor' : 'Show the item editor'}
+              >
+                {itemEditCount > 0 && (
+                  <span className="edit-dot" title={`${itemEditCount} modified item${itemEditCount > 1 ? 's' : ''}`}>
+                    {itemEditCount}
+                  </span>
+                )}
                 <div className="mini-stat-icon" style={{ background: 'rgba(74, 222, 128, 0.1)', color: '#4ade80' }}>
                   <i className="fa-solid fa-flask"></i>
                 </div>
@@ -531,9 +681,11 @@ export default function SaveConverterTab() {
                   <h5>Items Held</h5>
                   <p>{heldItems.length}</p>
                 </div>
-              </div>
+                <i className={`fa-solid fa-chevron-${openSections.items ? 'up' : 'down'} toggle-chev`}></i>
+              </button>
 
-              <div className="mini-stat-card">
+              <div className={`mini-stat-card${statEditDots.coins ? ' edited' : ''}`}>
+                {statEditDots.coins && <span className="edit-dot" title="Coins modified"></span>}
                 <div className="mini-stat-icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24' }}>
                   <i className="fa-solid fa-coins"></i>
                 </div>
@@ -551,7 +703,8 @@ export default function SaveConverterTab() {
                 </div>
               </div>
 
-              <div className="mini-stat-card">
+              <div className={`mini-stat-card${statEditDots.freeEnergy ? ' edited' : ''}`}>
+                {statEditDots.freeEnergy && <span className="edit-dot" title="Energy modified"></span>}
                 <div className="mini-stat-icon" style={{ background: 'rgba(34, 197, 94, 0.1)', color: '#4ade80' }}>
                   <i className="fa-solid fa-bolt"></i>
                 </div>
@@ -636,8 +789,8 @@ export default function SaveConverterTab() {
             </div>
           </div>
 
-          {/* Character Roster Preview (full roster, scrollable) */}
-          {activeAccountSummary?.top_characters && activeAccountSummary.top_characters.length > 0 && (
+          {/* Character Roster Preview (full roster, scrollable, collapsible) */}
+          {openSections.characters && activeAccountSummary?.top_characters && activeAccountSummary.top_characters.length > 0 && (
             <div className="roster-preview-card">
               <div className="roster-header">
                 <h4>
@@ -695,7 +848,152 @@ export default function SaveConverterTab() {
             </div>
           )}
 
-          {/* Item Inventory (counts editable, any game item addable) */}
+          {/* Companion Editor (levels editable per copy, any game companion addable) */}
+          {openSections.buddies && (
+            <div className="roster-preview-card">
+              <div className="roster-header">
+                <h4>
+                  <i className="fa-solid fa-paw"></i>
+                  Companions ({heldBuddies.length} {heldBuddies.length === 1 ? 'Copy' : 'Copies'} Held)
+                </h4>
+                <span
+                  className="roster-scroll-hint"
+                  title={`Levels are capped at the species' max level; level 0 removes the copy; clearing the field reverts`}
+                >
+                  <i className="fa-solid fa-pen"></i>
+                  Edit levels, or search to add companions
+                </span>
+              </div>
+
+              <div className="item-picker">
+                <div className="item-picker-controls">
+                  <div className="item-picker-search">
+                    <i className="fa-solid fa-magnifying-glass"></i>
+                    <input
+                      type="text"
+                      value={buddySearch}
+                      placeholder="Search a companion to add (name or ID)..."
+                      onChange={(e) => setBuddySearch(e.target.value)}
+                    />
+                  </div>
+                  <label className="item-picker-count">
+                    <span>Lv</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={buddyAddLevel}
+                      onChange={(e) => setBuddyAddLevel(e.target.value)}
+                      title="Level given to newly added companions"
+                    />
+                  </label>
+                </div>
+
+                {buddySearch.trim() !== '' && (
+                  buddyMatches.length > 0 ? (
+                    <div className="item-picker-results">
+                      {buddyMatches.map(id => {
+                        const thumb = buddyThumbUrl(id);
+                        return (
+                          <div key={id} className="item-picker-result">
+                            {thumb ? (
+                              <img src={thumb} alt="" onError={(e) => { e.target.style.visibility = 'hidden'; }} />
+                            ) : (
+                              <div className="buddy-thumb-fallback picker">
+                                <i className="fa-solid fa-paw"></i>
+                              </div>
+                            )}
+                            <span className="item-picker-name">{getBuddyName(id)}</span>
+                            {heldBuddySpeciesCounts[id] && (
+                              <span className="buddy-held-tag">held ×{heldBuddySpeciesCounts[id]}</span>
+                            )}
+                            <span className="item-picker-id">ID {id}</span>
+                            <button type="button" className="item-add-btn" onClick={() => handleAddBuddy(id)}>
+                              <i className="fa-solid fa-plus"></i>
+                              Add
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="item-picker-empty">No matching companion in the game catalog.</p>
+                  )
+                )}
+              </div>
+
+              {heldBuddies.length === 0 ? (
+                <p className="item-empty-note">
+                  No companions held — search above to add one.
+                </p>
+              ) : (
+                <div className="roster-grid">
+                  {heldBuddies.map(b => {
+                    const thumb = buddyThumbUrl(b.bid);
+                    return (
+                      <div key={b.added ? `add-${b.addIndex}` : b.iid} className={`char-badge-card${b.edited ? ' edited' : ''}`}>
+                        {thumb ? (
+                          <img
+                            className="buddy-thumb"
+                            src={thumb}
+                            alt=""
+                            loading="lazy"
+                            onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
+                          />
+                        ) : null}
+                        <div
+                          className="buddy-thumb-fallback"
+                          style={{ display: thumb ? 'none' : 'flex' }}
+                        >
+                          <i className="fa-solid fa-paw"></i>
+                        </div>
+                        <div className="char-badge-info">
+                          <h5>{getBuddyName(b.bid)}</h5>
+                          <div className="char-edit-row">
+                            <span className="char-job-tag">Buddy {b.bid}</span>
+                            {b.added ? (
+                              <>
+                                <span className="char-job-tag">Lv {b.lv}</span>
+                                <button
+                                  type="button"
+                                  className="buddy-remove-btn"
+                                  onClick={() => handleRemoveBuddyAdd(b.addIndex)}
+                                  title="Drop this newly added copy"
+                                >
+                                  <i className="fa-solid fa-xmark"></i>
+                                  Remove
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {b.iid > 0 && <span className="char-job-tag">#{b.iid}</span>}
+                                <label className="char-edit-field">
+                                  <span>Lv</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={buddyMaxLevel(b.bid)}
+                                    disabled={!b.iid}
+                                    value={(edits.buddies[b.iid]?.lv) ?? b.lv}
+                                    onChange={(e) => handleBuddyEdit(b.iid, b.bid, e.target.value)}
+                                    title={b.iid > 0
+                                      ? `Level 0–${buddyMaxLevel(b.bid)}; 0 removes the copy, clearing the field reverts`
+                                      : 'This copy has no inventory id in the save and cannot be edited'}
+                                  />
+                                </label>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Item Inventory (counts editable, any game item addable, collapsible) */}
+          {openSections.items && (
           <div className="roster-preview-card">
             <div className="roster-header">
               <h4>
@@ -793,6 +1091,7 @@ export default function SaveConverterTab() {
               </div>
             )}
           </div>
+          )}
 
           {/* JSON Viewer */}
           {showJsonViewer && convertedResult?.data && (

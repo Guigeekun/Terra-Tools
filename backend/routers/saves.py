@@ -66,6 +66,49 @@ def apply_client_float_traps(session_data: dict) -> None:
         }
 
 
+def buddy_copies(buddy_list: Any) -> List[dict]:
+    """Summarize companion copies as {iid, bid, lv} entries for the UI.
+
+    ``iid`` is the per-copy inventory id (the save editor keys edits by it),
+    ``bid`` the buddy species id, ``lv`` the copy's level (>= 1).
+    """
+    copies: List[dict] = []
+    if not isinstance(buddy_list, list):
+        return copies
+    for entry in buddy_list:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            bid = int(entry.get("bid") or 0)
+        except (TypeError, ValueError):
+            continue
+        if bid <= 0:
+            continue
+        try:
+            iid = int(entry.get("iid") or 0)
+        except (TypeError, ValueError):
+            iid = 0
+        try:
+            lv = int(entry.get("lv") or 1)
+        except (TypeError, ValueError):
+            lv = 1
+        copies.append({"iid": iid, "bid": bid, "lv": max(1, lv)})
+    copies.sort(key=lambda c: c["iid"])
+    return copies
+
+
+def liminal_buddy_list(ud: dict) -> Any:
+    """Return the owned-companion list from a Liminal Gate userdata dict."""
+    buddy_info = ud.get("buddyInfo")
+    if isinstance(buddy_info, list):
+        return buddy_info
+    if isinstance(buddy_info, dict):
+        for key in ("list", "user_companions"):
+            if isinstance(buddy_info.get(key), list):
+                return buddy_info[key]
+    return []
+
+
 def compendium_species_level(entry: Any) -> "tuple[int, int] | None":
     """Return ``(species_id, level)`` for a companion entry, or None if unreadable.
 
@@ -172,13 +215,8 @@ def parse_account_summary_liminal(account_id: str, acc: dict) -> dict:
     ud = acc.get("userdata", {})
     username = acc.get("username") or ud.get("username") or "Player"
     chrdata = ud.get("chrdata", [])
-    buddy_info = ud.get("buddyInfo", {})
-    buddy_count = 0
-    if isinstance(buddy_info, dict):
-        buddy_list = buddy_info.get("list", buddy_info.get("user_companions", []))
-        buddy_count = len(buddy_list) if isinstance(buddy_list, list) else 0
-    elif isinstance(buddy_info, list):
-        buddy_count = len(buddy_info)
+    buddy_list = liminal_buddy_list(ud)
+    buddy_count = len(buddy_list)
 
     item_list = ud.get("itemList", [])
     item_count = sum(1 for it in item_list if it and it > 0)
@@ -199,6 +237,7 @@ def parse_account_summary_liminal(account_id: str, acc: dict) -> dict:
             for idx, v in enumerate(item_list)
             if isinstance(v, (int, float)) and v and v > 0
         ],
+        "buddies": buddy_copies(buddy_list),
         "quest_clears": quest_clears,
         "progress_code": ud.get("progressCode", 0),
         "tutorial_phase": acc.get("tutorial_phase", "unknown"),
@@ -253,8 +292,10 @@ def parse_account_summary_retb(retb_data: dict) -> dict:
         if "stamina" in vdict:
             stamina = vdict.get("stamina", stamina)
 
-    buddy_info = session_data.get("buddyInfo", [])
-    buddy_count = len(buddy_info) if isinstance(buddy_info, list) else len(buddy_info.get("user_companions", []))
+    buddy_list = session_data.get("buddyInfo")
+    if not isinstance(buddy_list, list):
+        buddy_list = buddy_list.get("user_companions", []) if isinstance(buddy_list, dict) else []
+    buddy_count = len(buddy_list)
     item_list = session_data.get("itemList", [])
     item_count = sum(1 for it in item_list if it and it > 0)
     quest_clears = len(session_data.get("extra_quest_clears", {}))
@@ -303,6 +344,7 @@ def parse_account_summary_retb(retb_data: dict) -> dict:
             for idx, v in enumerate(item_list)
             if isinstance(v, (int, float)) and v and v > 0
         ],
+        "buddies": buddy_copies(buddy_list),
         "quest_clears": quest_clears,
         "progress_code": session_data.get("progressCode", 0),
         "tutorial_phase": "free_roam",

@@ -17,6 +17,24 @@ export function parseHeldItems(itemList) {
     .filter(it => it.count > 0);
 }
 
+// Companion entries as {iid, bid, lv} copies for summaries and the UI. iid is
+// the per-copy inventory id the save keys edits by; bid is the species id.
+export function parseBuddyCopies(buddyList) {
+  return (Array.isArray(buddyList) ? buddyList : [])
+    .map(e => {
+      const iid = Math.floor(Number(e && e.iid));
+      const bid = Math.floor(Number(e && e.bid));
+      const lv = Math.floor(Number(e && e.lv));
+      return {
+        iid: Number.isFinite(iid) ? iid : 0,
+        bid: Number.isFinite(bid) ? bid : 0,
+        lv: Number.isFinite(lv) && lv >= 1 ? lv : 1
+      };
+    })
+    .filter(b => b.bid > 0)
+    .sort((a, b) => a.iid - b.iid);
+}
+
 export function detectSaveFormat(data) {
   if (!data || typeof data !== 'object') return 'unknown';
   if (data.format === 'retb-save/1' || (data.tables && data.tables.session)) {
@@ -91,17 +109,11 @@ export function parseAccountSummaryLiminal(accountId, acc) {
   const ud = acc.userdata || {};
   const username = acc.username || ud.username || 'Player';
   const chrdata = ud.chrdata || [];
-  
-  let buddyCount = 0;
-  if (ud.buddyInfo) {
-    if (Array.isArray(ud.buddyInfo)) {
-      buddyCount = ud.buddyInfo.length;
-    } else if (Array.isArray(ud.buddyInfo.list)) {
-      buddyCount = ud.buddyInfo.list.length;
-    } else if (Array.isArray(ud.buddyInfo.user_companions)) {
-      buddyCount = ud.buddyInfo.user_companions.length;
-    }
-  }
+
+  const buddyList = Array.isArray(ud.buddyInfo) ? ud.buddyInfo
+    : Array.isArray(ud.buddyInfo?.list) ? ud.buddyInfo.list
+    : Array.isArray(ud.buddyInfo?.user_companions) ? ud.buddyInfo.user_companions
+    : [];
 
   const itemList = ud.itemList || [];
   const itemCount = itemList.filter(n => n && n > 0).length;
@@ -111,13 +123,14 @@ export function parseAccountSummaryLiminal(accountId, acc) {
     account_id: accountId,
     username,
     character_count: chrdata.length,
-    buddy_count: buddyCount,
+    buddy_count: buddyList.length,
     coins: ud.coins || (ud.valuables && ud.valuables.coins) || 0,
     energy_free: ud.freeEnergy || (ud.valuables && ud.valuables.freeEnergy) || 0,
     energy_paid: ud.energy || (ud.valuables && ud.valuables.energy) || 0,
     stamina: 20,
     item_count: itemCount,
     items: parseHeldItems(itemList),
+    buddies: parseBuddyCopies(buddyList),
     quest_clears: questClears,
     progress_code: ud.progressCode || 0,
     tutorial_phase: acc.tutorial_phase || 'free_roam',
@@ -165,15 +178,9 @@ export function parseAccountSummaryRetb(retbData) {
     if (vdict.stamina) stamina = vdict.stamina;
   }
 
-  let buddyCount = 0;
-  if (sessionData.buddyInfo) {
-    if (Array.isArray(sessionData.buddyInfo)) {
-      buddyCount = sessionData.buddyInfo.length;
-    } else if (Array.isArray(sessionData.buddyInfo.user_companions)) {
-      buddyCount = sessionData.buddyInfo.user_companions.length;
-    }
-  }
-
+  const buddyList = Array.isArray(sessionData.buddyInfo) ? sessionData.buddyInfo
+    : Array.isArray(sessionData.buddyInfo?.user_companions) ? sessionData.buddyInfo.user_companions
+    : [];
   const itemList = sessionData.itemList || [];
   const itemCount = itemList.filter(n => n && n > 0).length;
   const questClears = Object.keys(sessionData.extra_quest_clears || {}).length;
@@ -206,13 +213,14 @@ export function parseAccountSummaryRetb(retbData) {
     account_id: userid,
     username,
     character_count: charCount,
-    buddy_count: buddyCount,
+    buddy_count: buddyList.length,
     coins,
     energy_free: freeEnergy,
     energy_paid: paidEnergy,
     stamina,
     item_count: itemCount,
     items: parseHeldItems(itemList),
+    buddies: parseBuddyCopies(buddyList),
     quest_clears: questClears,
     progress_code: sessionData.progressCode || 0,
     tutorial_phase: 'free_roam',
@@ -674,12 +682,98 @@ export function convertSaveData(data, targetFormat = null, accountId = null) {
  * converted output and its suggested filename automatically reflect edits
  * while the loaded file on disk stays untouched.
  */
+
+// Fold companion entries into the ever-owned compendium map (bid -> max lv).
+// Keyed by the SPECIES id: per-copy inventory ids grow without bound, point
+// past the end of the game's BuddyData table and crash the client when served
+// back as buddyInfo.record.
+function foldBuddyCompanion(compendium, entries) {
+  (Array.isArray(entries) ? entries : []).forEach(entry => {
+    let bid;
+    let lv = 1;
+    if (entry !== null && typeof entry === 'object') {
+      bid = Math.floor(Number(entry.bid));
+      lv = Math.floor(Number(entry.lv || 1));
+    } else {
+      bid = Math.floor(Number(entry));
+    }
+    if (!Number.isFinite(bid) || bid <= 0) return;
+    if (!Number.isFinite(lv) || lv < 1) lv = 1;
+    const key = String(bid);
+    if (!(key in compendium) || lv > compendium[key]) compendium[key] = lv;
+  });
+}
+
+// Apply level edits / removals keyed by the per-copy iid: an edited level
+// replaces the copy's lv, a 0 removes the copy entirely.
+function patchBuddyCopies(list, buddyEdits) {
+  const out = [];
+  (Array.isArray(list) ? list : []).forEach(entry => {
+    if (!entry || typeof entry !== 'object') { out.push(entry); return; }
+    const e = buddyEdits[entry.iid];
+    if (!e) { out.push(entry); return; }
+    const lv = Math.floor(Number(e.lv));
+    if (!Number.isFinite(lv) || lv <= 0) return;
+    out.push({ ...entry, lv: Math.min(99, lv) });
+  });
+  return out;
+}
+
+// Next free per-copy inventory id: the save's own counter when sane, grown
+// past every iid already held (hand-edited saves can lag behind).
+function nextBuddySeq(list, current) {
+  let seq = Math.floor(Number(current));
+  if (!Number.isFinite(seq) || seq < 1) seq = 1;
+  (Array.isArray(list) ? list : []).forEach(entry => {
+    const iid = Math.floor(Number(entry && entry.iid));
+    if (Number.isFinite(iid) && iid >= seq) seq = iid + 1;
+  });
+  return seq;
+}
+
+// Append buddyAdds ({bid, lv}) as full inventory copies with fresh iids taken
+// from `seq`; returns the extended list and the counter bumped past every id
+// written (so later in-game acquisitions never collide).
+function appendBuddyAdds(list, buddyAdds, seq) {
+  const out = list.slice();
+  let nextSeq = seq;
+  buddyAdds.forEach(add => {
+    const bid = Math.floor(Number(add && add.bid));
+    if (!Number.isFinite(bid) || bid <= 0) return;
+    const lv = Math.max(1, Math.min(99, Math.floor(Number(add && add.lv) || 1)));
+    out.push({ bid, chrID: 0, date: 0, exp: 0, flag: 1, iid: nextSeq, lv });
+    nextSeq += 1;
+  });
+  return { list: out, nextSeq };
+}
+
+// Rebuild the liminal buddyInfo wrapper ({list, record}) around an edited
+// list: record stays the best-copy-per-species view, preserving ever-owned
+// species that only live in the old record (sold / consumed copies).
+function rebuildLiminalBuddyInfo(oldInfo, list) {
+  const compMap = {};
+  const oldRec = (oldInfo && typeof oldInfo === 'object' && !Array.isArray(oldInfo)) ? oldInfo.record : null;
+  if (Array.isArray(oldRec)) {
+    foldBuddyCompanion(compMap, oldRec);
+  } else if (oldRec && typeof oldRec === 'object') {
+    // A map-shaped record is already keyed by species id.
+    foldBuddyCompanion(compMap, Object.entries(oldRec).map(([k, v]) => (
+      (v && typeof v === 'object') ? { bid: Number(k), lv: v.lv } : { bid: Number(k), lv: v }
+    )));
+  }
+  foldBuddyCompanion(compMap, list);
+  return { list, record: buildLiminalRecord(list, compMap) };
+}
 export const EMPTY_SAVE_EDITS = Object.freeze({
   username: '',
   coins: null,
   freeEnergy: null,
   characters: {},
-  items: {}
+  items: {},
+  // Companion copies keyed by their per-copy inventory id (iid); lv 0 removes
+  // the copy. buddyAdds appends brand-new copies (each gets a fresh iid).
+  buddies: {},
+  buddyAdds: []
 });
 
 // '' / invalid / negative -> null (= leave the original value untouched).
@@ -696,6 +790,8 @@ export function hasSaveEdits(edits) {
   if (edits.coins !== null && edits.coins !== undefined) return true;
   if (edits.freeEnergy !== null && edits.freeEnergy !== undefined) return true;
   if (Object.keys(edits.characters || {}).length > 0) return true;
+  if (Object.keys(edits.buddies || {}).length > 0) return true;
+  if ((edits.buddyAdds || []).length > 0) return true;
   return Object.keys(edits.items || {}).length > 0;
 }
 
@@ -713,6 +809,23 @@ export function applySaveEdits(data, edits, accountId = null) {
   const hasCharEdits = Object.keys(charEdits).length > 0;
   const itemEdits = edits.items || {};
   const hasItemEdits = Object.keys(itemEdits).length > 0;
+  const buddyEdits = edits.buddies || {};
+  const buddyAdds = Array.isArray(edits.buddyAdds) ? edits.buddyAdds : [];
+  const hasBuddyEdits = Object.keys(buddyEdits).length > 0 || buddyAdds.length > 0;
+
+  // Edit a companion inventory in place: apply level edits / removals, append
+  // new copies (bumping the per-copy iid counter), and fold the result into
+  // the ever-owned ledger so newly added species land in the compendium.
+  const applyBuddyEditsToList = (buddyList, seqCurrent, onSeq) => {
+    const patched = patchBuddyCopies(buddyList, buddyEdits);
+    let out = patched;
+    if (buddyAdds.length) {
+      const res = appendBuddyAdds(patched, buddyAdds, nextBuddySeq(buddyList, seqCurrent));
+      out = res.list;
+      onSeq(res.nextSeq);
+    }
+    return out;
+  };
 
   const applyCharEdits = (chrdata) => {
     if (!hasCharEdits || !Array.isArray(chrdata)) return;
@@ -758,6 +871,19 @@ export function applySaveEdits(data, edits, accountId = null) {
     }
     applyCharEdits(ud.chrdata);
     if (hasItemEdits) ud.itemList = applyItemEdits(ud.itemList);
+    if (hasBuddyEdits) {
+      const bi = ud.buddyInfo;
+      const buddyList = Array.isArray(bi) ? bi
+        : Array.isArray(bi?.list) ? bi.list
+        : Array.isArray(bi?.user_companions) ? bi.user_companions
+        : [];
+      const out = applyBuddyEditsToList(
+        buddyList,
+        ud.nextCompanionInventoryId ?? ud._buddy_inventory_seq,
+        (seq) => { ud.nextCompanionInventoryId = seq; }
+      );
+      ud.buddyInfo = rebuildLiminalBuddyInfo(bi, out);
+    }
   } else {
     const tables = next.tables || {};
 
@@ -790,6 +916,27 @@ export function applySaveEdits(data, edits, accountId = null) {
         }
         applyCharEdits(sd.chrdata);
         if (hasItemEdits) sd.itemList = applyItemEdits(sd.itemList);
+        if (hasBuddyEdits) {
+          const buddyList = Array.isArray(sd.buddyInfo) ? sd.buddyInfo
+            : Array.isArray(sd.buddyInfo?.user_companions) ? sd.buddyInfo.user_companions
+            : [];
+          const out = applyBuddyEditsToList(
+            buddyList,
+            sd._buddy_inventory_seq ?? sd.nextCompanionInventoryId,
+            (seq) => { sd._buddy_inventory_seq = seq; }
+          );
+          sd.buddyInfo = out;
+          // Ever-owned ledger: normalise legacy list-shaped compendiums to the
+          // bid-keyed map the server expects, then fold the edited inventory in
+          // (mirrors reTB's sync_buddy_compendium).
+          const legacy = Array.isArray(sd._buddy_compendium) ? sd._buddy_compendium : [];
+          const comp = (sd._buddy_compendium && typeof sd._buddy_compendium === 'object' && !Array.isArray(sd._buddy_compendium))
+            ? sd._buddy_compendium
+            : {};
+          foldBuddyCompanion(comp, legacy);
+          foldBuddyCompanion(comp, out);
+          sd._buddy_compendium = comp;
+        }
         sessionRow[1] = wasString ? coerceJsonDoubles(JSON.stringify(sd)) : sd;
       }
     }

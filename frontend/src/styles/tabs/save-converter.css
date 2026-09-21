@@ -430,6 +430,57 @@
   color: var(--text-primary);
 }
 
+/* Clickable count cards toggling their edit-family section */
+.mini-stat-toggle {
+  cursor: pointer;
+  position: relative;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.mini-stat-toggle:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(56, 189, 248, 0.05);
+  transform: translateY(-2px);
+}
+
+.mini-stat-toggle .mini-stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toggle-chev {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* Card holding an unapplied edit (amber tint + dot), even when collapsed */
+.mini-stat-card.edited {
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.edit-dot {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent-amber);
+  color: #0f172a;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.45);
+}
+
 /* Conversion Control Bar */
 .conversion-control-bar {
   background: var(--bg-card);
@@ -842,6 +893,65 @@
   justify-content: center;
   font-size: 16px;
   flex-shrink: 0;
+}
+
+/* Companion editing */
+.buddy-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.buddy-thumb-fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(236, 72, 153, 0.15);
+  color: #f472b6;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.buddy-thumb-fallback.picker {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.buddy-held-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #f472b6;
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.3);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.buddy-remove-btn {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: var(--transition-smooth);
+}
+
+.buddy-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
 }
 
 /* JSON Code Viewer */
