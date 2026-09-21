@@ -712,6 +712,19 @@
   flex-shrink: 0;
 }
 
+/* The current-job badge on the name row reads as a pill, not bare text */
+.char-name-row .char-job-tag:not(.new-tag) {
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .char-badge-info p {
   font-size: 0.75rem;
   color: var(--text-secondary);
