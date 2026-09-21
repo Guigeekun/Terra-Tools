@@ -281,6 +281,7 @@ def load_databases():
         "strings": "StringSet.json",
         "enemies": "EnemyData.json",
         "stages_layout": "StagesLayout.json",
+        "stage_drops": "StageDrops.json",
         "book": "BookData.json",
     }
     

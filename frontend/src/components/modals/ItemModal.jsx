@@ -65,7 +65,9 @@ export default function ItemModal({ itemId, onClose }) {
                             {st.spawning_enemies.map((enemy, j) => (
                               <div key={j} style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
                                 <span><i className="fa-solid fa-skull" style={{ marginRight: 6, fontSize: 11 }}></i>{loc(enemy.enemy_name, lang, 'Unknown Enemy')}</span>
-                                <span style={{ color: 'var(--accent-pink)', fontWeight: 500 }}>Chance: {enemy.rate}%</span>
+                                {enemy.rate != null && (
+                                  <span style={{ color: 'var(--accent-pink)', fontWeight: 500 }}>Chance: {enemy.rate}%</span>
+                                )}
                               </div>
                             ))}
                           </div>
