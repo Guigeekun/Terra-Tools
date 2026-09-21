@@ -775,9 +775,35 @@
   background: rgba(56, 189, 248, 0.08);
 }
 
-/* Job unlock chips on character cards */
-.job-chip-row {
+/* Per-job level rows on character cards (chip = lock toggle, Lv = level) */
+.job-level-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   margin-top: 6px;
+}
+
+.job-level-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.job-level-row .char-edit-field input {
+  width: 48px;
+}
+
+.job-level-row.absent {
+  opacity: 0.4;
+}
+
+.job-level-row.absent .job-chip {
+  border-style: dashed;
+  cursor: default;
+}
+
+.job-level-row.equipped .job-chip {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.55);
 }
 
 .job-chip {
@@ -794,6 +820,7 @@
   padding: 2px 8px;
   cursor: pointer;
   transition: var(--transition-smooth);
+  flex-shrink: 0;
 }
 
 .job-chip i {
@@ -808,7 +835,6 @@
 
 .job-chip.absent {
   opacity: 0.4;
-  border-style: dashed;
 }
 
 .job-chip:disabled {
@@ -822,10 +848,6 @@
 .job-chip:not(:disabled):hover {
   border-color: rgba(56, 189, 248, 0.6);
   transform: translateY(-1px);
-}
-
-.job-chip.equipped {
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.55);
 }
 
 /* Item Inventory */

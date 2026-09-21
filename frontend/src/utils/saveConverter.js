@@ -8,7 +8,7 @@
 // count of item `slot` (ids are 1-based, exactly 181 slots, stack cap 999) --
 // mirrors project-liminal-gate save_validation.py and its save editor.
 export const ITEM_SLOTS = 181;
-export const ITEM_MAX_STACK = 999;
+export const ITEM_MAX_STACK = 9999;
 
 // Held items as {id, count} pairs (ids 1-based) for summaries and the UI.
 export function parseHeldItems(itemList) {
@@ -837,14 +837,22 @@ export function applySaveEdits(data, edits, accountId = null) {
       if (!e) return;
       if (e.sb !== null && e.sb !== undefined) c.skillBoost = e.sb;
       if (e.luck !== null && e.luck !== undefined) c.luck = e.luck;
-      // Job unlock slots: jobLevels holds (exp << 12) | level wire values, a
-      // zero level means the job is locked. Unlock writes a level-1 slot and
-      // lock writes 0; locking the equipped job falls back to job 1.
-      if (e.jobs && Array.isArray(c.jobLevels)) {
-        c.jobLevels = c.jobLevels.map((v, i) => (
-          e.jobs[i] === undefined ? v : (e.jobs[i] ? 1 : 0)
-        ));
-        if (e.jobs[c.jobID] === 0) c.jobID = 0;
+      // Job slots: jobLevels holds (exp << 12) | level wire values, a zero
+      // level means the job is locked. Per-slot edits: jobs[i] locks (0) /
+      // unlocks (1, level 1 unless a level edit exists); jobLevels[i] sets
+      // the level while keeping the slot's EXP bits. Locking the equipped
+      // job falls back to job 1.
+      if ((e.jobs || e.jobLevels) && Array.isArray(c.jobLevels)) {
+        c.jobLevels = c.jobLevels.map((v, i) => {
+          const lock = e.jobs ? e.jobs[i] : undefined;
+          const lv = e.jobLevels ? e.jobLevels[i] : undefined;
+          if (lock === undefined && lv === undefined) return v;
+          if (lock === 0) return 0;
+          if (lock === 1) return Math.max(1, Math.min(90, lv ?? 1));
+          const expBits = Math.floor(Number(v) || 0) & ~0xFFF;
+          return expBits + Math.max(1, Math.min(90, lv));
+        });
+        if (e.jobs && e.jobs[c.jobID] === 0) c.jobID = 0;
       }
     });
   };
@@ -1019,16 +1027,21 @@ export function applySaveEdits(data, edits, accountId = null) {
         if (!e) return;
         if (e.luck !== null && e.luck !== undefined && r.length > 2) r[2] = e.luck;
         if (e.sb !== null && e.sb !== undefined && r.length > 3) r[3] = e.sb;
-        if (e.jobs && r.length > 5) {
+        if ((e.jobs || e.jobLevels) && r.length > 5) {
           let jl = r[5];
           if (typeof jl === 'string') {
             try { jl = JSON.parse(jl); } catch (err) { jl = null; }
           }
           if (Array.isArray(jl)) {
-            r[5] = JSON.stringify(jl.map((v, i) => (
-              e.jobs[i] === undefined ? v : (e.jobs[i] ? 1 : 0)
-            )));
-            if (e.jobs[r[4]] === 0) r[4] = 0;
+            r[5] = JSON.stringify(jl.map((v, i) => {
+              const lock = e.jobs ? e.jobs[i] : undefined;
+              const lv = e.jobLevels ? e.jobLevels[i] : undefined;
+              if (lock === 0) return 0;
+              if (lock === 1) return Math.max(1, Math.min(90, lv ?? 1));
+              if (lv !== undefined) return Math.max(1, Math.min(90, lv));
+              return v;
+            }));
+            if (e.jobs && e.jobs[r[4]] === 0) r[4] = 0;
           }
         }
       });

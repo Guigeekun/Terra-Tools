@@ -287,18 +287,44 @@ export default function SaveConverterTab() {
     });
   };
 
-  // Job unlock toggle: flipping a slot back to its loaded state clears the
-  // edit for it, keeping the modified indicators accurate.
+  // Job unlock toggle: locking clears a remembered level for that slot, and
+  // flipping back to the loaded state clears the edit entirely, keeping the
+  // modified indicators accurate.
   const handleCharJobToggle = (charId, jobIndex, loadedUnlocked) => {
     setEdits(prev => {
       const characters = { ...prev.characters };
       const entry = { ...(characters[charId] || {}) };
       const jobs = { ...(entry.jobs || {}) };
+      const jobLevels = { ...(entry.jobLevels || {}) };
       const target = jobs[jobIndex] !== undefined ? (jobs[jobIndex] ? 0 : 1) : (loadedUnlocked ? 0 : 1);
-      if (target === (loadedUnlocked ? 1 : 0)) delete jobs[jobIndex];
-      else jobs[jobIndex] = target;
+      if (target === (loadedUnlocked ? 1 : 0)) {
+        delete jobs[jobIndex];
+        delete jobLevels[jobIndex];
+      } else {
+        jobs[jobIndex] = target;
+        if (target === 0) delete jobLevels[jobIndex];
+      }
       if (Object.keys(jobs).length === 0) delete entry.jobs;
       else entry.jobs = jobs;
+      if (Object.keys(jobLevels).length === 0) delete entry.jobLevels;
+      if (Object.keys(entry).length === 0) delete characters[charId];
+      else characters[charId] = entry;
+      return { ...prev, characters };
+    });
+  };
+
+  // Per-job level edit (1-90); typing the loaded level clears the edit.
+  const handleCharJobLevel = (charId, slot, raw, loadedLevel) => {
+    setEdits(prev => {
+      const characters = { ...prev.characters };
+      const entry = { ...(characters[charId] || {}) };
+      const jobLevels = { ...(entry.jobLevels || {}) };
+      const value = sanitizeCountInput(raw);
+      if (!value) delete jobLevels[slot];
+      else jobLevels[slot] = Math.min(90, Math.max(1, value));
+      if (jobLevels[slot] === loadedLevel) delete jobLevels[slot];
+      if (Object.keys(jobLevels).length === 0) delete entry.jobLevels;
+      else entry.jobLevels = jobLevels;
       if (Object.keys(entry).length === 0) delete characters[charId];
       else characters[charId] = entry;
       return { ...prev, characters };
@@ -937,6 +963,9 @@ export default function SaveConverterTab() {
                     const effUnlocked = (slot) => (charEdit?.jobs?.[slot] !== undefined
                       ? Boolean(charEdit.jobs[slot])
                       : loadedUnlocked(slot));
+                    const effLevel = (slot) => (charEdit?.jobLevels?.[slot] !== undefined
+                      ? charEdit.jobLevels[slot]
+                      : jobLevelOf(c.job_levels?.[slot]));
                     const effJobId = charEdit?.jobs?.[c.job_id] === 0 ? 0 : (c.job_id || 0);
                     return (
                       <div key={c.added ? `add-${c.addIndex}` : `${c.id}-${i}`} className={`char-badge-card${isEdited ? ' edited' : ''}`}>
@@ -987,7 +1016,7 @@ export default function SaveConverterTab() {
                               />
                             </label>
                           </div>
-                          <div className="char-edit-row job-chip-row">
+                          <div className="job-level-rows">
                             {[0, 1, 2].map(slot => {
                               const unlocked = effUnlocked(slot);
                               const jobName = jobNames[slot] || '';
@@ -997,32 +1026,51 @@ export default function SaveConverterTab() {
                               const title = absent
                                 ? 'This character has no additional job in the game data'
                                 : slot === 0
-                                  ? `${jobName ? `${jobName} — ` : ''}Job 1 is always unlocked`
-                                  : `${jobName ? `${jobName} — ` : ''}${unlocked ? 'Unlocked' : 'Locked'}${equipped ? ' — equipped' : ''} — click to ${unlocked ? 'lock' : 'unlock'}`;
+                                  ? `${jobName ? `${jobName} — ` : ''}Job 1 is always unlocked${equipped ? ' — equipped' : ''}`
+                                  : `${jobName ? `${jobName} — ` : ''}${unlocked ? 'Unlocked' : 'Locked'}${equipped ? ' — equipped' : ''} — click the job chip to ${unlocked ? 'lock' : 'unlock'}`;
                               return (
-                                <button
+                                <div
                                   key={slot}
-                                  type="button"
-                                  className={`job-chip${unlocked ? ' unlocked' : ''}${absent ? ' absent' : ''}${equipped ? ' equipped' : ''}`}
-                                  disabled={!toggleable}
-                                  onClick={() => handleCharJobToggle(c.id, slot, loadedUnlocked(slot))}
+                                  className={`job-level-row${absent ? ' absent' : ''}${equipped ? ' equipped' : ''}`}
                                   title={title}
                                 >
-                                  <i className={`fa-solid ${unlocked ? 'fa-circle-check' : 'fa-lock'}`}></i>
-                                  J{slot + 1}
-                                </button>
+                                  <button
+                                    type="button"
+                                    className={`job-chip${unlocked ? ' unlocked' : ''}${absent ? ' absent' : ''}`}
+                                    disabled={!toggleable}
+                                    onClick={() => handleCharJobToggle(c.id, slot, loadedUnlocked(slot))}
+                                  >
+                                    <i className={`fa-solid ${unlocked ? 'fa-circle-check' : 'fa-lock'}`}></i>
+                                    J{slot + 1}
+                                  </button>
+                                  <label className="char-edit-field">
+                                    <span>Lv</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="90"
+                                      value={unlocked ? effLevel(slot) : ''}
+                                      placeholder="—"
+                                      disabled={!unlocked || absent}
+                                      onChange={(e) => handleCharJobLevel(c.id, slot, e.target.value, jobLevelOf(c.job_levels?.[slot]))}
+                                      title={unlocked ? 'Job level (1–90)' : 'Locked — unlock the job to set its level'}
+                                    />
+                                  </label>
+                                </div>
                               );
                             })}
                             {c.added && (
-                              <button
-                                type="button"
-                                className="buddy-remove-btn"
-                                onClick={() => handleRemoveCharAdd(c.addIndex)}
-                                title="Remove this newly added character"
-                              >
-                                <i className="fa-solid fa-xmark"></i>
-                                Remove
-                              </button>
+                              <div className="job-level-row">
+                                <button
+                                  type="button"
+                                  className="buddy-remove-btn"
+                                  onClick={() => handleRemoveCharAdd(c.addIndex)}
+                                  title="Remove this newly added character"
+                                >
+                                  <i className="fa-solid fa-xmark"></i>
+                                  Remove
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
