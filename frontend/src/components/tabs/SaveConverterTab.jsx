@@ -93,6 +93,7 @@ export default function SaveConverterTab() {
   const [itemAddCount, setItemAddCount] = useState('1');
   const [buddySearch, setBuddySearch] = useState('');
   const [buddyAddLevel, setBuddyAddLevel] = useState('1');
+  const [charSearch, setCharSearch] = useState('');
   // Which edit-family sections are expanded (toggled from the count cards).
   const [openSections, setOpenSections] = useState({ characters: true, buddies: true, items: true });
 
@@ -304,6 +305,24 @@ export default function SaveConverterTab() {
     });
   };
 
+  const handleAddChar = (id) => {
+    setEdits(prev => ({ ...prev, charAdds: [...(prev.charAdds || []), { id }] }));
+    setCharSearch('');
+  };
+
+  const handleRemoveCharAdd = (addIndex) => {
+    setEdits(prev => {
+      const charAdds = (prev.charAdds || []).filter((_, i) => i !== addIndex);
+      // drop any per-char edits left behind by the removed addition
+      const removed = (prev.charAdds || [])[addIndex];
+      const characters = { ...prev.characters };
+      if (removed && Object.prototype.hasOwnProperty.call(characters, removed.id)) {
+        delete characters[removed.id];
+      }
+      return { ...prev, charAdds, characters };
+    });
+  };
+
   // Item counts: '' clears the edit (back to the loaded save), an explicit 0
   // removes the item from the pouch.
   const handleItemEdit = (itemId, raw) => {
@@ -402,7 +421,8 @@ export default function SaveConverterTab() {
   const editsActive = hasSaveEdits(edits);
 
   // Per-family edit counts driving the modified dots on the count cards.
-  const charEditCount = Object.keys(edits.characters).length;
+  const charAdds = edits.charAdds || [];
+  const charEditCount = Object.keys(edits.characters).length + charAdds.length;
   const buddyEditCount = Object.keys(edits.buddies || {}).length + (edits.buddyAdds?.length || 0);
   const itemEditCount = Object.keys(edits.items || {}).length;
   const statEditDots = {
@@ -448,10 +468,46 @@ export default function SaveConverterTab() {
     return matches;
   }, [gamedataItems, itemSearch, heldItemIds, itemNameById]);
 
+  // Effective character roster: loaded characters plus the add-picker recruits.
+  const effectiveChars = useMemo(() => {
+    const loaded = (activeAccountSummary?.top_characters || []).map(c => ({ ...c, added: false }));
+    const adds = charAdds.map((a, idx) => ({
+      id: a.id,
+      added: true,
+      addIndex: idx,
+      job_id: 0,
+      sb: 0,
+      luck: 0,
+      job_levels: [1, 0, 0]
+    }));
+    return [...loaded, ...adds];
+  }, [activeAccountSummary, charAdds]);
+
+  const ownedCharIds = useMemo(() => (
+    new Set(effectiveChars.map(c => c.id))
+  ), [effectiveChars]);
+
+  // Add-character picker: search the catalog by name or ID, owned characters
+  // excluded (a character can only be owned once).
+  const charMatches = useMemo(() => {
+    const q = charSearch.trim().toLowerCase();
+    if (!q || !gamedataCharacters) return [];
+    const matches = [];
+    for (const c of gamedataCharacters) {
+      const id = c?.ID;
+      if (id === undefined || ownedCharIds.has(id)) continue;
+      const name = (charNameById[id] || '').toLowerCase();
+      if (name.includes(q) || String(id) === q) {
+        matches.push(id);
+        if (matches.length >= PICKER_LIMIT) break;
+      }
+    }
+    return matches;
+  }, [gamedataCharacters, charSearch, ownedCharIds, charNameById]);
+
   // Effective companion roster: the loaded copies overlaid with level edits
   // (a zeroed edit removes the copy) plus the freshly added copies.
-  const heldBuddies = useMemo(() => {
-    const out = [];
+  const heldBuddies = useMemo(() => {    const out = [];
     (activeAccountSummary?.buddies || []).forEach(b => {
       const e = (edits.buddies || {})[b.iid];
       if (e) {
@@ -667,7 +723,7 @@ export default function SaveConverterTab() {
                 </div>
                 <div className="mini-stat-content">
                   <h5>Characters</h5>
-                  <p>{activeAccountSummary.character_count}</p>
+                  <p>{effectiveChars.length}</p>
                 </div>
                 <i className={`fa-solid fa-chevron-${openSections.characters ? 'up' : 'down'} toggle-chev`}></i>
               </button>
@@ -820,88 +876,161 @@ export default function SaveConverterTab() {
           </div>
 
           {/* Character Roster Preview (full roster, scrollable, collapsible) */}
-          {openSections.characters && activeAccountSummary?.top_characters && activeAccountSummary.top_characters.length > 0 && (
+          {openSections.characters && activeAccountSummary && (
             <div className="roster-preview-card">
               <div className="roster-header">
                 <h4>
                   <i className="fa-solid fa-id-card"></i>
-                  Character Roster ({activeAccountSummary.top_characters.length}{' '}
-                  {activeAccountSummary.top_characters.length === 1 ? 'Character' : 'Characters'})
+                  Character Roster ({effectiveChars.length}{' '}
+                  {effectiveChars.length === 1 ? 'Character' : 'Characters'})
                 </h4>
+                <span className="roster-scroll-hint" title="Edit stats and jobs, or search to add characters">
+                  <i className="fa-solid fa-pen"></i>
+                  Edit stats, or search to add characters
+                </span>
               </div>
 
-              <div className="roster-grid">
-                {activeAccountSummary.top_characters.map((c, i) => {
-                  const charEdit = edits.characters[c.id];
-                  const isEdited = Boolean(charEdit);
-                  const jobNames = charJobsById[c.id] || [];
-                  const loadedUnlocked = (slot) => jobLevelOf(c.job_levels?.[slot]) > 0;
-                  const effUnlocked = (slot) => (charEdit?.jobs?.[slot] !== undefined
-                    ? Boolean(charEdit.jobs[slot])
-                    : loadedUnlocked(slot));
-                  const effJobId = charEdit?.jobs?.[c.job_id] === 0 ? 0 : (c.job_id || 0);
-                  return (
-                    <div key={`${c.id}-${i}`} className={`char-badge-card${isEdited ? ' edited' : ''}`}>
-                      <div className="char-icon-circle">
-                        {c.id}
-                      </div>
-                      <div className="char-badge-info">
-                        <h5>{getCharName(c.id)}</h5>
-                        <div className="char-edit-row">
-                          <span className="char-job-tag">Job {effJobId + 1}</span>
-                          <label className="char-edit-field">
-                            <span>SB</span>
-                            <input
-                              type="number"
-                              min="0"
-                              value={charEdit?.sb ?? c.sb}
-                              onChange={(e) => handleCharEdit(c.id, 'sb', e.target.value)}
-                              title="Skill Boost %"
-                            />
-                          </label>
-                          <label className="char-edit-field">
-                            <span>LCK</span>
-                            <input
-                              type="number"
-                              min="0"
-                              value={charEdit?.luck ?? c.luck}
-                              onChange={(e) => handleCharEdit(c.id, 'luck', e.target.value)}
-                              title="Luck"
-                            />
-                          </label>
+              <div className="item-picker">
+                <div className="item-picker-controls">
+                  <div className="item-picker-search">
+                    <i className="fa-solid fa-magnifying-glass"></i>
+                    <input
+                      type="text"
+                      value={charSearch}
+                      placeholder="Search a character to add (name or ID)..."
+                      onChange={(e) => setCharSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {charSearch.trim() !== '' && (
+                  charMatches.length > 0 ? (
+                    <div className="item-picker-results">
+                      {charMatches.map(id => (
+                        <div key={id} className="item-picker-result">
+                          <span className="item-picker-name">{getCharName(id)}</span>
+                          <span className="item-picker-id">ID {id}</span>
+                          <button type="button" className="item-add-btn" onClick={() => handleAddChar(id)}>
+                            <i className="fa-solid fa-plus"></i>
+                            Add
+                          </button>
                         </div>
-                        <div className="char-edit-row job-chip-row">
-                          {[0, 1, 2].map(slot => {
-                            const unlocked = effUnlocked(slot);
-                            const jobName = jobNames[slot] || '';
-                            const absent = jobNames.length > 0 && !jobName;
-                            const equipped = effJobId === slot;
-                            const toggleable = slot > 0 && !absent;
-                            const title = absent
-                              ? 'This character has no additional job in the game data'
-                              : slot === 0
-                                ? `${jobName ? `${jobName} — ` : ''}Job 1 is always unlocked`
-                                : `${jobName ? `${jobName} — ` : ''}${unlocked ? 'Unlocked' : 'Locked'}${equipped ? ' — equipped' : ''} — click to ${unlocked ? 'lock' : 'unlock'}`;
-                            return (
-                              <button
-                                key={slot}
-                                type="button"
-                                className={`job-chip${unlocked ? ' unlocked' : ''}${absent ? ' absent' : ''}${equipped ? ' equipped' : ''}`}
-                                disabled={!toggleable}
-                                onClick={() => handleCharJobToggle(c.id, slot, loadedUnlocked(slot))}
-                                title={title}
-                              >
-                                <i className={`fa-solid ${unlocked ? 'fa-circle-check' : 'fa-lock'}`}></i>
-                                J{slot + 1}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  );
-                })}
+                  ) : (
+                    <p className="item-picker-empty">No matching character (already owned characters are not listed).</p>
+                  )
+                )}
               </div>
+
+              {effectiveChars.length === 0 ? (
+                <p className="item-empty-note">
+                  No characters in this save — search above to add one.
+                </p>
+              ) : (
+                <div className="roster-grid roster-grid-chars">
+                  {effectiveChars.map((c, i) => {
+                    const charEdit = edits.characters[c.id];
+                    const isEdited = Boolean(charEdit) || c.added;
+                    const jobNames = charJobsById[c.id] || [];
+                    const loadedUnlocked = (slot) => jobLevelOf(c.job_levels?.[slot]) > 0;
+                    const effUnlocked = (slot) => (charEdit?.jobs?.[slot] !== undefined
+                      ? Boolean(charEdit.jobs[slot])
+                      : loadedUnlocked(slot));
+                    const effJobId = charEdit?.jobs?.[c.job_id] === 0 ? 0 : (c.job_id || 0);
+                    return (
+                      <div key={c.added ? `add-${c.addIndex}` : `${c.id}-${i}`} className={`char-badge-card${isEdited ? ' edited' : ''}`}>
+                        <div className="char-icon-circle">
+                          {c.id}
+                        </div>
+                        <div className="char-badge-info">
+                          <div className="char-name-row">
+                            <h5>{getCharName(c.id)}</h5>
+                            {c.added && <span className="char-job-tag new-tag">New</span>}
+                            <span className="char-job-tag">Job {effJobId + 1}</span>
+                          </div>
+                          <div className="char-edit-row">
+                            <label className="char-edit-field">
+                              <span>SB%</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="1000"
+                                step="0.1"
+                                value={((charEdit?.sb ?? c.sb) || 0) / 10}
+                                onChange={(e) => {
+                                  const pct = parseFloat(e.target.value);
+                                  const raw = Number.isFinite(pct)
+                                    ? String(Math.round(Math.max(0, Math.min(1000, pct)) * 10))
+                                    : '';
+                                  handleCharEdit(c.id, 'sb', raw);
+                                }}
+                                title="Skill Boost % (0–1000, stored ×10 in the save)"
+                              />
+                            </label>
+                            <label className="char-edit-field">
+                              <span>LCK%</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="1000"
+                                step="0.1"
+                                value={((charEdit?.luck ?? c.luck) || 0) / 10}
+                                onChange={(e) => {
+                                  const pct = parseFloat(e.target.value);
+                                  const raw = Number.isFinite(pct)
+                                    ? String(Math.round(Math.max(0, Math.min(1000, pct)) * 10))
+                                    : '';
+                                  handleCharEdit(c.id, 'luck', raw);
+                                }}
+                                title="Luck % (0–1000, stored ×10 in the save)"
+                              />
+                            </label>
+                          </div>
+                          <div className="char-edit-row job-chip-row">
+                            {[0, 1, 2].map(slot => {
+                              const unlocked = effUnlocked(slot);
+                              const jobName = jobNames[slot] || '';
+                              const absent = jobNames.length > 0 && !jobName;
+                              const equipped = effJobId === slot;
+                              const toggleable = slot > 0 && !absent;
+                              const title = absent
+                                ? 'This character has no additional job in the game data'
+                                : slot === 0
+                                  ? `${jobName ? `${jobName} — ` : ''}Job 1 is always unlocked`
+                                  : `${jobName ? `${jobName} — ` : ''}${unlocked ? 'Unlocked' : 'Locked'}${equipped ? ' — equipped' : ''} — click to ${unlocked ? 'lock' : 'unlock'}`;
+                              return (
+                                <button
+                                  key={slot}
+                                  type="button"
+                                  className={`job-chip${unlocked ? ' unlocked' : ''}${absent ? ' absent' : ''}${equipped ? ' equipped' : ''}`}
+                                  disabled={!toggleable}
+                                  onClick={() => handleCharJobToggle(c.id, slot, loadedUnlocked(slot))}
+                                  title={title}
+                                >
+                                  <i className={`fa-solid ${unlocked ? 'fa-circle-check' : 'fa-lock'}`}></i>
+                                  J{slot + 1}
+                                </button>
+                              );
+                            })}
+                            {c.added && (
+                              <button
+                                type="button"
+                                className="buddy-remove-btn"
+                                onClick={() => handleRemoveCharAdd(c.addIndex)}
+                                title="Remove this newly added character"
+                              >
+                                <i className="fa-solid fa-xmark"></i>
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

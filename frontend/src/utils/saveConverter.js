@@ -769,6 +769,7 @@ export const EMPTY_SAVE_EDITS = Object.freeze({
   coins: null,
   freeEnergy: null,
   characters: {},
+  charAdds: [],
   items: {},
   // Companion copies keyed by their per-copy inventory id (iid); lv 0 removes
   // the copy. buddyAdds appends brand-new copies (each gets a fresh iid).
@@ -790,6 +791,7 @@ export function hasSaveEdits(edits) {
   if (edits.coins !== null && edits.coins !== undefined) return true;
   if (edits.freeEnergy !== null && edits.freeEnergy !== undefined) return true;
   if (Object.keys(edits.characters || {}).length > 0) return true;
+  if ((edits.charAdds || []).length > 0) return true;
   if (Object.keys(edits.buddies || {}).length > 0) return true;
   if ((edits.buddyAdds || []).length > 0) return true;
   return Object.keys(edits.items || {}).length > 0;
@@ -806,7 +808,8 @@ export function applySaveEdits(data, edits, accountId = null) {
   const coins = edits.coins ?? null;
   const freeEnergy = edits.freeEnergy ?? null;
   const charEdits = edits.characters || {};
-  const hasCharEdits = Object.keys(charEdits).length > 0;
+  const charAdds = Array.isArray(edits.charAdds) ? edits.charAdds : [];
+  const hasCharEdits = Object.keys(charEdits).length > 0 || charAdds.length > 0;
   const itemEdits = edits.items || {};
   const hasItemEdits = Object.keys(itemEdits).length > 0;
   const buddyEdits = edits.buddies || {};
@@ -859,6 +862,32 @@ export function applySaveEdits(data, edits, accountId = null) {
     return list;
   };
 
+  // Brand-new character from the add-picker: job 1 unlocked at level 1, no
+  // jobs 2/3, zero luck / skill boost (per-char edits may then apply on top).
+  const newCharacterEntry = (id) => ({
+    buddy: 0,
+    date: 0,
+    flags: 1,
+    id,
+    jobID: 0,
+    jobLevels: [1, 0, 0],
+    jobSlots: [0, 0, 0],
+    luck: 0,
+    skillBoost: 0
+  });
+
+  // Append add-picker characters the save does not have yet (adds land before
+  // the per-char edits run, so SB / luck / job edits apply to them too).
+  const appendCharAdds = (chrdata) => {
+    const owned = new Set(chrdata.map(c => c && c.id));
+    charAdds.forEach(a => {
+      const id = Math.floor(Number(a && a.id));
+      if (!Number.isFinite(id) || id <= 0 || owned.has(id)) return;
+      chrdata.push(newCharacterEntry(id));
+      owned.add(id);
+    });
+  };
+
   if (fmt === 'liminal') {
     const accounts = next.accounts || {};
     const accId = accountId || next.active_account_id || Object.keys(accounts)[0];
@@ -877,6 +906,10 @@ export function applySaveEdits(data, edits, accountId = null) {
     if (freeEnergy !== null) {
       ud.freeEnergy = freeEnergy;
       if (ud.valuables && typeof ud.valuables === 'object') ud.valuables.freeEnergy = freeEnergy;
+    }
+    if (hasCharEdits) {
+      if (!Array.isArray(ud.chrdata)) ud.chrdata = [];
+      appendCharAdds(ud.chrdata);
     }
     applyCharEdits(ud.chrdata);
     if (hasItemEdits) ud.itemList = applyItemEdits(ud.itemList);
@@ -923,6 +956,10 @@ export function applySaveEdits(data, edits, accountId = null) {
           if (sd.valuables && typeof sd.valuables === 'object') sd.valuables.freeEnergy = freeEnergy;
           if ('freeEnergy' in sd) sd.freeEnergy = freeEnergy;
         }
+        if (hasCharEdits) {
+          if (!Array.isArray(sd.chrdata)) sd.chrdata = [];
+          appendCharAdds(sd.chrdata);
+        }
         applyCharEdits(sd.chrdata);
         if (hasItemEdits) sd.itemList = applyItemEdits(sd.itemList);
         if (hasBuddyEdits) {
@@ -966,6 +1003,17 @@ export function applySaveEdits(data, edits, accountId = null) {
 
     // characters table rows: [userid, chr_id, luck, sb, job_id, job_levels, updated]
     if (hasCharEdits && Array.isArray(tables.characters?.rows)) {
+      if (charAdds.length) {
+        const uid = tables.characters.rows[0]?.[0] ?? next.userid ?? '';
+        const nowTs = Math.floor(Date.now() / 1000);
+        const owned = new Set(tables.characters.rows.map(r => r && r[1]));
+        charAdds.forEach(a => {
+          const id = Math.floor(Number(a && a.id));
+          if (!Number.isFinite(id) || id <= 0 || owned.has(id)) return;
+          tables.characters.rows.push([uid, id, 0, 0, 0, JSON.stringify([1, 0, 0]), nowTs]);
+          owned.add(id);
+        });
+      }
       tables.characters.rows.forEach(r => {
         const e = r && charEdits[r[1]];
         if (!e) return;

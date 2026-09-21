@@ -634,6 +634,11 @@
   padding-right: 6px;
 }
 
+/* Character cards are wider so the SB/Luck fields and job chips share rows */
+.roster-grid-chars {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
 .roster-scroll-hint {
   display: flex;
   align-items: center;
@@ -676,6 +681,35 @@
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 2px;
+}
+
+/* Name + current job share the card's first line */
+.char-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 2px;
+}
+
+.char-name-row h5 {
+  margin-bottom: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.char-job-tag.new-tag {
+  color: var(--accent-amber);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .char-badge-info p {
