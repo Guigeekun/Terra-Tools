@@ -72,6 +72,11 @@ export default function CharactersTab({ onSelectCharacter, initialSearch = '' })
               return (
                 <div key={char.ID} className="card-item" onClick={() => onSelectCharacter(char)}>
                   <span className="card-badge badge-rarity">{rarityLabels[char.rarity] || 'Class ' + char.rarity}</span>
+                  {char.recode && (
+                    <span className="card-badge badge-recode" title="This character can be recoded into its lambda form">
+                      <i className="fa-solid fa-arrows-rotate"></i> Λ
+                    </span>
+                  )}
                   {pieceUrl ? (
                     <div className="card-image" style={{ width: '100%', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, border: '1px solid var(--border-color)', overflow: 'hidden' }}>
                       <img src={pieceUrl} alt="Icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
