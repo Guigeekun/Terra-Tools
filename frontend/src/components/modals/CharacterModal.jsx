@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { loc } from '../../utils/localization';
-import { rarityLabels, speciesTranslations, weaponMeta, elementMeta } from '../../utils/constants';
+import { rarityLabels, weaponMeta, elementMeta } from '../../utils/constants';
 import { useGameData } from '../../contexts/GameDataContext';
 import { useLazyCategory } from '../../hooks/useLazyCategory';
 import LightboxModal from './LightboxModal';
@@ -18,9 +18,9 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
   const job = jobs[jobIndex];
   const skills = data?.skills || [];
 
-  const speciesTrans = speciesTranslations[character.Species];
-  const speciesStr = speciesTrans ? (speciesTrans[lang] || speciesTrans['en']) : 'Unknown';
-  const genderStr = character.Gender === 1 ? 'Male' : character.Gender === 2 ? 'Female' : 'Unknown';
+  // Species/Gender only exist on job entries, not on the character info
+  const genderVal = jobs.find(j => j.Gender === 1 || j.Gender === 2)?.Gender;
+  const genderStr = genderVal === 1 ? 'Male' : genderVal === 2 ? 'Female' : 'Unknown';
 
   const weap = job ? (weaponMeta[job.Attrib] || weaponMeta[4]) : null;
   const elem = job ? (elementMeta[job.SkillAttrib] || elementMeta[0]) : null;
@@ -36,8 +36,7 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
 
           {/* Header */}
           <div className="modal-header">
-            <span className="badge badge-species">{speciesStr}</span>
-            <h3 style={{ marginTop: 8 }}>{loc(character.NameString, lang)}</h3>
+            <h3>{loc(character.NameString, lang)}</h3>
             <div className="modal-char-meta">
               <span><i className="fa-solid fa-venus-mars"></i> Gender: {genderStr}</span>
               <span><i className="fa-solid fa-star"></i> Class: {rarityLabels[character.rarity] || 'Class ' + character.rarity}</span>
