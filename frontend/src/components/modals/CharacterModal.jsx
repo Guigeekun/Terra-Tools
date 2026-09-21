@@ -147,24 +147,6 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
                   <p>{loc(job.ProfileString, lang, 'Profile description not available.')}</p>
                 </div>
 
-                {/* Recruitment (chapter drops) */}
-                {character.recruitment?.length > 0 && (
-                  <div className="job-skills-box recruitment-box">
-                    <h5><i className="fa-solid fa-map-pin" style={{ marginRight: 6 }}></i>Recruitment</h5>
-                    <p className="recruitment-hint">Defeat this enemy in these stages for a chance to recruit it:</p>
-                    <ul className="job-skills-list">
-                      {character.recruitment.map((site, i) => (
-                        <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span className="badge" style={{ fontSize: 10, padding: '2px 7px', backgroundColor: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.2)', color: 'var(--accent-green)', flexShrink: 0 }}>
-                            Ch {site.chapter}-{site.section}
-                          </span>
-                          <span style={{ fontSize: 12 }}>{site.title.replace(/^Stage\s+\S+:\s*/, '')}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
                 <div className="job-assets-box">
                   <h5>Art Assets</h5>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }}>
@@ -188,6 +170,24 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
 
               {/* Right Column */}
               <div className="job-stats-col">
+                {/* Recruitment (chapter drops) */}
+                {character.recruitment?.length > 0 && (
+                  <div className="job-skills-box recruitment-box">
+                    <h5><i className="fa-solid fa-map-pin" style={{ marginRight: 6 }}></i>Recruitment</h5>
+                    <p className="recruitment-hint">Defeat this enemy in these stages for a chance to recruit it:</p>
+                    <ul className="job-skills-list">
+                      {character.recruitment.map((site, i) => (
+                        <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span className="badge" style={{ fontSize: 10, padding: '2px 7px', backgroundColor: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.2)', color: 'var(--accent-green)', flexShrink: 0 }}>
+                            Ch {site.chapter}-{site.section}
+                          </span>
+                          <span style={{ fontSize: 12 }}>{site.title.replace(/^Stage\s+\S+:\s*/, '')}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="stats-table-box">
                   <h5>Job Base Statistics</h5>
                   {[['HP', job.HP], ['ATK', job.ATK], ['DEF', job.DEF], ['MATK', job.SATK], ['MDEF', job.SDEF]].map(([label, val]) => (
