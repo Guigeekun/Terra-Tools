@@ -919,6 +919,23 @@
   border-color: var(--accent-blue);
 }
 
+.roster-sort select {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 8px;
+  outline: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.roster-sort select:focus {
+  border-color: var(--accent-blue);
+}
+
 .item-picker-results {
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -982,6 +999,24 @@
 .item-add-btn:hover {
   background: rgba(34, 197, 94, 0.3);
   transform: translateY(-1px);
+}
+
+/* Picker result for a character already owned by the save: greyed out, no add button. */
+.item-picker-result.owned {
+  opacity: 0.55;
+}
+
+.char-owned-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
 .item-picker-empty {

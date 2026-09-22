@@ -94,6 +94,8 @@ export default function SaveConverterTab() {
   const [buddySearch, setBuddySearch] = useState('');
   const [buddyAddLevel, setBuddyAddLevel] = useState('1');
   const [charSearch, setCharSearch] = useState('');
+  // Roster sort order: id (save order), alphabetical, or by job level.
+  const [charSort, setCharSort] = useState('id');
   // Which edit-family sections are expanded (toggled from the count cards).
   const [openSections, setOpenSections] = useState({ characters: true, buddies: true, items: true });
 
@@ -494,7 +496,8 @@ export default function SaveConverterTab() {
     return matches;
   }, [gamedataItems, itemSearch, heldItemIds, itemNameById]);
 
-  // Effective character roster: loaded characters plus the add-picker recruits.
+  // Effective character roster: loaded characters plus the add-picker recruits,
+  // ordered by the roster sort (id / name / level).
   const effectiveChars = useMemo(() => {
     const loaded = (activeAccountSummary?.top_characters || []).map(c => ({ ...c, added: false }));
     const adds = charAdds.map((a, idx) => ({
@@ -506,25 +509,36 @@ export default function SaveConverterTab() {
       luck: 0,
       job_levels: [1, 0, 0]
     }));
-    return [...loaded, ...adds];
-  }, [activeAccountSummary, charAdds]);
+    const chars = [...loaded, ...adds];
+    const nameOf = (c) => (charNameById[c.id] || `#${c.id}`).toLowerCase();
+    const levelOf = (c) => Math.max(0, ...(c.job_levels || []).map(jobLevelOf));
+    if (charSort === 'name') {
+      chars.sort((a, b) => nameOf(a).localeCompare(nameOf(b)) || a.id - b.id);
+    } else if (charSort === 'level') {
+      chars.sort((a, b) => levelOf(b) - levelOf(a) || a.id - b.id);
+    } else {
+      chars.sort((a, b) => a.id - b.id);
+    }
+    return chars;
+  }, [activeAccountSummary, charAdds, charSort, charNameById]);
 
   const ownedCharIds = useMemo(() => (
     new Set(effectiveChars.map(c => c.id))
   ), [effectiveChars]);
 
-  // Add-character picker: search the catalog by name or ID, owned characters
-  // excluded (a character can only be owned once).
+  // Add-character picker: search the catalog by name or ID. Characters already
+  // in the save still match (flagged `owned`) so the picker can show them
+  // greyed out instead of silently hiding them.
   const charMatches = useMemo(() => {
     const q = charSearch.trim().toLowerCase();
     if (!q || !gamedataCharacters) return [];
     const matches = [];
     for (const c of gamedataCharacters) {
       const id = c?.ID;
-      if (id === undefined || ownedCharIds.has(id)) continue;
+      if (id === undefined) continue;
       const name = (charNameById[id] || '').toLowerCase();
       if (name.includes(q) || String(id) === q) {
-        matches.push(id);
+        matches.push({ id, owned: ownedCharIds.has(id) });
         if (matches.length >= PICKER_LIMIT) break;
       }
     }
@@ -927,24 +941,39 @@ export default function SaveConverterTab() {
                       onChange={(e) => setCharSearch(e.target.value)}
                     />
                   </div>
+                  <label className="item-picker-count roster-sort">
+                    <span>Sort</span>
+                    <select value={charSort} onChange={(e) => setCharSort(e.target.value)}>
+                      <option value="id">ID</option>
+                      <option value="name">Name</option>
+                      <option value="level">Level</option>
+                    </select>
+                  </label>
                 </div>
 
                 {charSearch.trim() !== '' && (
                   charMatches.length > 0 ? (
                     <div className="item-picker-results">
-                      {charMatches.map(id => (
-                        <div key={id} className="item-picker-result">
+                      {charMatches.map(({ id, owned }) => (
+                        <div key={id} className={`item-picker-result${owned ? ' owned' : ''}`}>
                           <span className="item-picker-name">{getCharName(id)}</span>
                           <span className="item-picker-id">ID {id}</span>
-                          <button type="button" className="item-add-btn" onClick={() => handleAddChar(id)}>
-                            <i className="fa-solid fa-plus"></i>
-                            Add
-                          </button>
+                          {owned ? (
+                            <span className="char-owned-tag" title="This character is already in the save file">
+                              <i className="fa-solid fa-check"></i>
+                              In save
+                            </span>
+                          ) : (
+                            <button type="button" className="item-add-btn" onClick={() => handleAddChar(id)}>
+                              <i className="fa-solid fa-plus"></i>
+                              Add
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="item-picker-empty">No matching character (already owned characters are not listed).</p>
+                    <p className="item-picker-empty">No matching character.</p>
                   )
                 )}
               </div>
