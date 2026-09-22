@@ -232,6 +232,24 @@ without holding raw assets in git:
 Deployed containers stay light: they only ever fetch `user-data`. The raw
 `gdresources` are a dev asset for experiencing/testing the data pipeline.
 
+### Refreshing user-data in deployed containers
+
+The container entrypoint picks its startup build mode from the `BUILD_MODE`
+environment variable:
+
+| `BUILD_MODE` | Behavior |
+|---|---|
+| `auto` (default) | Fetch from GitHub releases (then fall back to local extraction) only when extracted game data is missing |
+| `force-download` | Always fetch the latest release user-data, replacing the data already in `user-data/` |
+
+Since compose mounts `./user-data` as a volume, existing data would normally
+never be re-fetched. To refresh it from the latest release, start the
+containers once with the variable overridden:
+
+```bash
+BUILD_MODE=force-download docker compose up -d
+```
+
 ### Creating a release (light resources + generated user-data)
 
 1. Place the light resources under `local-input/gdresources-light`.

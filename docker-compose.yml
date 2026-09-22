@@ -4,6 +4,10 @@ services:
     container_name: terra-tools
     ports:
       - "5001:5001"
+    environment:
+      # auto: fetch user-data only when missing;
+      # force-download: always fetch the latest release user-data, replacing existing data
+      BUILD_MODE: ${BUILD_MODE:-auto}
     develop:
       watch:
         # Sync Python backend code and restart container automatically
