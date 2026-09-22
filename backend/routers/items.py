@@ -167,10 +167,14 @@ def get_item_details(item_id: int):
             section_drop_count = sec.get("itemCount", 0) if is_section_drop else 0
             
             spawning_enemies = {}
+            spawn_counts = {}
             if sec_layout:
                 for wave in sec_layout:
                     for enemy in wave.get("enemies", []):
                         eid = enemy.get("enemy_id")
+                        if eid is None:
+                            continue
+                        spawn_counts[eid] = spawn_counts.get(eid, 0) + 1
                         if eid in enemy_id_to_drops:
                             spawning_enemies[eid] = enemy_id_to_drops[eid]
             
@@ -190,7 +194,8 @@ def get_item_details(item_id: int):
                         {
                             "enemy_id": eid,
                             "enemy_name": enemies_by_id[eid].get("NameString") if eid in enemies_by_id else None,
-                            "rate": rate
+                            "rate": rate,
+                            "count": spawn_counts.get(eid, 1)
                         } for eid, rate in spawning_enemies.items()
                     ]
                 })
@@ -211,6 +216,14 @@ def get_item_details(item_id: int):
         ch = chapters_by_no.get(chapter_no)
         if not ch or sec_num > len(ch.get("sections", [])):
             continue
+        sec_layout = layout_db.get(str(chapter_no), {}).get(str(sec_num))
+        spawn_counts = {}
+        if sec_layout:
+            for wave in sec_layout:
+                for enemy in wave.get("enemies", []):
+                    eid = enemy.get("enemy_id")
+                    if eid is not None:
+                        spawn_counts[eid] = spawn_counts.get(eid, 0) + 1
         spawning = {}
         for rec in records:
             eid = rec["enemy_id"]
@@ -219,6 +232,7 @@ def get_item_details(item_id: int):
                     "enemy_id": eid,
                     "enemy_name": enemies_by_id[eid].get("NameString"),
                     "rate": rec.get("ratio"),
+                    "count": spawn_counts.get(eid, 1),
                 }
         existing = next(
             (e for e in dropped_in_stages
