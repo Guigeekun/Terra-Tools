@@ -34,7 +34,10 @@ RUN --mount=type=secret,id=github_token,target=/run/secrets/github_token \
         python /app/scripts/download_user_data.py --target-dir /app/user-data ; \
     fi
 
-# Copy entrypoint script and make it executable
+# Copy entrypoint script and make it executable.
+# At runtime the entrypoint honors BUILD_MODE: "auto" (default) fetches
+# user-data only when missing, "force-download" re-fetches it from the
+# latest release to replace existing data (see docker-entrypoint.sh).
 COPY docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh
 
