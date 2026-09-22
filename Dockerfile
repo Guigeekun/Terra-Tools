@@ -38,8 +38,9 @@ RUN --mount=type=secret,id=github_token,target=/run/secrets/github_token \
 # At runtime the entrypoint honors BUILD_MODE: "auto" (default) fetches
 # user-data only when missing, "force-download" re-fetches it from the
 # latest release to replace existing data (see docker-entrypoint.sh).
+# Strip any CR characters so the shebang survives CRLF checkouts on Windows.
 COPY docker-entrypoint.sh /app/
-RUN chmod +x /app/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
 # Expose the port the app runs on
 EXPOSE 5001
