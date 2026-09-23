@@ -3,6 +3,15 @@ from backend.database import gamedata, find_local_asset
 
 router = APIRouter(tags=["skills"])
 
+# SkillKind 20 ("Hop Break") skills are tap-activated: the player taps the unit
+# before it moves. Their emitRatio holds the number of charges (uses per battle),
+# not a proc percentage.
+TAP_SKILL_KIND = 20
+
+
+def _is_tap_skill(skill):
+    return skill.get("kind") == TAP_SKILL_KIND
+
 # Lazy-built reverse index: skill_id -> {"character": {chr_id: entry}, "buddy": {id: entry}, "enemy": {name: entry}}
 # chr_meta: chr_id -> shared character display metadata (name, rarity, piece artwork)
 _sources_index = None
@@ -155,9 +164,11 @@ def get_skills(
             continue
         if kind != "" and str(skill.get("kind", 0)) != str(kind):
             continue
-        if trigger == "equip" and (skill.get("emitRatio") or 0) != 0:
+        if trigger == "equip" and ((skill.get("emitRatio") or 0) != 0 or _is_tap_skill(skill)):
             continue
-        if trigger == "active" and (skill.get("emitRatio") or 0) == 0:
+        if trigger == "active" and ((skill.get("emitRatio") or 0) == 0 or _is_tap_skill(skill)):
+            continue
+        if trigger == "tap" and not _is_tap_skill(skill):
             continue
 
         skill_id = idx + 1
@@ -191,7 +202,13 @@ def get_skills(
         named.sort(key=lambda t: _en(t[1].get("nameString")).lower(), reverse=reverse)
         filtered[:] = named + unnamed
     elif sort == "trigger":
-        filtered.sort(key=lambda t: t[1].get("emitRatio") or 0, reverse=reverse)
+        # Tap skills group after the percentage-triggered ones in both directions;
+        # their emitRatio is a charge count, not comparable to a percentage.
+        def trigger_key(t):
+            skill = t[1]
+            return (1, skill.get("emitRatio") or 0) if _is_tap_skill(skill) else (0, skill.get("emitRatio") or 0)
+
+        filtered.sort(key=trigger_key, reverse=reverse)
     elif sort == "power":
         filtered.sort(key=lambda t: t[1].get("power") or 0, reverse=reverse)
     elif sort == "sources":

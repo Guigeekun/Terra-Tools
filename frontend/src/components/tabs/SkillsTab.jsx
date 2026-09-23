@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { loc } from '../../utils/localization';
-import { skillAttribMeta, skillKindLabels, sourceTypeMeta } from '../../utils/constants';
+import { skillAttribMeta, skillKindLabels, sourceTypeMeta, isTapSkill } from '../../utils/constants';
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
@@ -16,7 +16,8 @@ const SOURCE_OPTIONS = [
 const TRIGGER_OPTIONS = [
   { value: '', label: 'All Triggers' },
   { value: 'equip', label: 'Equip (Passive)' },
-  { value: 'active', label: 'Triggered (%)' }
+  { value: 'active', label: 'Triggered (%)' },
+  { value: 'tap', label: 'Tap (Charges)' }
 ];
 
 function SortHeader({ label, sortKey, sort, onSort }) {
@@ -217,9 +218,18 @@ export default function SkillsTab({ onOpenSource }) {
                         </span>
                       </td>
                       <td>
-                        {skill.emitRatio === 0
-                          ? <span className="badge trigger-badge equip">Equip</span>
-                          : <span className="badge trigger-badge active">{skill.emitRatio || 0}%</span>}
+                        {isTapSkill(skill) ? (
+                          <span
+                            className="badge trigger-badge tap"
+                            title={`Activated by tapping the unit before it moves — ${skill.emitRatio} charge${skill.emitRatio === 1 ? '' : 's'} per battle`}
+                          >
+                            <i className="fa-solid fa-hand-pointer" /> Tap · {skill.emitRatio} {skill.emitRatio === 1 ? 'charge' : 'charges'}
+                          </span>
+                        ) : skill.emitRatio === 0 ? (
+                          <span className="badge trigger-badge equip">Equip</span>
+                        ) : (
+                          <span className="badge trigger-badge active">{skill.emitRatio || 0}%</span>
+                        )}
                       </td>
                       <td>{skill.power ? Number(skill.power.toFixed(2)) : '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>

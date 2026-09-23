@@ -348,6 +348,12 @@
     color: var(--accent-blue);
 }
 
+.trigger-badge.tap {
+    background-color: rgba(99, 102, 241, 0.1);
+    color: var(--accent-indigo);
+    white-space: nowrap;
+}
+
 .area-badge {
     background-color: rgba(236, 72, 153, 0.08);
     border: 1px solid rgba(236, 72, 153, 0.2);

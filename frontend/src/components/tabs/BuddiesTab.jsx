@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { loc } from '../../utils/localization';
-import { rarityLabels } from '../../utils/constants';
+import { rarityLabels, triggerText } from '../../utils/constants';
 import { TabSpinner, useLazyCategory } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
@@ -57,7 +57,7 @@ export default function BuddiesTab({ onSelectBuddy, initialSearch = '' }) {
                     <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.4 }}>{loc(selectedSkill.descString, lang)}</p>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
-                      <div><span style={{ color: 'var(--text-muted)' }}>Activation Rate:</span> {selectedSkill.emitRatio === 0 ? 'Equip' : `${selectedSkill.emitRatio}%`}</div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Activation:</span> {triggerText(selectedSkill)}</div>
                       <div><span style={{ color: 'var(--text-muted)' }}>Element:</span> {selectedSkill.attrib || 'None'}</div>
                       <div><span style={{ color: 'var(--text-muted)' }}>Area:</span> {loc(selectedSkill.rangePrefixString, lang, 'Self')}</div>
                       {(selectedSkill.power > 0 || selectedSkill.spower > 0) && (
@@ -137,7 +137,7 @@ export default function BuddiesTab({ onSelectBuddy, initialSearch = '' }) {
                   <div className="card-meta">
                     {buddy.skill && data?.skills?.[buddy.skill - 1] ? (
                       <span style={{ color: 'var(--accent-indigo)' }}>
-                        <i className="fa-solid fa-star"></i> {loc(data.skills[buddy.skill - 1].nameString, lang)} ({data.skills[buddy.skill - 1].emitRatio === 0 ? 'Equip' : `${data.skills[buddy.skill - 1].emitRatio}%`})
+                        <i className="fa-solid fa-star"></i> {loc(data.skills[buddy.skill - 1].nameString, lang)} ({triggerText(data.skills[buddy.skill - 1])})
                       </span>
                     ) : buddy.skill && !data?.skills ? (
                       <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
