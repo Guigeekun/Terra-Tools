@@ -1,6 +1,12 @@
 import unittest
+from unittest.mock import patch
 from backend.stage_translations import strip_title_variants, METAL_ZONE_ENEMY_VARS
-from backend.routers.stages import _derive_fallback_random, build_metal_zone_pools
+from backend.routers.stages import (
+    _derive_fallback_random,
+    _chapter_layout,
+    build_family_pool,
+    build_metal_zone_pools,
+)
 
 ENEMIES = {7: {"ID": 7, "NameString": {"en": "Orbling"}, "LV": 3},
            99: {"ID": 99, "NameString": {"en": "Garuda"}, "LV": 99}}
@@ -73,6 +79,62 @@ class TestMetalZonePools(unittest.TestCase):
         by_id = {eid: evar for eid, evar in METAL_ZONE_ENEMY_VARS}
         sample = next(e for e in self.pools["regular"] if e["enemy_id"] == 407)
         self.assertEqual(sample["enemy_var"], by_id[407])
+
+
+class TestChapterLayoutFiltering(unittest.TestCase):
+    @staticmethod
+    def layout(enemies):
+        return {"1": [{"type": "wave", "enemies": enemies}]}
+
+    def test_tutorial_chapter_keeps_ch1_spawns(self):
+        layout = self.layout([{"enemy_id": 1, "enemy_var": "CH1_BAKUROU"}])
+        filtered, placeholder = _chapter_layout(1, layout)
+        self.assertFalse(placeholder)
+        self.assertEqual(len(filtered["1"][0]["enemies"]), 1)
+
+    def test_fully_placeholder_layout_is_discarded(self):
+        layout = self.layout([{"enemy_id": 1, "enemy_var": "CH1_BAKUROU"}])
+        filtered, placeholder = _chapter_layout(1001, layout)
+        self.assertTrue(placeholder)
+        self.assertEqual(filtered, {})
+
+    def test_majority_placeholder_layout_is_discarded(self):
+        layout = self.layout([
+            {"enemy_id": 1, "enemy_var": "CH1_BAKUROU"},
+            {"enemy_id": 1, "enemy_var": "CH1_WARRIOR"},
+            {"enemy_id": 1, "enemy_var": "CH1_ARCHER"},
+            {"enemy_id": 99, "enemy_var": "MONEY_S"},
+        ])
+        filtered, placeholder = _chapter_layout(3003, layout)
+        self.assertTrue(placeholder)
+        self.assertEqual(filtered, {})
+
+    def test_minority_placeholder_spawns_are_stripped(self):
+        layout = self.layout([
+            {"enemy_id": 1, "enemy_var": "CH1_BAKUROU"},
+            {"enemy_id": 99, "enemy_var": "MONEY_S"},
+            {"enemy_id": 99, "enemy_var": "MONEY_B"},
+            {"enemy_id": 99, "enemy_var": "MONEY_BOSS"},
+        ])
+        filtered, placeholder = _chapter_layout(3001, layout)
+        self.assertFalse(placeholder)
+        remaining = filtered["1"][0]["enemies"]
+        self.assertEqual([e["enemy_var"] for e in remaining], ["MONEY_S", "MONEY_B", "MONEY_BOSS"])
+
+
+class TestFamilyPool(unittest.TestCase):
+    def test_builds_pool_from_enum_prefix(self):
+        symbols = {483: "MONEY_S", 484: "MONEY_SP", 1: "CH1_BAKUROU", 999: "MONEY_GHOST"}
+        with patch("backend.routers.stages.ENEMY_ENUM_SYMBOLS", symbols):
+            pool = build_family_pool("MONEY_", {483: {"ID": 483}, 999: {"ID": 999}})
+        self.assertEqual([e["enemy_id"] for e in pool], [483, 999])
+        self.assertEqual(pool[0]["enemy_var"], "MONEY_S")
+
+    def test_missing_enemy_records_are_skipped(self):
+        symbols = {483: "MONEY_S", 484: "MONEY_SP"}
+        with patch("backend.routers.stages.ENEMY_ENUM_SYMBOLS", symbols):
+            pool = build_family_pool("MONEY_", {483: {"ID": 483}})
+        self.assertEqual([e["enemy_id"] for e in pool], [483])
 
 
 if __name__ == "__main__":

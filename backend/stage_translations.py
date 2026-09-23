@@ -77,6 +77,23 @@ SIBLING_POOL_REASON = (
 RANDOM_FALLBACK_REASON = (
     "Enemy placement data isn't present in the game data – the game assigns spawns at run time."
 )
+EVENT_FAMILY_POOL_REASON = (
+    "Enemy placement is randomized each run; the pool is this event's own enemy family."
+)
+
+# Chapters whose real spawns are one of the named enum families (their extracted
+# layouts are placeholders embedding chapter-1 tutorial enemies). Prefixes match
+# symbols in backend/enemy_enum.py.
+RANDOM_POOL_FAMILY_PREFIX: dict[int, str] = {
+    1001: "PUDDING_",   # プリン出現 (Pudding)
+    1002: "TIN_",       # ブリコ行進 (Tin)
+    1003: "MONEY_",     # マネマネ参上 (Coin Creeps)
+    1004: "PUPPET_",    # パペットショウ (Puppet Show)
+    3002: "MONEY_",     # マネマネ参上
+    3003: "MONEY_",     # マネマネタイム
+    6001: "PUPPET_",    # パペット乱闘 (Puppet Brawl)
+    1100: "SP1100_",    # シンエン戦 (Shin'en battles)
+}
 
 # Title suffixes marking a difficulty variant of an otherwise identically-named stage.
 _TITLE_VARIANT_SUFFIXES = ("（ハード）", "(ハード)")
