@@ -1,6 +1,6 @@
 import unittest
-from backend.stage_translations import strip_title_variants
-from backend.routers.stages import _derive_fallback_random
+from backend.stage_translations import strip_title_variants, METAL_ZONE_ENEMY_VARS
+from backend.routers.stages import _derive_fallback_random, build_metal_zone_pools
 
 ENEMIES = {7: {"ID": 7, "NameString": {"en": "Orbling"}, "LV": 3},
            99: {"ID": 99, "NameString": {"en": "Garuda"}, "LV": 99}}
@@ -54,6 +54,25 @@ class TestDeriveFallbackRandom(unittest.TestCase):
         reason, pool = _derive_fallback_random("まったく別のタイトル", self.chapters, self.layout_db, ENEMIES)
         self.assertEqual(reason, "Enemy placement data isn't present in the game data – the game assigns spawns at run time.")
         self.assertEqual(pool, [])
+
+
+class TestMetalZonePools(unittest.TestCase):
+    def setUp(self):
+        self.pools = build_metal_zone_pools({})
+
+    def test_regular_pool_excludes_kings(self):
+        self.assertEqual(len(self.pools["regular"]), len(METAL_ZONE_ENEMY_VARS) - 7)
+        self.assertFalse(any("_KING" in e["enemy_var"] for e in self.pools["regular"]))
+
+    def test_king_pool_is_full_family(self):
+        self.assertEqual(len(self.pools["king"]), len(METAL_ZONE_ENEMY_VARS))
+        kings = [e for e in self.pools["king"] if "_KING" in e["enemy_var"]]
+        self.assertEqual(len(kings), 7)
+
+    def test_pool_keeps_enum_symbol_as_enemy_var(self):
+        by_id = {eid: evar for eid, evar in METAL_ZONE_ENEMY_VARS}
+        sample = next(e for e in self.pools["regular"] if e["enemy_id"] == 407)
+        self.assertEqual(sample["enemy_var"], by_id[407])
 
 
 if __name__ == "__main__":

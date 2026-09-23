@@ -15,7 +15,8 @@ from backend.database import (
 )
 from backend.stage_translations import (
     derive_chapter_display_name,
-    RANDOM_CHAPTER_RELATED,
+    METAL_ZONE_CHAPTERS,
+    METAL_ZONE_ENEMY_VARS,
     is_random_section,
     strip_title_variants,
     HARD_POOL_REASON,
@@ -30,41 +31,33 @@ router = APIRouter(tags=["stages"])
 _TITLE_POOL_INDEX: dict[str, list] | None = None
 
 
-def build_possible_enemies_pool(
-    related_chapter_nos: list[int],
-    layout_db: dict,
-    enemies_by_id: dict,
-) -> list[dict]:
-    """Collect the unique set of enemies that appear across the fixed-layout
-    sibling chapters, to use as the 'possible enemies' pool for a random section."""
-    seen_ids: set = set()
-    pool: list[dict] = []
+def build_metal_zone_pools(enemies_by_id: dict) -> dict[str, list[dict]]:
+    """Possible-enemies pools for the Metal Zone chapters, from the ML_ enum family.
+    King sections spawn the Metal Kings on top of the regular runners."""
+    def enrich(eid, evar):
+        enemy_info = enemies_by_id.get(eid, {})
+        return {
+            "enemy_id": eid,
+            "enemy_var": evar,
+            "NameString": enemy_info.get("NameString"),
+            "HP": enemy_info.get("HP"),
+            "ATK": enemy_info.get("ATK"),
+            "DEF": enemy_info.get("DEF"),
+            "LV": enemy_info.get("LV"),
+            "ImageID": enemy_info.get("ImageID"),
+        }
 
-    for ch_no in related_chapter_nos:
-        ch_layout = layout_db.get(str(ch_no), {})
-        for _sec_key, items in ch_layout.items():
-            if not isinstance(items, list):
-                continue
-            for item in items:
-                for enemy in item.get("enemies", []):
-                    eid = enemy.get("enemy_id")
-                    evar = enemy.get("enemy_var", "")
-                    if eid is None or eid in seen_ids:
-                        continue
-                    seen_ids.add(eid)
-                    enemy_info = enemies_by_id.get(eid, {})
-                    pool.append({
-                        "enemy_id":  eid,
-                        "enemy_var": evar,
-                        "NameString": enemy_info.get("NameString"),
-                        "HP":  enemy_info.get("HP"),
-                        "ATK": enemy_info.get("ATK"),
-                        "DEF": enemy_info.get("DEF"),
-                        "LV":  enemy_info.get("LV"),
-                        "ImageID": enemy_info.get("ImageID"),
-                    })
+    regular = [enrich(eid, evar) for eid, evar in METAL_ZONE_ENEMY_VARS if "_KING" not in evar]
+    king = [enrich(eid, evar) for eid, evar in METAL_ZONE_ENEMY_VARS]
+    return {"regular": regular, "king": king}
 
-    return pool
+
+def _section_random_pool(random_reason: str, metal_pools: dict | None, fallback_pool: list) -> list:
+    """Pool for one random wave: Metal Zone chapters use their dedicated family
+    (Kings only in King-Appears sections), everything else uses the fallback."""
+    if metal_pools is not None:
+        return metal_pools["king"] if "King Appears" in random_reason else metal_pools["regular"]
+    return fallback_pool
 
 
 def _get_title_pool_index(chapters: list, layout_db: dict) -> dict[str, list]:
@@ -218,11 +211,9 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
         ch_layout = layout_db.get(chapter_no, {})
         book_sec_stories = get_chapter_stories_by_section(chapter_no)
 
-        # Pre-build the possible enemies pool for random sections of this chapter
-        related_chs = RANDOM_CHAPTER_RELATED.get(ch_no_int, [])
-        possible_enemies_pool = (
-            build_possible_enemies_pool(related_chs, layout_db, enemies_by_id)
-            if related_chs else []
+        # Pre-build the possible enemies pools for random sections of this chapter
+        metal_pools = (
+            build_metal_zone_pools(enemies_by_id) if ch_no_int in METAL_ZONE_CHAPTERS else None
         )
 
         result_sections = []
@@ -354,7 +345,7 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
                         if random_reason:
                             wave_entry["random_layout"] = True
                             wave_entry["random_layout_reason"] = random_reason
-                            wave_entry["possible_enemies"] = possible_enemies_pool
+                            wave_entry["possible_enemies"] = _section_random_pool(random_reason, metal_pools, [])
                         sequence.append(wave_entry)
                 sec_copy["sequence"] = sequence
             else:
@@ -387,7 +378,7 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
                     if random_reason:
                         wave_entry["random_layout"] = True
                         wave_entry["random_layout_reason"] = random_reason
-                        wave_entry["possible_enemies"] = possible_enemies_pool or fallback_pool
+                        wave_entry["possible_enemies"] = _section_random_pool(random_reason, metal_pools, fallback_pool)
                     sequence.append(wave_entry)
                 sec_copy["sequence"] = sequence
 

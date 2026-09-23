@@ -42,10 +42,30 @@ RANDOM_LAYOUT_PATTERNS: dict[str, str] = {
     "るつぼの都":  "Melting Pot – enemy placement is random each run",
 }
 
-RANDOM_CHAPTER_RELATED: dict[int, list[int]] = {
-    1000: [1001, 1002, 1003, 1004],
-    3000: [3001, 3002, 3003, 3004],
-}
+# Chapters whose sections spawn enemies randomly (no layout script exists for them).
+METAL_ZONE_CHAPTERS = {1000, 3000}
+
+# The Metal Zone spawn family: every enemy whose global-metadata enum symbol starts
+# with ML_ (Metal/Golden Runners, elemental variants, Kings, Mirrors), extracted
+# from the APK. The game never places them in fixed layouts, so this family cannot
+# be derived from stage data. (enemy_id, enum symbol) pairs.
+METAL_ZONE_ENEMY_VARS = [
+    (404, "ML_BAKUROU_S"), (405, "ML_BAKUROU_SP"), (406, "ML_BAKUROU_B"),
+    (407, "ML_MOMEN"), (408, "ML_MOMEN2"), (409, "ML_MOMEN3"), (410, "ML_MOMEN4"), (411, "ML_MOMEN5"),
+    (412, "ML_FIRE"), (413, "ML_FIRE2"), (414, "ML_FIRE3"), (415, "ML_FIRE4"), (416, "ML_FIRE5"),
+    (417, "ML_ICE"), (418, "ML_ICE2"), (419, "ML_ICE3"), (420, "ML_ICE4"), (421, "ML_ICE5"),
+    (422, "ML_THUNDER"), (423, "ML_THUNDER2"), (424, "ML_THUNDER3"), (425, "ML_THUNDER4"), (426, "ML_THUNDER5"),
+    (427, "ML_DARK"), (428, "ML_DARK2"), (429, "ML_DARK3"), (430, "ML_DARK4"), (431, "ML_DARK5"),
+    (432, "ML_GOLD"), (433, "ML_GOLD2"), (434, "ML_GOLD3"), (435, "ML_GOLD4"), (436, "ML_GOLD5"),
+    (437, "ML_KERO"),
+    (438, "ML_KING"), (439, "ML_KING2"), (440, "ML_KING3"), (441, "ML_KING4"), (442, "ML_KING5"),
+    (717, "ML_FIRE6"), (718, "ML_ICE6"), (719, "ML_THUNDER6"), (720, "ML_DARK6"),
+    (721, "ML_MOMEN6"), (722, "ML_GOLD6"), (723, "ML_KING6"), (724, "ML_KERO6"), (725, "ML_BAKUROU6"),
+    (729, "ML_MIRROR6"),
+    (888, "ML_FIRE7"), (889, "ML_ICE7"), (890, "ML_THUNDER7"), (891, "ML_DARK7"),
+    (892, "ML_MOMEN7"), (893, "ML_GOLD7"), (894, "ML_KING7"), (895, "ML_KERO7"), (896, "ML_BAKUROU7"),
+    (897, "ML_MIRROR7"),
+]
 
 # Fallback reasons for random sections that have no layout and no RELATED pool.
 HARD_POOL_REASON = (
