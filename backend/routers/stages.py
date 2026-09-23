@@ -17,9 +17,17 @@ from backend.stage_translations import (
     derive_chapter_display_name,
     RANDOM_CHAPTER_RELATED,
     is_random_section,
+    strip_title_variants,
+    HARD_POOL_REASON,
+    SIBLING_POOL_REASON,
+    RANDOM_FALLBACK_REASON,
 )
 
 router = APIRouter(tags=["stages"])
+
+# Lazy index: section title -> enemy pools of fixed-layout sections with that title,
+# used to give random sections without their own layout a possible-enemies pool.
+_TITLE_POOL_INDEX: dict[str, list] | None = None
 
 
 def build_possible_enemies_pool(
@@ -57,6 +65,75 @@ def build_possible_enemies_pool(
                     })
 
     return pool
+
+
+def _get_title_pool_index(chapters: list, layout_db: dict) -> dict[str, list]:
+    """Map section titles (raw and variant-stripped) to the enemy lists of every
+    fixed-layout section with that title, so random sections without their own
+    layout can still expose a possible-enemies pool."""
+    global _TITLE_POOL_INDEX
+    if _TITLE_POOL_INDEX is not None:
+        return _TITLE_POOL_INDEX
+
+    index: dict[str, list] = {}
+    for ch in chapters:
+        ch_layout = layout_db.get(str(ch.get("chapterNo", "")), {})
+        if not isinstance(ch_layout, dict):
+            continue
+        for idx, sec in enumerate(ch.get("sections", [])):
+            enemies: list[tuple] = []
+            seen: set = set()
+            for item in ch_layout.get(str(idx + 1)) or []:
+                for enemy in item.get("enemies", []):
+                    eid = enemy.get("enemy_id")
+                    if eid and eid not in seen:
+                        seen.add(eid)
+                        enemies.append((eid, enemy.get("enemy_var", "")))
+            if not enemies:
+                continue
+            title = (sec.get("title") or "").strip()
+            for key in {title, strip_title_variants(title)}:
+                if key:
+                    index.setdefault(key, []).append(enemies)
+
+    _TITLE_POOL_INDEX = index
+    return index
+
+
+def _derive_fallback_random(
+    sec_title: str, chapters: list, layout_db: dict, enemies_by_id: dict
+) -> tuple[str, list[dict]]:
+    """Reason + possible-enemies pool for a random section that has no layout of
+    its own and no RELATED-chapter pool: the pool comes from fixed-layout
+    sections sharing the same title (including hard variants of them)."""
+    index = _get_title_pool_index(chapters, layout_db)
+    title = (sec_title or "").strip()
+    enemy_lists = index.get(title) or index.get(strip_title_variants(title)) or []
+
+    pool: list[dict] = []
+    seen: set = set()
+    for enemies in enemy_lists:
+        for eid, evar in enemies:
+            if eid in seen:
+                continue
+            seen.add(eid)
+            enemy_info = enemies_by_id.get(eid, {})
+            pool.append({
+                "enemy_id": eid,
+                "enemy_var": evar,
+                "NameString": enemy_info.get("NameString"),
+                "HP": enemy_info.get("HP"),
+                "ATK": enemy_info.get("ATK"),
+                "DEF": enemy_info.get("DEF"),
+                "LV": enemy_info.get("LV"),
+                "ImageID": enemy_info.get("ImageID"),
+            })
+
+    if not pool:
+        return RANDOM_FALLBACK_REASON, []
+    if strip_title_variants(title) != title:
+        return HARD_POOL_REASON, pool
+    return SIBLING_POOL_REASON, pool
 
 @router.get('/api/chapters')
 def get_chapters():
@@ -290,6 +367,12 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
                 default_bgm = sec_stories[0].get("bgmID", 10) if sec_stories else 10
 
                 battle_cnt = sec.get("battleCnt", 0)
+                fallback_pool = []
+                if battle_cnt > 0 and not random_reason:
+                    random_reason, fallback_pool = _derive_fallback_random(
+                        sec_title_raw, chapters, layout_db, enemies_by_id
+                    )
+
                 for w in range(1, battle_cnt + 1):
                     wave_entry = {
                         "type": "wave",
@@ -304,7 +387,7 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
                     if random_reason:
                         wave_entry["random_layout"] = True
                         wave_entry["random_layout_reason"] = random_reason
-                        wave_entry["possible_enemies"] = possible_enemies_pool
+                        wave_entry["possible_enemies"] = possible_enemies_pool or fallback_pool
                     sequence.append(wave_entry)
                 sec_copy["sequence"] = sequence
 

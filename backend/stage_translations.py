@@ -47,6 +47,29 @@ RANDOM_CHAPTER_RELATED: dict[int, list[int]] = {
     3000: [3001, 3002, 3003, 3004],
 }
 
+# Fallback reasons for random sections that have no layout and no RELATED pool.
+HARD_POOL_REASON = (
+    "Hard mode – enemy placement is randomized each run; the pool mirrors the normal version."
+)
+SIBLING_POOL_REASON = (
+    "Enemy placement is randomized each run; the pool mirrors the fixed-layout version of this stage."
+)
+RANDOM_FALLBACK_REASON = (
+    "Enemy placement data isn't present in the game data – the game assigns spawns at run time."
+)
+
+# Title suffixes marking a difficulty variant of an otherwise identically-named stage.
+_TITLE_VARIANT_SUFFIXES = ("（ハード）", "(ハード)")
+
+
+def strip_title_variants(section_title: str) -> str:
+    """Remove difficulty suffixes so e.g. 五覇降臨ガルーダ（ハード） matches 五覇降臨ガルーダ."""
+    title = (section_title or "").strip()
+    for suffix in _TITLE_VARIANT_SUFFIXES:
+        if title.endswith(suffix):
+            return title[: -len(suffix)].strip()
+    return title
+
 
 def is_random_section(section_title: str) -> str | None:
     """Return the random-layout reason string if the section title matches, else None."""
