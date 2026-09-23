@@ -325,12 +325,12 @@ function SectionSequenceView({ sequence, lang, onOpenBg, onToggleBgm, isBgmPlayi
 
         return (
           <div key={i} className="sequence-wave-block">
-            <div className={`sequence-wave-header ${isActive ? 'active' : ''}`}>
-              <div
-                className="sequence-wave-left"
-                onClick={() => setActiveWaveIdx(isActive ? null : wavePos)}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-              >
+            <div
+              className={`sequence-wave-header ${isActive ? 'active' : ''}`}
+              onClick={() => setActiveWaveIdx(isActive ? null : wavePos)}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="sequence-wave-left" style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
                 <span className="sequence-wave-label">
                   <i className={`fa-solid ${isRandom ? 'fa-shuffle' : 'fa-swords'}`} style={{ marginRight: 6 }}></i>
                   Wave {item.wave_index}
@@ -367,8 +367,7 @@ function SectionSequenceView({ sequence, lang, onOpenBg, onToggleBgm, isBgmPlayi
 
               <i
                 className={`fa-solid ${isActive ? 'fa-chevron-up' : 'fa-chevron-down'}`}
-                onClick={() => setActiveWaveIdx(isActive ? null : wavePos)}
-                style={{ fontSize: 11, opacity: 0.5, cursor: 'pointer' }}
+                style={{ fontSize: 11, opacity: 0.5 }}
               ></i>
             </div>
             {isActive && (

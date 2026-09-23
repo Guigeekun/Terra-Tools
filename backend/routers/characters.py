@@ -108,6 +108,17 @@ def _resolve_recode_materials(rebirth, item_set):
     return materials
 
 
+def _is_active_rebirth(rebirth):
+    """A rebirth entry with no coins, items, or companions is an unused
+    placeholder in the game data (e.g. Dagus -> Ella Λ, Xaepha -> Shin'en Λ /
+    Mutoh Λ) that the game itself never offers, so skip it."""
+    if rebirth.get("coins", 0) > 0:
+        return True
+    if any(item.get("code", 0) > 0 for item in rebirth.get("items", [])):
+        return True
+    return any(mon.get("chrID", 0) > 0 for mon in rebirth.get("mons", []))
+
+
 def _unit_brief(info, jobs_by_id):
     """Name/piece summary for a character referenced by the recode system."""
     first_job = next((jobs_by_id[jid] for jid in info.get("Jobs", []) if jid in jobs_by_id), None)
@@ -148,7 +159,7 @@ def _build_character_lookups():
     rebirth_by_src: dict[int, list] = {}
     rebirth_by_dst = {}
     for r in char_db.get("rebirthInfo", []):
-        if not r:
+        if not r or not _is_active_rebirth(r):
             continue
         rebirth_by_src.setdefault(r["srcChrID"], []).append(r)
         rebirth_by_dst[r["dstChrID"]] = r
@@ -239,7 +250,7 @@ def get_characters(
     rebirth_by_src: dict[int, list] = {}
     rebirth_by_dst = {}
     for r in char_db.get("rebirthInfo", []):
-        if not r:
+        if not r or not _is_active_rebirth(r):
             continue
         rebirth_by_src.setdefault(r["srcChrID"], []).append(r)
         rebirth_by_dst[r["dstChrID"]] = r

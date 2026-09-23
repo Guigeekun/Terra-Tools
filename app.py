@@ -92,7 +92,7 @@ def serve_app_icon():
 def index_page():
     """Serve the React single-page application."""
     if os.path.exists('frontend/dist/index.html'):
-        return FileResponse('frontend/dist/index.html')
+        return FileResponse('frontend/dist/index.html', headers={"Cache-Control": "no-cache"})
     return HTMLResponse("React frontend not found. Please run 'npm run build' in the 'frontend' directory.", status_code=404)
 
 

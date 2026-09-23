@@ -194,6 +194,7 @@ def get_item_details(item_id: int):
                         {
                             "enemy_id": eid,
                             "enemy_name": enemies_by_id[eid].get("NameString") if eid in enemies_by_id else None,
+                            "level": enemies_by_id[eid].get("LV", 0) if eid in enemies_by_id else 0,
                             "rate": rate,
                             "count": spawn_counts.get(eid, 1)
                         } for eid, rate in spawning_enemies.items()
