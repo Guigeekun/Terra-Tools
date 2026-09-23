@@ -82,6 +82,22 @@ export const skillKindLabels = {
   23: 'Equip Display', 24: 'Wildcard', 25: 'Attack + Resist'
 };
 
+// SkillKind 20 ("Hop Break") skills are tap-activated: the player taps the unit
+// before it moves. Their `emitRatio` holds the number of charges (uses per
+// battle), not a proc percentage.
+export const TAP_SKILL_KIND = 20;
+
+export const isTapSkill = (skill) => skill?.kind === TAP_SKILL_KIND;
+
+export function triggerText(skill) {
+  if (!skill) return '—';
+  if (isTapSkill(skill)) {
+    const n = skill.emitRatio || 0;
+    return `Tap · ${n} charge${n === 1 ? '' : 's'}`;
+  }
+  return (skill.emitRatio || 0) === 0 ? 'Equip' : `${skill.emitRatio}%`;
+}
+
 // Where a skill can come from
 export const sourceTypeMeta = {
   character: { label: 'Character', icon: 'fa-user', color: '#38bdf8' },

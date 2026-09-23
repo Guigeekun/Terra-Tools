@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { loc } from '../../utils/localization';
-import { rarityShortLabels, weaponMeta, elementMeta } from '../../utils/constants';
+import { rarityShortLabels, weaponMeta, elementMeta, triggerText } from '../../utils/constants';
 import { useGameData } from '../../contexts/GameDataContext';
 import { useLazyCategory } from '../../hooks/useLazyCategory';
 import LightboxModal from './LightboxModal';
@@ -243,7 +243,7 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
                                   <strong style={{ color: 'var(--accent-blue)' }}>{loc(skill.nameString, lang)}</strong>
                                   <span className="badge" style={{ fontSize: 10, padding: '2px 6px', backgroundColor: 'rgba(56,189,248,0.08)', borderColor: 'rgba(56,189,248,0.2)', color: 'var(--accent-blue)' }}>Lv {unlockLv}</span>
                                 </div>
-                                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trigger: {skill.emitRatio === 0 ? 'Equip' : `${skill.emitRatio || 0}%`}</span>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trigger: {triggerText(skill)}</span>
                                 <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>{loc(skill.descString, lang)}</p>
                               </>
                             ) : (
