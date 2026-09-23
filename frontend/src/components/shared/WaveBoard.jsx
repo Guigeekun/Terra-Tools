@@ -39,8 +39,9 @@ export default function WaveBoard({ waves, lang }) {
           } : {}}
         >
           <div className="board-grid">
-            {Array.from({ length: 8 }).map((_, y) =>
+            {Array.from({ length: 8 }).map((_, row) =>
               Array.from({ length: 6 }).map((_, x) => {
+                const y = 7 - row; // game grid origin is bottom-left, render row 0 at the bottom
                 const enemy = enemyMap[`${x},${y}`];
                 const isBoss = enemy && (
                   enemy.enemy_var?.includes('BAKUROU') || enemy.enemy_var?.includes('CHAMP') ||
