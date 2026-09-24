@@ -179,8 +179,9 @@ export default function SaveConverterTab() {
       setSelectedAccountId(inspectRes.active_account_id);
       setEdits(EMPTY_SAVE_EDITS);
 
-      const defaultTarget = inspectRes.format === 'liminal' ? 'retb' : 'liminal';
-      setTargetFormat(defaultTarget);
+      // The editor's default target is the save's own format; use "Swap
+      // Target" to convert to the other one.
+      setTargetFormat(inspectRes.format);
 
       showToast(`Loaded ${name} (${inspectRes.format_label})`);
     } catch (err) {
@@ -595,7 +596,7 @@ export default function SaveConverterTab() {
           <div className="dropzone-icon" style={{ width: '90px', height: '90px', fontSize: '36px' }}>
             <i className="fa-solid fa-file-import"></i>
           </div>
-          <h2>Drop Savefile to Convert</h2>
+          <h2>Drop Savefile to Edit</h2>
           <p>Supports Project Liminal Gate and ReTB save formats</p>
         </div>
       )}
@@ -613,10 +614,10 @@ export default function SaveConverterTab() {
         <div className="save-hero-text">
           <h2>
             <i className="fa-solid fa-arrow-right-arrow-left" style={{ color: 'var(--accent-blue)' }}></i>
-            Savefile Converter
+            Savefile Editor
           </h2>
           <p>
-            Drop or select a savegame file to instantly convert between <strong>Project Liminal Gate</strong> (<code>bootstrap-state.json</code>) and <strong>ReTB</strong> (<code>tb-save.json</code>) formats.
+            Drop or select a savegame file to edit characters, companions, items and more — it exports back in its own format, or converts between <strong>Project Liminal Gate</strong> (<code>bootstrap-state.json</code>) and <strong>ReTB</strong> (<code>tb-save.json</code>).
           </p>
         </div>
       </div>

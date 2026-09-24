@@ -65,6 +65,11 @@
     color: var(--accent-indigo);
 }
 
+.save-bg {
+    background-color: rgba(168, 85, 247, 0.1);
+    color: #c084fc;
+}
+
 .stat-info h3 {
     font-size: 28px;
     line-height: 1.1;

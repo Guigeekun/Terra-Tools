@@ -668,10 +668,21 @@ export function convertSaveData(data, targetFormat = null, accountId = null) {
     };
   }
 
+  // Same-format passthrough (the editor's default target): keep each format's
+  // native filename convention so the download works without renaming.
+  let suggested_filename = `save-${targetFmt}-${now}.json`;
+  if (sourceFormat === 'liminal') {
+    const accounts = data.accounts || {};
+    const accId = accountId || data.active_account_id || Object.keys(accounts)[0];
+    suggested_filename = `bootstrap-state-${accounts[accId]?.username || accounts[accId]?.userdata?.username || 'Player'}-${now}.json`;
+  } else if (sourceFormat === 'retb') {
+    suggested_filename = `tb-save-${data.username || 'Player'}-${now}.json`;
+  }
+
   return {
     source_format: sourceFormat,
     target_format: targetFmt,
-    suggested_filename: `save-${targetFmt}-${now}.json`,
+    suggested_filename,
     data
   };
 }

@@ -21,6 +21,7 @@ export default function DashboardTab({ onTabChange }) {
     { key: 'items', label: 'Items', count: itemCount, icon: 'fa-gem', bg: 'item-bg' },
     { key: 'stages', label: 'Chapters & Stages', count: stageCount, icon: 'fa-map-location-dot', bg: 'stage-bg' },
     { key: 'audio', label: 'Audio Tracks', count: `${bgmCount} BGM / ${seCount} SE`, icon: 'fa-music', bg: 'audio-bg' },
+    { key: 'saveEditor', label: 'Save Editor', count: 'PLG ⇄ ReTB', icon: 'fa-arrow-right-arrow-left', bg: 'save-bg' },
   ];
 
   return (
