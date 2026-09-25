@@ -25,6 +25,9 @@ services:
         - action: sync
           path: ./frontend/dist
           target: /app/frontend/dist
+        - action: sync
+          path: ./docs
+          target: /app/docs
         # Rebuild container only when dependencies or Docker config change
         - action: rebuild
           path: ./requirements.txt
