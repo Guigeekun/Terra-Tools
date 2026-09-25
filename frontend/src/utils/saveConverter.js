@@ -48,16 +48,23 @@ export function detectSaveFormat(data) {
 
 // JSON.stringify cannot emit "0.0" -- in JS the numbers 0 and 0.0 are the same
 // value -- so integral doubles that the game client reads through LitJson
-// double casts must be re-decimalised in the serialized text. reTB coerces its
-// typed session fields at serve time, but chrdata `date` is an untyped extra
-// that reaches the client verbatim: an int 0 there hangs the boot on the
-// loading screen. (Float-trap list: project-liminal-gate save_validation.py.)
-function coerceJsonDoubles(json) {
-  return json.replace(
-    /("(?:date|lastupdate|refillStartTime)":)(-?\d+)([,}\]])/g,
-    '$1$2.0$3'
-  );
+// double casts must be re-decimalised in the serialized text: an int 0 there
+// hangs the boot on the loading screen. The field set is the client's
+// double-read list (project-liminal-gate save_validation.py): the scalar
+// userdata fields, the packed jobLevels / jobSlots roster arrays, and every
+// questClearDate value.
+export function decimalizeClientDoubles(json) {
+  return json
+    .replace(/("(?:date|lastupdate|refillStartTime|metalZoneUnlockTime)"\s*:\s*)(-?\d+)([,}\]])/g, '$1$2.0$3')
+    .replace(/("(?:jobLevels|jobSlots)"\s*:\s*\[)([^\]]*)(\])/g, (m, head, body) =>
+      head + body.replace(/-?\d+(?:\.\d+)?/g, n => n.includes('.') ? n : n + '.0') + ']')
+    .replace(/("questClearDate"\s*:\s*\{)([^{}]*)(\})/g, (m, head, body) =>
+      head + body.replace(/(:\s*)(-?\d+(?:\.\d+)?)([,}])/g, (v, sep, n, tail) =>
+        sep + (n.includes('.') ? n : n + '.0') + tail) + '}');
 }
+
+// Compact-text alias for the session blobs embedded in ReTB table rows.
+const coerceJsonDoubles = decimalizeClientDoubles;
 
 // Build the Liminal Gate buddyInfo.record list: one entry per distinct
 // companion species, the best copy held (liminal derives record from the owned
@@ -668,10 +675,21 @@ export function convertSaveData(data, targetFormat = null, accountId = null) {
     };
   }
 
+  // Same-format passthrough (the editor's default target): keep each format's
+  // native filename convention so the download works without renaming.
+  let suggested_filename = `save-${targetFmt}-${now}.json`;
+  if (sourceFormat === 'liminal') {
+    const accounts = data.accounts || {};
+    const accId = accountId || data.active_account_id || Object.keys(accounts)[0];
+    suggested_filename = `bootstrap-state-${accounts[accId]?.username || accounts[accId]?.userdata?.username || 'Player'}-${now}.json`;
+  } else if (sourceFormat === 'retb') {
+    suggested_filename = `tb-save-${data.username || 'Player'}-${now}.json`;
+  }
+
   return {
     source_format: sourceFormat,
     target_format: targetFmt,
-    suggested_filename: `save-${targetFmt}-${now}.json`,
+    suggested_filename,
     data
   };
 }

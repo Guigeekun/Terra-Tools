@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useGameData } from '../../contexts/GameDataContext';
 import { loc } from '../../utils/localization';
-import { detectSaveFormat, inspectSaveData, convertSaveData, applySaveEdits, EMPTY_SAVE_EDITS, hasSaveEdits, sanitizeCountInput, ITEM_MAX_STACK } from '../../utils/saveConverter';
+import { detectSaveFormat, inspectSaveData, convertSaveData, applySaveEdits, EMPTY_SAVE_EDITS, hasSaveEdits, sanitizeCountInput, ITEM_MAX_STACK, decimalizeClientDoubles } from '../../utils/saveConverter';
 import { inspectSave, convertSave } from '../../api';
 
 // Add-picker search results shown before the list needs scrolling.
@@ -179,8 +179,9 @@ export default function SaveConverterTab() {
       setSelectedAccountId(inspectRes.active_account_id);
       setEdits(EMPTY_SAVE_EDITS);
 
-      const defaultTarget = inspectRes.format === 'liminal' ? 'retb' : 'liminal';
-      setTargetFormat(defaultTarget);
+      // The editor's default target is the save's own format; use "Swap
+      // Target" to convert to the other one.
+      setTargetFormat(inspectRes.format);
 
       showToast(`Loaded ${name} (${inspectRes.format_label})`);
     } catch (err) {
@@ -397,7 +398,7 @@ export default function SaveConverterTab() {
 
   const handleDownload = () => {
     if (!convertedResult?.data) return;
-    const jsonStr = JSON.stringify(convertedResult.data, null, 2);
+    const jsonStr = exportText(convertedResult);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -412,7 +413,7 @@ export default function SaveConverterTab() {
 
   const handleCopyJson = () => {
     if (!convertedResult?.data) return;
-    const jsonStr = JSON.stringify(convertedResult.data, null, 2);
+    const jsonStr = exportText(convertedResult);
     navigator.clipboard.writeText(jsonStr);
     showToast('Converted JSON copied to clipboard!');
   };
@@ -447,6 +448,18 @@ export default function SaveConverterTab() {
   const itemIconUrl = (id) => `/api/assets/item/item_${String(id).padStart(2, '0')}.png`;
 
   const editsActive = hasSaveEdits(edits);
+
+  // Serialized export text. JSON.stringify emits integral values without a
+  // decimal point, and the Liminal Gate client parses several fields
+  // (jobLevels, jobSlots, dates, questClearDate) with LitJson's double
+  // accessor, which refuses integers — so liminal-target output is
+  // re-decimalised before it reaches the clipboard, the preview, or the
+  // downloaded file.
+  const exportText = (result) => {
+    if (!result?.data) return '';
+    const text = JSON.stringify(result.data, null, 2);
+    return result.target_format === 'liminal' ? decimalizeClientDoubles(text) : text;
+  };
 
   // Per-family edit counts driving the modified dots on the count cards.
   const charAdds = edits.charAdds || [];
@@ -595,7 +608,7 @@ export default function SaveConverterTab() {
           <div className="dropzone-icon" style={{ width: '90px', height: '90px', fontSize: '36px' }}>
             <i className="fa-solid fa-file-import"></i>
           </div>
-          <h2>Drop Savefile to Convert</h2>
+          <h2>Drop Savefile to Edit</h2>
           <p>Supports Project Liminal Gate and ReTB save formats</p>
         </div>
       )}
@@ -613,10 +626,10 @@ export default function SaveConverterTab() {
         <div className="save-hero-text">
           <h2>
             <i className="fa-solid fa-arrow-right-arrow-left" style={{ color: 'var(--accent-blue)' }}></i>
-            Savefile Converter
+            Savefile Editor
           </h2>
           <p>
-            Drop or select a savegame file to instantly convert between <strong>Project Liminal Gate</strong> (<code>bootstrap-state.json</code>) and <strong>ReTB</strong> (<code>tb-save.json</code>) formats.
+            Drop or select a savegame file to edit characters, companions, items and more — it exports back in its own format, or converts between <strong>Project Liminal Gate</strong> (<code>bootstrap-state.json</code>) and <strong>ReTB</strong> (<code>tb-save.json</code>).
           </p>
         </div>
       </div>
@@ -1369,7 +1382,7 @@ export default function SaveConverterTab() {
                 </button>
               </div>
               <pre className="json-pre-block">
-                {JSON.stringify(convertedResult.data, null, 2)}
+                {exportText(convertedResult)}
               </pre>
             </div>
           )}

@@ -79,7 +79,7 @@ function AppContent() {
             {activeTab === 'items' && <ItemsTab onSelectItem={setSelectedItemId} />}
             {activeTab === 'stages' && <StagesTab onSelectItem={setSelectedItemId} onSelectBuddy={setSelectedBuddy} />}
             {activeTab === 'audio' && <AudioTab />}
-            {activeTab === 'saveConverter' && <SaveConverterTab />}
+            {activeTab === 'saveEditor' && <SaveConverterTab />}
           </div>
         </main>
       </div>
