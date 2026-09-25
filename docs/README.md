@@ -20,6 +20,16 @@ Your content here...
 - `description` — one-liner shown on the card.
 - `tags` — comma-separated; the tab's filter chips are built from these. Current families: `reTB`, `project-liminal-gate`. Sub-folders work: `docs/reTB/foo.md` gets slug `reTB/foo`.
 
+## Linking documents
+
+Link to another doc with a markdown link — it navigates inside the app and copies as a shareable URL. Paths work like file paths: same-folder names (`custom-reTB.md`) or full slugs (`reTB/custom-reTB`), both with optional `#section` anchors that use GitHub-style heading slugs:
+
+```markdown
+See the [quick setup guide](reTB/quick-setup-guide) or the [tweaks](custom-reTB.md#android).
+```
+
+Every doc also has a permanent address you can paste anywhere — open it and copy the browser URL, or build it from the slug: `#/docs/reTB/quick-setup-guide` (add `#section` to land on a heading). Links to other sites open in a new tab; bare pasted YouTube URLs become embedded players (see below).
+
 ## YouTube videos
 
 Two ways to embed, both render as a 16:9 player:

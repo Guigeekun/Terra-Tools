@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -24,6 +24,26 @@ function formatDate(iso) {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? '' :
     date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// ---------- hash routing ----------
+// The app is an SPA, so docs live under the URL hash: '#/docs' is the list,
+// '#/docs/<slug>' opens one document, and '#/docs/<slug>#<section>' jumps to
+// a heading (GitHub-style slug). The hash is the source of truth, which makes
+// every doc addressable (copy the URL, paste it on Discord) and gives browser
+// back/forward navigation for free.
+
+function parseDocHash() {
+  const match = window.location.hash.match(/^#\/docs\/(.+)$/);
+  if (!match || !match[1]) return null;
+  const [rawSlug, section] = match[1].split('#');
+  const slug = rawSlug.split('/').filter(Boolean).map(decodeURIComponent).join('/');
+  return { slug: slug || null, section: section ? decodeURIComponent(section) : null };
+}
+
+function docHash(slug, section) {
+  const path = slug ? '/docs/' + slug.split('/').map(encodeURIComponent).join('/') : '/docs';
+  return '#' + path + (slug && section ? '#' + encodeURIComponent(section) : '');
 }
 
 // Flatten react-markdown children (string | element | array) to plain text so
@@ -115,7 +135,7 @@ export default function DocsTab() {
   const [error, setError] = useState(null);
   const [activeTag, setActiveTag] = usePersistentState('docs-tag', 'all');
   const [search, setSearch] = useState('');
-  const [slug, setSlug] = useState(null);
+  const [route, setRoute] = useState(parseDocHash);
   const [doc, setDoc] = useState(null);
   const [docLoading, setDocLoading] = useState(false);
 
@@ -124,6 +144,19 @@ export default function DocsTab() {
       .then(res => { setDocs(res.docs); setTags(res.tags); })
       .catch(e => setError(e.message));
   }, []);
+
+  // Follow the hash while mounted (card clicks, in-doc links, back/forward
+  // and manually pasted URLs all land here); normalise a bare '#docs' hash.
+  useEffect(() => {
+    if (window.location.hash.indexOf('#/docs') !== 0) {
+      window.history.replaceState(null, '', docHash(null));
+    }
+    const sync = () => setRoute(parseDocHash());
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
+
+  const slug = route?.slug || null;
 
   useEffect(() => {
     if (!slug) return;
@@ -135,11 +168,42 @@ export default function DocsTab() {
       .catch(e => {
         if (cancelled) return;
         setError(e.message);
-        setSlug(null);
+        window.location.hash = docHash(null);
       })
       .finally(() => { if (!cancelled) setDocLoading(false); });
     return () => { cancelled = true; };
   }, [slug]);
+
+  // Scroll to the linked heading, or the top when switching documents.
+  useEffect(() => {
+    if (!doc) return;
+    requestAnimationFrame(() => {
+      const heading = route?.section && document.getElementById(route.section);
+      if (heading) {
+        heading.scrollIntoView({ block: 'start' });
+      } else {
+        document.querySelector('.content-container')?.scrollTo(0, 0);
+      }
+    });
+  }, [doc, route?.section]);
+
+  const openDoc = (nextSlug, section) => {
+    window.location.hash = docHash(nextSlug, section);
+  };
+
+  // GitHub-compatible heading slugs, so '[text](doc.md#section)' links
+  // written on GitHub keep working here. The seen-counter is per document.
+  const sluggerRef = useRef({ for: undefined, seen: null });
+  if (sluggerRef.current.for !== doc?.slug) {
+    sluggerRef.current = { for: doc?.slug, seen: Object.create(null) };
+  }
+  const headingId = (children) => {
+    const base = childText(children).toLowerCase().replace(/[^\w\- ]/g, '').replace(/ /g, '-');
+    const count = sluggerRef.current.seen[base] ?? 0;
+    sluggerRef.current.seen[base] = count + 1;
+    return count ? `${base}-${count}` : base;
+  };
+  const heading = (Tag) => ({ node: _node, children }) => <Tag id={headingId(children)}>{children}</Tag>;
 
   const visibleDocs = useMemo(() => {
     if (!docs) return [];
@@ -166,7 +230,7 @@ export default function DocsTab() {
     <div className="tab-content">
       {slug ? (
         <div className="docs-article">
-          <button className="docs-back-btn" onClick={() => { setSlug(null); setDoc(null); }}>
+          <button className="docs-back-btn" onClick={() => openDoc(null)}>
             <i className="fa-solid fa-arrow-left"></i> All docs
           </button>
           {docLoading && (
@@ -186,6 +250,10 @@ export default function DocsTab() {
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeRaw, [rehypeSanitize, DOCS_SANITIZE_SCHEMA]]}
                   components={{
+                    h1: heading('h1'),
+                    h2: heading('h2'),
+                    h3: heading('h3'),
+                    h4: heading('h4'),
                     a: ({ node: _node, children, href, ...props }) => {
                       const video = href ? extractYouTube(href) : null;
                       // A bare pasted YouTube URL (GFM autolink: link text
@@ -193,6 +261,22 @@ export default function DocsTab() {
                       // labelled link stays a link.
                       if (video && childText(children).trim().toLowerCase() === href.trim().toLowerCase()) {
                         return <YouTubeEmbed video={video} />;
+                      }
+                      // A relative href with no scheme points at another
+                      // doc; resolve it like a file path (folder-relative
+                      // links such as 'custom-reTB.md#android' included) and
+                      // rewrite to the hash route so it navigates in-app and
+                      // right-click-copy yields a shareable URL.
+                      if (href && !/^[a-z][a-z0-9+.-]*:/i.test(href) && !href.startsWith('#')) {
+                        const [rawPath, section] = href.replace(/^\.?\//, '').split('#');
+                        const target = rawPath.replace(/\.md$/i, '');
+                        const baseDir = slug && slug.includes('/') ? slug.slice(0, slug.lastIndexOf('/')) : '';
+                        const candidates = [target, baseDir ? `${baseDir}/${target}` : null].filter(Boolean);
+                        const known = (docs || []).find(d =>
+                          candidates.some(c => c.toLowerCase() === d.slug.toLowerCase())
+                        );
+                        const resolved = known ? known.slug : candidates[candidates.length - 1];
+                        return <a {...props} href={docHash(resolved, section)}>{children}</a>;
                       }
                       return <a {...props} href={href} target="_blank" rel="noreferrer">{children}</a>;
                     },
@@ -257,7 +341,7 @@ export default function DocsTab() {
 
           <div className="docs-grid">
             {visibleDocs.map(d => (
-              <article key={d.slug} className="docs-card" onClick={() => setSlug(d.slug)}>
+              <article key={d.slug} className="docs-card" onClick={() => openDoc(d.slug)}>
                 <h3>{d.title}</h3>
                 {d.description && <p>{d.description}</p>}
                 <div className="docs-card-foot">

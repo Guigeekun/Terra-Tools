@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GameDataProvider, useGameData } from './contexts/GameDataContext';
 import { AudioProvider } from './contexts/AudioContext';
 import Sidebar from './components/layout/Sidebar';
@@ -47,7 +47,25 @@ function AppContent() {
   const handleTabChange = (tab) => {
     setSourceSearch(null);
     setActiveTab(tab);
+    // Docs reflect their state in the hash; other tabs clear it so a stale
+    // deep link doesn't resurrect the Docs tab on the next reload.
+    if (tab !== 'docs') {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
   };
+
+  // Deep links: '#/docs/...' (or '#/docs') opens the Docs tab directly, so a
+  // URL copied from a doc can be pasted anywhere.
+  useEffect(() => {
+    const applyHash = () => {
+      if (window.location.hash.startsWith('#/docs')) {
+        setActiveTab('docs');
+      }
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, []);
 
   return (
     <>
