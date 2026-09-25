@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useGameData } from '../../contexts/GameDataContext';
 import { loc } from '../../utils/localization';
-import { detectSaveFormat, inspectSaveData, convertSaveData, applySaveEdits, EMPTY_SAVE_EDITS, hasSaveEdits, sanitizeCountInput, ITEM_MAX_STACK } from '../../utils/saveConverter';
+import { detectSaveFormat, inspectSaveData, convertSaveData, applySaveEdits, EMPTY_SAVE_EDITS, hasSaveEdits, sanitizeCountInput, ITEM_MAX_STACK, decimalizeClientDoubles } from '../../utils/saveConverter';
 import { inspectSave, convertSave } from '../../api';
 
 // Add-picker search results shown before the list needs scrolling.
@@ -398,7 +398,7 @@ export default function SaveConverterTab() {
 
   const handleDownload = () => {
     if (!convertedResult?.data) return;
-    const jsonStr = JSON.stringify(convertedResult.data, null, 2);
+    const jsonStr = exportText(convertedResult);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -413,7 +413,7 @@ export default function SaveConverterTab() {
 
   const handleCopyJson = () => {
     if (!convertedResult?.data) return;
-    const jsonStr = JSON.stringify(convertedResult.data, null, 2);
+    const jsonStr = exportText(convertedResult);
     navigator.clipboard.writeText(jsonStr);
     showToast('Converted JSON copied to clipboard!');
   };
@@ -448,6 +448,18 @@ export default function SaveConverterTab() {
   const itemIconUrl = (id) => `/api/assets/item/item_${String(id).padStart(2, '0')}.png`;
 
   const editsActive = hasSaveEdits(edits);
+
+  // Serialized export text. JSON.stringify emits integral values without a
+  // decimal point, and the Liminal Gate client parses several fields
+  // (jobLevels, jobSlots, dates, questClearDate) with LitJson's double
+  // accessor, which refuses integers — so liminal-target output is
+  // re-decimalised before it reaches the clipboard, the preview, or the
+  // downloaded file.
+  const exportText = (result) => {
+    if (!result?.data) return '';
+    const text = JSON.stringify(result.data, null, 2);
+    return result.target_format === 'liminal' ? decimalizeClientDoubles(text) : text;
+  };
 
   // Per-family edit counts driving the modified dots on the count cards.
   const charAdds = edits.charAdds || [];
@@ -1370,7 +1382,7 @@ export default function SaveConverterTab() {
                 </button>
               </div>
               <pre className="json-pre-block">
-                {JSON.stringify(convertedResult.data, null, 2)}
+                {exportText(convertedResult)}
               </pre>
             </div>
           )}
