@@ -5,6 +5,8 @@ import os
 DATA_DIR = os.path.join("user-data", "extracted-gamedata", "game_data")
 EXTRACTED_DIR = os.path.join("user-data", "extracted-gamedata")
 LOCAL_INPUT_ROOT = "local-input"
+# Tagged markdown documents served on the Docs tab
+DOCS_DIR = os.path.join("docs")
 
 # Index in StringSet.scenarioSet where actual story narrative text begins.
 STORY_SCENARIO_OFFSET = 485
