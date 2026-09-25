@@ -15,6 +15,7 @@ import ItemsTab from './components/tabs/ItemsTab';
 import StagesTab from './components/tabs/StagesTab';
 import AudioTab from './components/tabs/AudioTab';
 import SaveConverterTab from './components/tabs/SaveConverterTab';
+import DocsTab from './components/tabs/DocsTab';
 
 import CharacterModal from './components/modals/CharacterModal';
 import ItemModal from './components/modals/ItemModal';
@@ -80,6 +81,7 @@ function AppContent() {
             {activeTab === 'stages' && <StagesTab onSelectItem={setSelectedItemId} onSelectBuddy={setSelectedBuddy} />}
             {activeTab === 'audio' && <AudioTab />}
             {activeTab === 'saveEditor' && <SaveConverterTab />}
+            {activeTab === 'docs' && <DocsTab />}
           </div>
         </main>
       </div>

@@ -114,7 +114,8 @@ export const TAB_META = {
   items:       { title: 'Items Inventory', desc: 'Browse equipment, job evolve materials, tokens, and materials.', icon: 'fa-gem', label: 'Items' },
   stages:      { title: 'Chapters & Stages', desc: 'Select chapters to view sections, recommended levels, enemy detail and drops.', icon: 'fa-map-location-dot', label: 'Chapters & Stages' },
   audio:         { title: 'Audio Asset Player', desc: 'Stream background music and sound effects directly extracted from the game files.', icon: 'fa-music', label: 'Audio Player' },
-  saveEditor: { title: 'Savefile Editor', desc: 'Edit savefiles — characters, companions, items and more — and export them in their own format or convert between Project Liminal Gate and ReTB.', icon: 'fa-arrow-right-arrow-left', label: 'Save Editor' }
+  saveEditor: { title: 'Savefile Editor', desc: 'Edit savefiles — characters, companions, items and more — and export them in their own format or convert between Project Liminal Gate and ReTB.', icon: 'fa-arrow-right-arrow-left', label: 'Save Editor' },
+  docs: { title: 'Community Docs', desc: 'Tagged guides and references for ReTB and Project Liminal Gate — one place for what used to live in Discord pins and repo readmes.', icon: 'fa-book', label: 'Docs' }
 };
 
 export const TAB_KEYS = Object.keys(TAB_META);

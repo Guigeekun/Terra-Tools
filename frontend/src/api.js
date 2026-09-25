@@ -65,6 +65,18 @@ export async function fetchCharacter(charId) {
   return res.json();
 }
 
+export async function fetchDocs() {
+  const res = await fetch('/api/docs');
+  if (!res.ok) throw new Error('Failed to fetch docs');
+  return res.json();
+}
+
+export async function fetchDoc(slug) {
+  const res = await fetch(`/api/docs/${slug}`);
+  if (!res.ok) throw new Error(`Failed to fetch doc ${slug}`);
+  return res.json();
+}
+
 export async function inspectSave(saveData) {
   const res = await fetch('/api/saves/inspect', {
     method: 'POST',
