@@ -3,8 +3,9 @@ import { loc } from '../../utils/localization';
 import { rarityLabels, triggerText } from '../../utils/constants';
 import { useGameData } from '../../contexts/GameDataContext';
 import { useLazyCategory } from '../../hooks/useLazyCategory';
+import SkillIcon from '../shared/SkillIcon';
 
-export default function BuddyModal({ buddy: initialBuddy, buddyId, onClose, onSelectBuddy }) {
+export default function BuddyModal({ buddy: initialBuddy, buddyId, onClose, onSelectBuddy, onOpenSkill }) {
   const { lang, data } = useGameData();
   useLazyCategory('skills');
   const [buddy, setBuddy] = useState(initialBuddy || null);
@@ -91,18 +92,30 @@ export default function BuddyModal({ buddy: initialBuddy, buddyId, onClose, onSe
                     <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: 'var(--accent-indigo)', display: 'flex', alignItems: 'center', gap: 8 }}>
                       <i className="fa-solid fa-star"></i> Companion Skill
                     </h4>
-                    <h5 style={{ margin: '0 0 8px 0', fontSize: 16 }}>{loc(selectedSkill.nameString, lang)}</h5>
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.4 }}>
-                      {loc(selectedSkill.descString, lang)}
-                    </p>
+                    <div className="skill-name-row">
+                      <SkillIcon skill={selectedSkill} size={34} title={loc(selectedSkill.nameString, lang, '')} />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <h5
+                          {...(onOpenSkill ? {
+                            className: 'skill-jump skill-jump-name',
+                            title: 'View this skill in the Skills catalog',
+                            onClick: () => onOpenSkill(buddy.skill, selectedSkill),
+                          } : {})}
+                          style={{ margin: '0 0 8px 0', fontSize: 16 }}
+                        >{loc(selectedSkill.nameString, lang)}</h5>
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.4 }}>
+                          {loc(selectedSkill.descString, lang)}
+                        </p>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
-                      <div><span style={{ color: 'var(--text-muted)' }}>Activation:</span> {triggerText(selectedSkill)}</div>
-                      <div><span style={{ color: 'var(--text-muted)' }}>Element:</span> {selectedSkill.attrib || 'None'}</div>
-                      <div><span style={{ color: 'var(--text-muted)' }}>Area:</span> {loc(selectedSkill.rangePrefixString, lang, 'Self')}</div>
-                      {(selectedSkill.power > 0 || selectedSkill.spower > 0) && (
-                        <div><span style={{ color: 'var(--text-muted)' }}>Power:</span> {selectedSkill.power > 0 ? selectedSkill.power : selectedSkill.spower}</div>
-                      )}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
+                          <div><span style={{ color: 'var(--text-muted)' }}>Activation:</span> {triggerText(selectedSkill)}</div>
+                          <div><span style={{ color: 'var(--text-muted)' }}>Element:</span> {selectedSkill.attrib || 'None'}</div>
+                          <div><span style={{ color: 'var(--text-muted)' }}>Area:</span> {loc(selectedSkill.rangePrefixString, lang, 'Self')}</div>
+                          {(selectedSkill.power > 0 || selectedSkill.spower > 0) && (
+                            <div><span style={{ color: 'var(--text-muted)' }}>Power:</span> {selectedSkill.power > 0 ? selectedSkill.power : selectedSkill.spower}</div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );

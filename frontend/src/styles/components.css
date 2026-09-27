@@ -301,6 +301,47 @@
     max-width: 300px;
 }
 
+.skill-name-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+/* Pipeline-extracted skill glyph; source crops are small pixel art (21-44px) */
+.skill-icon {
+    flex-shrink: 0;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 3px;
+}
+
+.skill-icon.bare {
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    vertical-align: middle;
+}
+
+/* Skill mentions that jump to the Skills catalog (modals, companion cards) */
+.skill-jump {
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.skill-jump:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.skill-jump:hover:is(.skill-jump-name),
+.skill-jump:hover .skill-jump-name {
+    text-decoration: underline;
+}
+
 .skill-name {
     color: var(--text-primary);
     font-family: var(--font-heading);
@@ -446,6 +487,23 @@
     color: var(--text-muted);
     background: transparent;
     border-style: dashed;
+}
+
+.source-chip.chip-more.clickable {
+    cursor: pointer;
+}
+
+.source-chip.chip-more.clickable:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+    border-style: solid;
+}
+
+/* Expanded "+N more": bound the row height, chips stay scrollable and clickable */
+.source-chips.expanded {
+    max-height: 210px;
+    overflow-y: auto;
+    padding-right: 2px;
 }
 
 .source-none {

@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { loc } from '../../utils/localization';
 import { skillAttribMeta, skillKindLabels, sourceTypeMeta, isTapSkill } from '../../utils/constants';
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
+import SkillIcon from '../shared/SkillIcon';
 
 const SOURCE_OPTIONS = [
   { value: '', label: 'All Sources' },
@@ -95,22 +96,40 @@ function SourceChip({ source, onOpenSource }) {
 }
 
 function SourcesCell({ sources, onOpenSource }) {
+  // Hidden sources stay one click away: the "+N more" chip expands in place so
+  // every chip remains a real, clickable link (a hover popover can't guarantee that).
+  const [expanded, setExpanded] = useState(false);
   if (!sources || sources.length === 0) {
     return <span className="source-none">No known source</span>;
   }
-  const shown = sources.slice(0, 3);
-  const extra = sources.length - shown.length;
+  const SHOWN = 3;
+  const extra = sources.length - SHOWN;
+  const shown = expanded ? sources : sources.slice(0, SHOWN);
   return (
-    <div className="source-chips" title={sourceTitle(sources)}>
+    <div className={`source-chips${expanded ? ' expanded' : ''}`} title={sourceTitle(sources)}>
       {shown.map((s, i) => <SourceChip key={i} source={s} onOpenSource={onOpenSource} />)}
-      {extra > 0 && <span className="source-chip chip-more">+{extra} more</span>}
+      {extra > 0 && (
+        <span
+          className="source-chip chip-more clickable"
+          role="button"
+          title={expanded ? 'Show fewer sources' : `Show ${extra} more source${extra === 1 ? '' : 's'}`}
+          onClick={() => setExpanded(v => !v)}
+        >
+          {expanded ? (
+            <><i className="fa-solid fa-chevron-up" style={{ fontSize: 9 }} /> Show less</>
+          ) : (
+            <><i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} /> +{extra} more</>
+          )}
+        </span>
+      )}
     </div>
   );
 }
 
-export default function SkillsTab({ onOpenSource }) {
-  // Filter/sort state persists in localStorage across sessions
-  const [search, setSearch] = usePersistentState('skills.search', '');
+export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
+  // Search stays session-local so skill-jump/source-chip navigation (initialSearch)
+  // always wins; the other filter/sort state persists in localStorage across sessions.
+  const [search, setSearch] = useState(initialSearch);
   const [sourceType, setSourceType] = usePersistentState('skills.sourceType', '');
   const [element, setElement] = usePersistentState('skills.element', '');
   const [kind, setKind] = usePersistentState('skills.kind', '');
@@ -203,9 +222,14 @@ export default function SkillsTab({ onOpenSource }) {
                     <tr key={skill.ID}>
                       <td><code>{skill.ID}</code></td>
                       <td className="skill-name-cell" style={{ maxWidth: 380 }}>
-                        <strong className="skill-name">{loc(skill.nameString, lang)}</strong>
-                        {kindLabel && <span className="skill-kind-tag">{kindLabel}</span>}
-                        <p className="skill-desc">{loc(skill.descString, lang, '')}</p>
+                        <div className="skill-name-row">
+                          <SkillIcon skill={skill} size={32} title={loc(skill.nameString, lang, '')} />
+                          <div style={{ minWidth: 0 }}>
+                            <strong className="skill-name">{loc(skill.nameString, lang)}</strong>
+                            {kindLabel && <span className="skill-kind-tag">{kindLabel}</span>}
+                            <p className="skill-desc">{loc(skill.descString, lang, '')}</p>
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <span className="badge element-badge" style={{ color: attrib.color, borderColor: `${attrib.color}44`, backgroundColor: `${attrib.color}14` }}>
