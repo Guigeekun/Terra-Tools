@@ -30,6 +30,7 @@ from backend.config import (
     LOCAL_INPUT_DIR,
     STORY_SCENARIO_OFFSET
 )
+from backend.middleware import CacheControlMiddleware, SelectiveGZipMiddleware
 from backend.routers import (
     characters,
     buddies,
@@ -60,6 +61,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Bandwidth optimizations: gzip compressible payloads, cache policy on static
+# and media responses (see backend/middleware.py)
+app.add_middleware(SelectiveGZipMiddleware, minimum_size=1000, compresslevel=6)
+app.add_middleware(CacheControlMiddleware)
 
 # Mount static folders
 os.makedirs("frontend/dist/assets", exist_ok=True)
