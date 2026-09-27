@@ -489,6 +489,23 @@
     border-style: dashed;
 }
 
+.source-chip.chip-more.clickable {
+    cursor: pointer;
+}
+
+.source-chip.chip-more.clickable:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+    border-style: solid;
+}
+
+/* Expanded "+N more": bound the row height, chips stay scrollable and clickable */
+.source-chips.expanded {
+    max-height: 210px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
 .source-none {
     font-size: 12px;
     font-style: italic;

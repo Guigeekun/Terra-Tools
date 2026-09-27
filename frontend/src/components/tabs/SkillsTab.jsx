@@ -96,15 +96,32 @@ function SourceChip({ source, onOpenSource }) {
 }
 
 function SourcesCell({ sources, onOpenSource }) {
+  // Hidden sources stay one click away: the "+N more" chip expands in place so
+  // every chip remains a real, clickable link (a hover popover can't guarantee that).
+  const [expanded, setExpanded] = useState(false);
   if (!sources || sources.length === 0) {
     return <span className="source-none">No known source</span>;
   }
-  const shown = sources.slice(0, 3);
-  const extra = sources.length - shown.length;
+  const SHOWN = 3;
+  const extra = sources.length - SHOWN;
+  const shown = expanded ? sources : sources.slice(0, SHOWN);
   return (
-    <div className="source-chips" title={sourceTitle(sources)}>
+    <div className={`source-chips${expanded ? ' expanded' : ''}`} title={sourceTitle(sources)}>
       {shown.map((s, i) => <SourceChip key={i} source={s} onOpenSource={onOpenSource} />)}
-      {extra > 0 && <span className="source-chip chip-more">+{extra} more</span>}
+      {extra > 0 && (
+        <span
+          className="source-chip chip-more clickable"
+          role="button"
+          title={expanded ? 'Show fewer sources' : `Show ${extra} more source${extra === 1 ? '' : 's'}`}
+          onClick={() => setExpanded(v => !v)}
+        >
+          {expanded ? (
+            <><i className="fa-solid fa-chevron-up" style={{ fontSize: 9 }} /> Show less</>
+          ) : (
+            <><i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} /> +{extra} more</>
+          )}
+        </span>
+      )}
     </div>
   );
 }
