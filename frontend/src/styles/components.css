@@ -326,6 +326,22 @@
     vertical-align: middle;
 }
 
+/* Skill mentions that jump to the Skills catalog (modals, companion cards) */
+.skill-jump {
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.skill-jump:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.skill-jump:hover:is(.skill-jump-name),
+.skill-jump:hover .skill-jump-name {
+    text-decoration: underline;
+}
+
 .skill-name {
     color: var(--text-primary);
     font-family: var(--font-heading);

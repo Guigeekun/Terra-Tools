@@ -39,6 +39,14 @@ function AppContent() {
     setActiveTab(tab);
   };
 
+  // Skill mentions (modals, companion cards) jump to the Skills catalog pre-filtered
+  // to that skill. Search keys off the English name (backend-searchable in any UI
+  // language); unnamed skills fall back to their 1-based ID.
+  const openSkillTab = (skillId, skill) => {
+    const name = skill?.nameString?.en?.trim();
+    openSourceTab('skills', name || String(skillId || ''));
+  };
+
   // Open a character modal by game-data ID (recode targets / recode material units)
   const openCharacterById = (charId) => {
     fetchCharacter(charId).then(setSelectedCharacter).catch(e => console.error('Error fetching character:', e));
@@ -93,8 +101,8 @@ function AppContent() {
             {activeTab === 'dashboard' && <DashboardTab onTabChange={handleTabChange} />}
             {activeTab === 'storybook' && <StorybookTab />}
             {activeTab === 'characters' && <CharactersTab onSelectCharacter={setSelectedCharacter} initialSearch={sourceSearch?.tab === 'characters' ? sourceSearch.search : ''} />}
-            {activeTab === 'buddies' && <BuddiesTab onSelectBuddy={setSelectedBuddy} initialSearch={sourceSearch?.tab === 'buddies' ? sourceSearch.search : ''} />}
-            {activeTab === 'skills' && <SkillsTab onOpenSource={openSourceTab} />}
+            {activeTab === 'buddies' && <BuddiesTab onSelectBuddy={setSelectedBuddy} initialSearch={sourceSearch?.tab === 'buddies' ? sourceSearch.search : ''} onOpenSkill={openSkillTab} />}
+            {activeTab === 'skills' && <SkillsTab onOpenSource={openSourceTab} initialSearch={sourceSearch?.tab === 'skills' ? sourceSearch.search : ''} />}
             {activeTab === 'items' && <ItemsTab onSelectItem={setSelectedItemId} />}
             {activeTab === 'stages' && <StagesTab onSelectItem={setSelectedItemId} onSelectBuddy={setSelectedBuddy} />}
             {activeTab === 'audio' && <AudioTab />}
@@ -116,6 +124,7 @@ function AppContent() {
           onClose={() => setSelectedCharacter(null)}
           onOpenItem={(id) => setSelectedItemId(id)}
           onOpenCharacter={openCharacterById}
+          onOpenSkill={(id, skill) => { setSelectedCharacter(null); openSkillTab(id, skill); }}
         />
       )}
       {selectedItemId && (
@@ -125,11 +134,12 @@ function AppContent() {
         />
       )}
       {selectedBuddy && (
-        <BuddyModal 
+        <BuddyModal
           buddy={typeof selectedBuddy === 'object' ? selectedBuddy : null}
           buddyId={typeof selectedBuddy === 'number' || typeof selectedBuddy === 'string' ? selectedBuddy : (selectedBuddy?.ID || selectedBuddy?.id)}
           onClose={() => setSelectedBuddy(null)}
           onSelectBuddy={setSelectedBuddy}
+          onOpenSkill={(id, skill) => { setSelectedBuddy(null); openSkillTab(id, skill); }}
         />
       )}
     </>

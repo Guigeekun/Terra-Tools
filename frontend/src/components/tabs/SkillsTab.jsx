@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { loc } from '../../utils/localization';
 import { skillAttribMeta, skillKindLabels, sourceTypeMeta, isTapSkill } from '../../utils/constants';
 import { TabSpinner } from '../../hooks/useLazyCategory';
@@ -109,9 +109,10 @@ function SourcesCell({ sources, onOpenSource }) {
   );
 }
 
-export default function SkillsTab({ onOpenSource }) {
-  // Filter/sort state persists in localStorage across sessions
-  const [search, setSearch] = usePersistentState('skills.search', '');
+export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
+  // Search stays session-local so skill-jump/source-chip navigation (initialSearch)
+  // always wins; the other filter/sort state persists in localStorage across sessions.
+  const [search, setSearch] = useState(initialSearch);
   const [sourceType, setSourceType] = usePersistentState('skills.sourceType', '');
   const [element, setElement] = usePersistentState('skills.element', '');
   const [kind, setKind] = usePersistentState('skills.kind', '');

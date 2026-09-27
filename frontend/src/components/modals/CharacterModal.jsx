@@ -6,7 +6,7 @@ import { useLazyCategory } from '../../hooks/useLazyCategory';
 import LightboxModal from './LightboxModal';
 import SkillIcon from '../shared/SkillIcon';
 
-export default function CharacterModal({ character, onClose, onOpenItem, onOpenCharacter }) {
+export default function CharacterModal({ character, onClose, onOpenItem, onOpenCharacter, onOpenSkill }) {
   const { lang, data } = useGameData();
   useLazyCategory('skills');
   const [jobIndex, setJobIndex] = useState(0);
@@ -237,13 +237,20 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
                         const unlockLv = (job.skillMasterLevel && job.skillMasterLevel[i]) || 1;
                         const skill = skills[skillID - 1];
                         return (
-                          <li key={i}>
+                          <li
+                            key={i}
+                            {...(onOpenSkill && skill ? {
+                              className: 'skill-jump',
+                              title: 'View this skill in the Skills catalog',
+                              onClick: () => onOpenSkill(skillID, skill),
+                            } : {})}
+                          >
                             {skill ? (
                               <div className="skill-name-row">
                                 <SkillIcon skill={skill} size={30} title={loc(skill.nameString, lang, '')} />
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                                    <strong style={{ color: 'var(--accent-blue)' }}>{loc(skill.nameString, lang)}</strong>
+                                    <strong className="skill-jump-name" style={{ color: 'var(--accent-blue)' }}>{loc(skill.nameString, lang)}</strong>
                                     <span className="badge" style={{ fontSize: 10, padding: '2px 6px', backgroundColor: 'rgba(56,189,248,0.08)', borderColor: 'rgba(56,189,248,0.2)', color: 'var(--accent-blue)' }}>Lv {unlockLv}</span>
                                   </div>
                                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trigger: {triggerText(skill)}</span>

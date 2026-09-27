@@ -6,7 +6,7 @@ import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
 import SkillIcon from '../shared/SkillIcon';
 
-export default function BuddiesTab({ onSelectBuddy, initialSearch = '' }) {
+export default function BuddiesTab({ onSelectBuddy, initialSearch = '', onOpenSkill }) {
   // Search stays session-local so source-chip navigation (initialSearch) always wins;
   // dropdown filters persist in localStorage across sessions.
   const [search, setSearch] = useState(initialSearch);
@@ -137,7 +137,14 @@ export default function BuddiesTab({ onSelectBuddy, initialSearch = '' }) {
                   </p>
                   <div className="card-meta">
                     {buddy.skill && data?.skills?.[buddy.skill - 1] ? (
-                      <span style={{ color: 'var(--accent-indigo)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span
+                        {...(onOpenSkill ? {
+                          className: 'skill-jump',
+                          title: 'View this skill in the Skills catalog',
+                          onClick: (e) => { e.stopPropagation(); onOpenSkill(buddy.skill, data.skills[buddy.skill - 1]); },
+                        } : {})}
+                        style={{ color: 'var(--accent-indigo)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      >
                         <SkillIcon skill={data.skills[buddy.skill - 1]} size={18} bare title={loc(data.skills[buddy.skill - 1].nameString, lang, '')} />
                         {loc(data.skills[buddy.skill - 1].nameString, lang)} ({triggerText(data.skills[buddy.skill - 1])})
                       </span>
