@@ -4,6 +4,7 @@ import { skillAttribMeta, skillKindLabels, sourceTypeMeta, isTapSkill } from '..
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
+import SkillIcon from '../shared/SkillIcon';
 
 const SOURCE_OPTIONS = [
   { value: '', label: 'All Sources' },
@@ -203,9 +204,14 @@ export default function SkillsTab({ onOpenSource }) {
                     <tr key={skill.ID}>
                       <td><code>{skill.ID}</code></td>
                       <td className="skill-name-cell" style={{ maxWidth: 380 }}>
-                        <strong className="skill-name">{loc(skill.nameString, lang)}</strong>
-                        {kindLabel && <span className="skill-kind-tag">{kindLabel}</span>}
-                        <p className="skill-desc">{loc(skill.descString, lang, '')}</p>
+                        <div className="skill-name-row">
+                          <SkillIcon skill={skill} size={32} title={loc(skill.nameString, lang, '')} />
+                          <div style={{ minWidth: 0 }}>
+                            <strong className="skill-name">{loc(skill.nameString, lang)}</strong>
+                            {kindLabel && <span className="skill-kind-tag">{kindLabel}</span>}
+                            <p className="skill-desc">{loc(skill.descString, lang, '')}</p>
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <span className="badge element-badge" style={{ color: attrib.color, borderColor: `${attrib.color}44`, backgroundColor: `${attrib.color}14` }}>

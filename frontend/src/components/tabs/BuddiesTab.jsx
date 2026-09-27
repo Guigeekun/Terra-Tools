@@ -4,6 +4,7 @@ import { rarityLabels, triggerText } from '../../utils/constants';
 import { TabSpinner, useLazyCategory } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
+import SkillIcon from '../shared/SkillIcon';
 
 export default function BuddiesTab({ onSelectBuddy, initialSearch = '' }) {
   // Search stays session-local so source-chip navigation (initialSearch) always wins;
@@ -136,8 +137,9 @@ export default function BuddiesTab({ onSelectBuddy, initialSearch = '' }) {
                   </p>
                   <div className="card-meta">
                     {buddy.skill && data?.skills?.[buddy.skill - 1] ? (
-                      <span style={{ color: 'var(--accent-indigo)' }}>
-                        <i className="fa-solid fa-star"></i> {loc(data.skills[buddy.skill - 1].nameString, lang)} ({triggerText(data.skills[buddy.skill - 1])})
+                      <span style={{ color: 'var(--accent-indigo)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <SkillIcon skill={data.skills[buddy.skill - 1]} size={18} bare title={loc(data.skills[buddy.skill - 1].nameString, lang, '')} />
+                        {loc(data.skills[buddy.skill - 1].nameString, lang)} ({triggerText(data.skills[buddy.skill - 1])})
                       </span>
                     ) : buddy.skill && !data?.skills ? (
                       <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>

@@ -301,6 +301,31 @@
     max-width: 300px;
 }
 
+.skill-name-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+/* Pipeline-extracted skill glyph; source crops are small pixel art (21-44px) */
+.skill-icon {
+    flex-shrink: 0;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 3px;
+}
+
+.skill-icon.bare {
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    vertical-align: middle;
+}
+
 .skill-name {
     color: var(--text-primary);
     font-family: var(--font-heading);

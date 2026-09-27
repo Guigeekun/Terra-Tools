@@ -89,6 +89,13 @@ export const TAP_SKILL_KIND = 20;
 
 export const isTapSkill = (skill) => skill?.kind === TAP_SKILL_KIND;
 
+// Skill glyphs extracted to user-data/extracted-gamedata/ui_icons by the pipeline,
+// zero-padded to two digits (iconNo 1 -> skill_icon_01.png, 147 files in total).
+export function skillIconUrl(iconNo) {
+  if (!iconNo) return null;
+  return `/api/assets/image?path=user-data/extracted-gamedata/ui_icons/skill_icon_${String(iconNo).padStart(2, '0')}.png`;
+}
+
 export function triggerText(skill) {
   if (!skill) return '—';
   if (isTapSkill(skill)) {
