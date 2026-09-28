@@ -30,7 +30,7 @@ from backend.config import (
     LOCAL_INPUT_DIR,
     STORY_SCENARIO_OFFSET
 )
-from backend.middleware import CacheControlMiddleware, SelectiveGZipMiddleware
+from backend.middleware import CacheControlMiddleware, RequestLoggingMiddleware, SelectiveGZipMiddleware
 from backend.routers import (
     characters,
     buddies,
@@ -66,6 +66,11 @@ app.add_middleware(
 # and media responses (see backend/middleware.py)
 app.add_middleware(SelectiveGZipMiddleware, minimum_size=1000, compresslevel=6)
 app.add_middleware(CacheControlMiddleware)
+
+# Enriched access log with response size/duration; added last so it is the
+# outermost middleware and counts the bytes actually sent to the client.
+# uvicorn's own access log is disabled (it logs every request a second time).
+app.add_middleware(RequestLoggingMiddleware)
 
 # Mount static folders
 os.makedirs("frontend/dist/assets", exist_ok=True)
@@ -113,6 +118,6 @@ if __name__ == "__main__":
     # Automatically open browser in 1.5 seconds
     Timer(1.5, open_browser).start()
     
-    # Run local web server
+    # Run local web server (access_log off: RequestLoggingMiddleware logs it richer)
     print("Starting FastAPI web server...")
-    uvicorn.run(app, host="127.0.0.1", port=5001)
+    uvicorn.run(app, host="127.0.0.1", port=5001, access_log=False)

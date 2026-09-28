@@ -45,8 +45,13 @@ RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoin
 # Expose the port the app runs on
 EXPOSE 5001
 
+# Structured access logs (one JSON line per request with response size and
+# duration) for log aggregation in production; local runs default to text.
+ENV LOG_FORMAT=json
+
 # Set the entrypoint to our startup script
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # Run uvicorn directly to bypass the browser auto-open in app.py
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5001"]
+# (--no-access-log: RequestLoggingMiddleware already logs every request)
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5001", "--no-access-log"]
