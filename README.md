@@ -1,33 +1,47 @@
 #  TerraTools
 <img src="frontend/public/TerraToolbox.png" width="200" height="200" align="center" alt="Terra Toolbox Icon">
-An interactive web-based database viewer for *Terra Battle*. 
+An interactive web-based toolbox for *Terra Battle*.
 
-This editor provides comprehensive access to game assets, character stats, companion drop rates, skills, audio players (BGM/SE), and stage wave board layouts.
+Browse the game's assets and databases, explore chapters and battle layouts, experience the story with its original art and music, listen to the extracted soundtrack, edit and convert save files — and follow the built-in docs to set up your own server emulator.
 
 Live version : https://terratools.ggkfigment.fr/
 ---
 
 ## Key Features
 
-### 1. Stage Wave Configurations & Interactive Grid Board
-* **Visual Grid Board**: Renders an interactive 6x8 board visualizer corresponding to the precise battle grid coordinates of Terra Battle.
+### 1. Asset & Database Browsing
+* **Characters**: full character database — stats, classes, skills, and rarities, with job artwork.
+* **Companions**: companion (buddy) metadata, stats and granted skills, with thumbnails and full artwork.
+* **Skills**: every skill lists its potential sources — characters (with granting jobs), companions, and enemies (aggregated variants, boss-flagged) — with clickable links.
+* **Items**: browse all game items with their "Where to Obtain" drop sources.
+* Server-side filtering (source type, element, skill kind, trigger type, search across entries *and* source names), column sorting, and dynamic translation support (English, Japanese, French, German, Spanish, Traditional Chinese).
+
+### 2. Chapter Information & Stage Layouts
+* **Chapter browser**: every chapter with its sections — banner art, level ranges, tips, and vulnerability hints.
+* **Visual grid board**: interactive 6x8 board visualizer matching the precise battle grid coordinates of Terra Battle, rendering the layout of each section's waves.
 * **Wave selection tabs**: Switch between battle waves (`Wave 1`, `Wave 2`, `Wave 3`...) to view changes in enemy layout positions.
-* **Interactive Enemy Tokens**: Displays custom tokens for spawned enemies (red glowing pulses for Bosses, orange for normal enemies).
-* **Hover tooltips**: Inspect name, level, HP, ATK, and DEF stats instantly.
-* **Side-by-side List**: Detailed list of all enemies spawning in the currently active wave.
+* **Interactive enemy tokens**: custom tokens for spawned enemies (red glowing pulses for Bosses, orange for normal enemies), with hover tooltips showing name, level, HP, ATK, DEF and spawn counts.
+* **Side-by-side list**: detailed list of all enemies spawning in the currently active wave.
 ![wave_layout](/res/wave_layout.png)
 
-### 2. Character & Companion DB
-* Inspect character and buddy database metadata (HP, ATK, DEF, stats, classes, skills, and rarities).
-* Built-in search and filtering.
+### 3. Story Book
+* Experience the main story chapters scene by scene, with the original scene backgrounds and each scene's background music synced automatically.
+* Fullscreen reading mode, hide-text mode, and auto-play.
+* Reading position is remembered, so you can pick up where you left off.
 
-### 3. Audio Controller Player
-* Play case-insensitive BGM soundtracks and Sound Effects (SE) directly through the browser.
+### 4. Music Player
+* Play the game's extracted music (BGM) and sound effects (SE) directly through the browser.
+* Searchable playlists and a persistent player that keeps playing while you browse other tabs.
 
-### 4. Items & Skills Viewer
-* Browse all game items and skills databases with dynamic translation support (English, Japanese, French, German, Spanish, Traditional Chinese).
-* Every skill lists its potential sources — characters (with granting jobs), companions, and enemies (aggregated variants, boss-flagged) — with clickable companion links.
-* Server-side filtering (source type, element, skill kind, trigger type, search across skills *and* source names) and column sorting (ID, name, trigger, power, sources).
+### 5. Save Editor & Converter
+* Load and inspect save files from both server emulators: **Project Liminal Gate** and **reTB**.
+* Edit your progress: username, coins, energy, character job levels and newly recruited characters, companion levels, and item counts (capped at the game's real stack limits).
+* Convert saves between the two formats in either direction.
+
+### 6. Community Docs
+* A built-in collection of documents covering server emulator setup and tweaking: reTB quick setup, patched game APK, enabling events & collabs, custom reTB builds, and more.
+* Tag filtering, shareable deep links to any document or section, and embedded YouTube guides.
+* Docs are plain markdown files under `docs/` — drop one in a pull request and it goes live.
 
 ---
 
@@ -58,6 +72,8 @@ TerraTools/
 │   ├── search_enemy.py         # Utility to search EnemyData.json NameStrings
 │   ├── verify_mapping.py       # Utility to verify metadata enum-to-ID alignment
 │   └── test_hash.py            # .NET String.GetHashCode tester
+├── docs/                       # Community docs shown on the Docs tab (server setup guides, ...)
+│   └── reTB/                   # reTB guides (quick setup, patched APK, events & collabs, ...)
 ├── frontend/                   # React + Vite frontend source code
 │   └── public/
 │       └── TerraToolbox.png    # App icon and browser favicon
@@ -74,74 +90,17 @@ TerraTools/
 
 ## Local Input Directory (`local-input/`)
 
-The `local-input/` directory is gitignored and acts as the workspace drop-zone for user-provided raw game files, binaries, and asset bundles required by the extraction pipeline and web server.
+`local-input/` is a gitignored drop-zone for the raw game files:
 
-### Required & Optional Files Breakdown
+* **`terra-battle-5.5.7-170.apk`** *(required)* — Terra Battle v5.5.7 APK. The extraction pipeline pulls everything out of it: the game databases, the Lua stage scripts (Chapters 1–7), and the native ARM64 binary (Chapters 8–42 layouts and event boss drops).
+* **`gdresources/`** *(optional, recommended)* — vanilla client asset bundles (`data_u2017/android/...`): stage backgrounds, BGM/SE audio, banners, companion artwork and thumbnails, character job artwork, grid token sprites, and scenario files. These feed the media features (artwork, music player, story backgrounds). The trimmed `gdresources-light` variant distributed for the reTB emulator works too.
 
-```text
-local-input/
-├── terra-battle-5.5.7-170.apk    # [Required] Terra Battle APK
-└── gdresources/                   # [Optional / Recommended] Vanilla game asset bundles
-    └── data_u2017/
-        └── android/
-            ├── BG/                # Background graphics asset bundles (.bin)
-            ├── BGM/               # Background Music audio bundles (.bin)
-            ├── Banner/            # Event banner graphics asset bundles (.bin)
-            ├── BuddyImages/       # Companion full artwork bundles (.bin)
-            ├── BuddyThumbs/       # Companion thumbnail icon bundles (.bin)
-            ├── Illust/            # Character class artwork bundles (.bin)
-            ├── Pieces/            # Character grid token sprites (.bin)
-            ├── SE/                # Sound Effects audio clip bundles (.bin)
-            └── Scenario/          # Scenario DLC & extra battle script bundles (.bin)
-```
-
-#### Detailed Description of Contents
-
-1. **`terra-battle-5.5.7-170.apk`** *(Required for Database & Asset Extraction)*
-   - **Path**: `local-input/terra-battle-5.5.7-170.apk` (configurable in `config.json`)
-   - **Source**: Terra Battle v5.5.7 Android APK file.
-   - **Used By**: `scripts/extract_everything.py`, `scripts/decompile_and_parse_all.py`, `scripts/extract_native_stages.py`, `scripts/recompile_everything.py`
-   - **Content Extracted**:
-     - `global-metadata.dat`: C# `Enemies` enum and string decryption inverse table (at offset `0x601CAD`).
-     - `resources.assets` / `data.unity3d`: Game databases (`ChrDatabase`, `BuddyDatabase`, `ItemSet`, `SkillData`, `BattleData`, `StringSet`, `EnemyData`), TextAssets, and `ItemAtlas` sprite graphics.
-     - `Chapter1.luac` through `Chapter7.luac`: Lua bytecode stage scripts.
-     - `libil2cpp.so`: ARM64 C++ binary for stage layout extraction (Chapters 8–42) and event boss drop recovery.
-
-2. **`dump.cs`** *(Auto-generated — Required for Native Stage Layouts — Chapters 8 to 42)*
-   - **Path**: `user-data/dump.cs` (configurable in `config.json`)
-   - **Source**: Automatically generated by the extraction pipeline (step 7) using [Il2CppDumper](https://github.com/Perfare/Il2CppDumper) on `libil2cpp.so` and `global-metadata.dat` extracted from the APK. Requires `Il2CppDumper` on your system `PATH`.
-   - **Used By**: `scripts/extract_native_stages.py`, `scripts/extract_native_drops.py` (steps 8 & 9 of `scripts/extract_everything.py`).
-   - **Content Extracted**: Provides C# structure definitions, method Relative Virtual Addresses (RVAs), and vtable slot mappings needed to disassemble C++ battle generator classes (`Chapter8.$Battle...`).
-
-3. **`gdresources/data_u2017/android/`** *(Optional / Recommended for Media & Live Browsing)*
-   - **Path**: any `local-input/gdresources*/` folder (see [gdresources discovery](#gdresources-discovery))
-   - **Source**: Downloaded game client asset cache folder. Both the full `gdresources` and trimmed variants such as `gdresources-light` (as distributed for the reTB server emulator) are supported.
-   - **Used By**: `scripts/extract_everything.py` (steps 5c & 5d; reads `gdresources/data_u2017/android` directly).
-   - **Bundles & Categories**:
-     - `BG/`: Stage background images (ENCA-encrypted Unity asset bundles).
-     - `BGM/`: Background Music audio clips (`.bin` containing `AudioClip` streams).
-     - `Banner/`: UI banners and event graphic asset bundles.
-     - `BuddyImages/`: High-resolution companion full artwork asset bundles.
-     - `BuddyThumbs/`: Companion thumbnail icon asset bundles.
-     - `Illust/`: Character job artwork asset bundles.
-     - `Pieces/`: Character battle grid token sprites.
-     - `SE/`: Sound Effects audio clip asset bundles.
-     - `Scenario/`: Additional scenario DLC files and TextAssets (e.g. `Chapter8.luac`).
-
-#### gdresources Discovery
-
-The toolbox does not assume a fixed resources path: `backend/config.py` scans
-`local-input/` for any folder named `gdresources*` (`gdresources`,
-`gdresources-light`, ...) and resolves the platform directory inside it that
-holds the most asset categories (BG, BGM, ...). On ties it prefers `data_u2017`
-CDN revisions (the one the extraction pipeline reads from), then `android`
-layouts. `LOCAL_INPUT_DIR` is resolved at startup and
-`backend.config.get_local_input_dir()` re-resolves on demand. This means you
-can swap the full resources for the much smaller `gdresources-light` by simply
-dropping it in `local-input/` — no configuration change needed.
-
-Note: the extraction pipeline (`scripts/extract_everything.py`) still reads
-from `gdresources/data_u2017/android` directly.
+No fixed path is assumed: `backend/config.py` scans `local-input/` for any
+`gdresources*` folder and picks the platform directory holding the most asset
+categories (preferring `data_u2017` on ties), so you can swap the full
+resources for the much smaller `gdresources-light` by simply dropping it in —
+no configuration change needed. The extraction pipeline itself still reads
+`gdresources/data_u2017/android` directly.
 
 ---
 
@@ -293,12 +252,32 @@ the Docker build accepts it as a secret, e.g.
 
 ## Running the Web Server
 
-1. **Install Dependencies**:
+### With Docker Compose (recommended)
+
+The container image builds the frontend, installs the backend, and fetches the pre-extracted user-data from the latest GitHub release on first start — no local Python or Node required, and no need to run the extraction pipeline yourself.
+
+```bash
+docker compose up -d
+```
+
+Then open [http://127.0.0.1:5001](http://127.0.0.1:5001) in your browser.
+
+* `user-data/`, `scripts/` and `local-input/` are volume-mounted from the working tree, so dropping a `gdresources*` folder into `local-input/` enables the media features (artwork, music player, story backgrounds) without rebuilding.
+* The entrypoint honors `BUILD_MODE`: `auto` (default) fetches user-data only when missing, `force-download` replaces existing data with the latest release (see [Refreshing user-data in deployed containers](#refreshing-user-data-in-deployed-containers)).
+* `docker compose watch` syncs backend code and a rebuilt `frontend/dist` into the running container for development.
+
+### Without Docker (local Python)
+
+1. **Install the backend dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
-2. **Start the server**:
+2. **Build the frontend** (the server serves `frontend/dist`):
+   ```bash
+   cd frontend && npm install && npm run build && cd ..
+   ```
+3. **Start the server**:
    ```bash
    python app.py
    ```
-3. Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
+4. Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
