@@ -5,6 +5,7 @@ import { useGameData } from '../../contexts/GameDataContext';
 import { useLazyCategory } from '../../hooks/useLazyCategory';
 import LightboxModal from './LightboxModal';
 import SkillIcon from '../shared/SkillIcon';
+import EmitConditionBadge from '../shared/EmitConditionBadge';
 
 export default function CharacterModal({ character, onClose, onOpenItem, onOpenCharacter, onOpenSkill }) {
   const { lang, data } = useGameData();
@@ -253,7 +254,10 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
                                     <strong className="skill-jump-name" style={{ color: 'var(--accent-blue)' }}>{loc(skill.nameString, lang)}</strong>
                                     <span className="badge" style={{ fontSize: 10, padding: '2px 6px', backgroundColor: 'rgba(56,189,248,0.08)', borderColor: 'rgba(56,189,248,0.2)', color: 'var(--accent-blue)' }}>Lv {unlockLv}</span>
                                   </div>
-                                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trigger: {triggerText(skill)}</span>
+                                  <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                    Trigger: {triggerText(skill)}
+                                    <EmitConditionBadge skill={skill} />
+                                  </span>
                                   <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>{loc(skill.descString, lang)}</p>
                                 </div>
                               </div>
