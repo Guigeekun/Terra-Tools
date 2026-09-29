@@ -7,7 +7,7 @@ import { loc } from '../../utils/localization';
 
 export default function StorybookTab() {
   const { lang, data } = useGameData();
-  const { playTrack, togglePlayPause, isPlaying, activeTrack } = useAudio();
+  const { playTrack, queueTrack, togglePlayPause, openFloatingPlayer, isPlaying, activeTrack } = useAudio();
   const containerRef = useRef(null);
 
   const [chapters, setChapters] = useState([]);
@@ -71,8 +71,10 @@ export default function StorybookTab() {
     return stories[clamped];
   }, [stories, sceneIdx]);
 
-  // BGM is strictly opt-in: scene tracks are never synced automatically
-  // (each WAV is ~20 MB of billed egress), the pill below plays on click.
+  // BGM is strictly opt-in: scene tracks are never auto-played (each WAV is
+  // ~20 MB of billed egress). The scene's track is queued as metadata only so
+  // the corner player always shows the correct music; audio downloads only
+  // when the user presses play.
   const sceneTrack = useMemo(() => {
     if (!currentStory?.bgmID || !currentStory?.bgm_url) return null;
     return {
@@ -88,14 +90,23 @@ export default function StorybookTab() {
     activeTrack?.filename === sceneTrack.filename
   );
 
+  useEffect(() => {
+    if (!sceneTrack) return;
+    if (isSceneBgmActive) return;
+    queueTrack(sceneTrack, 'bgm');
+  }, [sceneTrack, isSceneBgmActive, queueTrack]);
+
   const handleBgmPill = useCallback(() => {
     if (!sceneTrack) return;
-    if (isSceneBgmActive) {
+    if (isSceneBgmActive && isPlaying) {
+      togglePlayPause(); // pause
+    } else if (isSceneBgmActive) {
+      openFloatingPlayer(); // resume the already-loaded track where it was
       togglePlayPause();
     } else {
-      playTrack(sceneTrack, 'bgm');
+      playTrack(sceneTrack, 'bgm'); // load + play + open the player
     }
-  }, [sceneTrack, isSceneBgmActive, togglePlayPause, playTrack]);
+  }, [sceneTrack, isSceneBgmActive, isPlaying, togglePlayPause, openFloatingPlayer, playTrack]);
 
   // Page navigation handlers
   const nextPage = useCallback(() => {
