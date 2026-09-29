@@ -90,19 +90,95 @@ export const TAP_SKILL_KIND = 20;
 export const isTapSkill = (skill) => skill?.kind === TAP_SKILL_KIND;
 
 // SkillEmitCondition enum (SkillData `condition` field): where the unit must
-// stand in the pincer formation for the skill to activate. The game never
-// states this anywhere. 0 = None (anywhere in the chain); 1 = Sandwich (only
-// while this unit is one of the two pincering units, adjacent to the target —
-// why Ragnarok works up close but Grand Ragnarok also fires from the chain).
-// Values 2-14 are counter directions and conditions already stated in the
-// skill descriptions ("counter lateral pincer attacks", ...).
+// stand / what must hold for the skill to activate. The game never states the
+// Sandwich case; the counter values are already implied by skill descriptions.
+// Displayed on every skill as a badge whose hover text explains the details;
+// names come from dump.cs (class SkillType, `public SkillEmitCondition condition`).
+// Why Ragnarok works up close but Grand Ragnarok also fires from the chain:
+// Ragnarok's skill is Sandwich (1), Grand Ragnarok's is None (0).
 export const SKILL_EMIT_CONDITION_NONE = 0;
 export const SKILL_EMIT_CONDITION_SANDWICH = 1;
 
-export const isPincerInitiatorSkill = (skill) => (skill?.condition ?? 0) === SKILL_EMIT_CONDITION_SANDWICH;
+const SKILL_EMIT_CONDITIONS = {
+  0: {
+    label: 'Any position',
+    className: 'pos-any',
+    title: 'SkillEmitCondition.None — no positional restriction: activates anywhere in a pincer attack, whether this unit pincers (adjacent) or stands in the chain.'
+  },
+  1: {
+    label: 'Pincer Initiator only',
+    className: 'pos-pincer',
+    title: 'SkillEmitCondition.Sandwich — activates solely while this unit initiates the pincer (adjacent to the enemy); it never fires from the chain. Hidden in-game.'
+  },
+  2: {
+    label: 'Lateral counters',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.HorizontalOnlyCounter — counters only lateral pincer attacks: enemies pincering this unit from the left or right.'
+  },
+  3: {
+    label: 'Vertical counters',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.VerticalOnlyCounter — counters only vertical pincer attacks: enemies pincering this unit from above or below.'
+  },
+  4: {
+    label: 'Pincer counters',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.SandwichOnlyCounter — counters only while this unit is pincered, from any direction.'
+  },
+  5: {
+    label: 'Yukka & Ricky',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.YukkaAndRicky — special one-off condition tied to the Yukka & Ricky mechanic.'
+  },
+  6: {
+    label: 'Magic counters',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.MagicCounter — counters magical attacks.'
+  },
+  7: {
+    label: 'HP ≤ 25%',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.HP_25percent — only fires while this unit\'s HP is at 25% or less.'
+  },
+  8: {
+    label: 'Fire ally',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.FireInTeam — only fires while a Fire ally is on the team.'
+  },
+  9: {
+    label: 'Ice ally',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.IceInTeam — only fires while an Ice ally is on the team.'
+  },
+  10: {
+    label: 'Thunder ally',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.ThunderInTeam — only fires while a Thunder ally is on the team.'
+  },
+  11: {
+    label: 'Dark ally',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.DarkInTeam — only fires while a Dark ally is on the team.'
+  },
+  12: {
+    label: 'Enemy HP critical',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.FatalAttack — only fires when the target enemy\'s HP is critically low.'
+  },
+  13: {
+    label: 'After own move',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.OwnMoved — only fires after this unit has moved.'
+  },
+  14: {
+    label: 'Move + pincer',
+    className: 'pos-restrict',
+    title: 'SkillEmitCondition.OwnMovedAndSandwich — only fires after this unit has moved and while it pincers.'
+  }
+};
 
-export const PINCER_INITIATOR_TITLE =
-  'Pincer Initiator only: activates solely while this unit initiates the pincer (adjacent to the enemy) — it never fires from the chain.';
+export const skillEmitConditionMeta = (skill) =>
+  SKILL_EMIT_CONDITIONS[skill?.condition ?? 0] || SKILL_EMIT_CONDITIONS[0];
 
 // Skill glyphs extracted to user-data/extracted-gamedata/ui_icons by the pipeline,
 // zero-padded to two digits (iconNo 1 -> skill_icon_01.png, 147 files in total).

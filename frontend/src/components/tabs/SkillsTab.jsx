@@ -5,7 +5,7 @@ import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
 import SkillIcon from '../shared/SkillIcon';
-import PincerInitiatorBadge from '../shared/PincerInitiatorBadge';
+import EmitConditionBadge from '../shared/EmitConditionBadge';
 
 const SOURCE_OPTIONS = [
   { value: '', label: 'All Sources' },
@@ -268,7 +268,7 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
                           ) : (
                             <span className="badge trigger-badge active">{skill.emitRatio || 0}%</span>
                           )}
-                          <PincerInitiatorBadge skill={skill} />
+                          <EmitConditionBadge skill={skill} />
                         </div>
                       </td>
                       <td>{skill.power ? Number(skill.power.toFixed(2)) : '—'}</td>

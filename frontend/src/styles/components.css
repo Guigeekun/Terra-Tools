@@ -395,9 +395,20 @@
     white-space: nowrap;
 }
 
-.trigger-badge.pincer {
+.trigger-badge.pos-any {
+    background-color: rgba(148, 163, 184, 0.08);
+    color: var(--text-muted);
+}
+
+.trigger-badge.pos-pincer {
     background-color: rgba(248, 113, 113, 0.1);
     color: var(--accent-red);
+    white-space: nowrap;
+}
+
+.trigger-badge.pos-restrict {
+    background-color: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
     white-space: nowrap;
 }
 
