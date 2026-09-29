@@ -46,7 +46,8 @@ export function AudioProvider({ children }) {
   const handlePlay = () => setIsPlaying(true);
   const handlePause = () => setIsPlaying(false);
 
-  // Explicit user action to play a track
+  // Explicit user action to play a track. Audio must never start loading on
+  // its own: BGM WAVs are ~20 MB each and egress is billed per GB.
   const playTrack = useCallback((track, category = 'bgm') => {
     if (!track) return;
 
@@ -67,44 +68,6 @@ export function AudioProvider({ children }) {
       audioRef.current.play().then(() => {
         setIsPlaying(true);
       }).catch(e => console.error('Audio play error:', e));
-    }
-  }, []);
-
-  // Sync BGM for Storybook without unpausing if user manually paused
-  const syncStoryBgm = useCallback((track, category = 'bgm') => {
-    if (!track) return;
-
-    const catLower = (category || 'bgm').toLowerCase();
-    const src = track.url || `/api/play/${catLower}/${track.filename}`;
-
-    setActiveTrack({ ...track, category: catLower });
-    setPlaylistCategory(catLower);
-
-    if (audioRef.current) {
-      audioRef.current.loop = (catLower === 'bgm');
-
-      const currentSrc = audioRef.current.currentSrc || audioRef.current.src;
-      const isSameSrc = currentSrc && (currentSrc.endsWith(src) || currentSrc === src);
-
-      if (!isSameSrc) {
-        audioRef.current.src = src;
-      }
-
-      // CRITICAL: If the user paused the music, NEVER unpause by itself!
-      if (userPausedRef.current) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-        return;
-      }
-
-      // User has not paused, so play new scene track
-      if (!isSameSrc || audioRef.current.paused) {
-        audioRef.current.play().then(() => {
-          setIsPlaying(true);
-        }).catch(e => {
-          console.warn('Autoplay prevented or waiting for interaction:', e);
-        });
-      }
     }
   }, []);
 
@@ -185,7 +148,6 @@ export function AudioProvider({ children }) {
         isMinimized,
         isFloatingOpen,
         playTrack,
-        syncStoryBgm,
         togglePlayPause,
         seek,
         setVolume,

@@ -7,9 +7,8 @@ import { loc } from '../../utils/localization';
 
 export default function StorybookTab() {
   const { lang, data } = useGameData();
-  const { syncStoryBgm, togglePlayPause, isPlaying } = useAudio();
+  const { playTrack, togglePlayPause, isPlaying, activeTrack } = useAudio();
   const containerRef = useRef(null);
-  const lastSyncedBgmId = useRef(null);
 
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,26 +71,31 @@ export default function StorybookTab() {
     return stories[clamped];
   }, [stories, sceneIdx]);
 
-  // Sync background music when scene BGM changes (without auto-unpausing if user paused)
-  useEffect(() => {
-    if (!currentStory) return;
-    const bgmId = currentStory.bgmID;
+  // BGM is strictly opt-in: scene tracks are never synced automatically
+  // (each WAV is ~20 MB of billed egress), the pill below plays on click.
+  const sceneTrack = useMemo(() => {
+    if (!currentStory?.bgmID || !currentStory?.bgm_url) return null;
+    return {
+      bgmID: currentStory.bgmID,
+      name: `BGM #${currentStory.bgmID}`,
+      filename: `${currentStory.bgmID}.wav`,
+      url: currentStory.bgm_url,
+    };
+  }, [currentStory?.bgmID, currentStory?.bgm_url]);
 
-    // Only sync if scene BGM actually changed
-    if (lastSyncedBgmId.current === bgmId) {
-      return;
-    }
-    lastSyncedBgmId.current = bgmId;
+  const isSceneBgmActive = !!sceneTrack && (
+    activeTrack?.bgmID === sceneTrack.bgmID ||
+    activeTrack?.filename === sceneTrack.filename
+  );
 
-    if (bgmId && currentStory.bgm_url) {
-      syncStoryBgm({
-        bgmID: bgmId,
-        name: `BGM #${bgmId}`,
-        filename: `${bgmId}.wav`,
-        url: currentStory.bgm_url,
-      }, 'bgm');
+  const handleBgmPill = useCallback(() => {
+    if (!sceneTrack) return;
+    if (isSceneBgmActive) {
+      togglePlayPause();
+    } else {
+      playTrack(sceneTrack, 'bgm');
     }
-  }, [currentStory?.bgmID, currentStory?.bgm_url, syncStoryBgm]);
+  }, [sceneTrack, isSceneBgmActive, togglePlayPause, playTrack]);
 
   // Page navigation handlers
   const nextPage = useCallback(() => {
@@ -314,18 +318,18 @@ export default function StorybookTab() {
                     {currentStory.scenarioID}
                   </span>
                 )}
-                {currentStory?.bgmID > 0 && (
-                  <button 
-                    className={`meta-pill bgm-pill ${isPlaying ? 'playing' : 'paused'}`}
+                {sceneTrack && (
+                  <button
+                    className={`meta-pill bgm-pill ${isSceneBgmActive && isPlaying ? 'playing' : 'paused'}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      togglePlayPause();
+                      handleBgmPill();
                     }}
-                    title={isPlaying ? "Pause Music" : "Play Music"}
+                    title={isSceneBgmActive && isPlaying ? `Pause ${sceneTrack.name}` : `Play ${sceneTrack.name}`}
                     style={{ cursor: 'pointer', border: '1px solid rgba(99, 102, 241, 0.4)' }}
                   >
-                    <i className={`fa-solid ${isPlaying ? 'fa-volume-high' : 'fa-play'}`} style={{ marginRight: 4 }}></i>
-                    BGM #{currentStory.bgmID} {isPlaying ? '' : '(Paused)'}
+                    <i className={`fa-solid ${isSceneBgmActive && isPlaying ? 'fa-volume-high' : 'fa-play'}`} style={{ marginRight: 4 }}></i>
+                    {sceneTrack.name}{isSceneBgmActive && isPlaying ? '' : ' (Paused)'}
                   </button>
                 )}
               </div>
