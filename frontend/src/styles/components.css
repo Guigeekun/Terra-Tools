@@ -395,6 +395,19 @@
     white-space: nowrap;
 }
 
+.trigger-badge.pincer {
+    background-color: rgba(248, 113, 113, 0.1);
+    color: var(--accent-red);
+    white-space: nowrap;
+}
+
+.trigger-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
 .area-badge {
     background-color: rgba(236, 72, 153, 0.08);
     border: 1px solid rgba(236, 72, 153, 0.2);

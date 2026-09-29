@@ -5,6 +5,7 @@ import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
 import SkillIcon from '../shared/SkillIcon';
+import PincerOnlyBadge from '../shared/PincerOnlyBadge';
 
 const SOURCE_OPTIONS = [
   { value: '', label: 'All Sources' },
@@ -19,6 +20,13 @@ const TRIGGER_OPTIONS = [
   { value: 'equip', label: 'Equip (Passive)' },
   { value: 'active', label: 'Triggered (%)' },
   { value: 'tap', label: 'Tap (Charges)' }
+];
+
+// SkillEmitCondition raw values; only Sandwich (1) is a real positional
+// restriction the game hides — the other values are counter descriptions.
+const POSITION_OPTIONS = [
+  { value: '', label: 'All Positions' },
+  { value: '1', label: 'Pincer Only (Close Range)' }
 ];
 
 function SortHeader({ label, sortKey, sort, onSort }) {
@@ -134,6 +142,7 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
   const [element, setElement] = usePersistentState('skills.element', '');
   const [kind, setKind] = usePersistentState('skills.kind', '');
   const [trigger, setTrigger] = usePersistentState('skills.trigger', '');
+  const [position, setPosition] = usePersistentState('skills.position', '');
   const [sort, setSort] = usePersistentState('skills.sort', { key: 'id', dir: 'asc' });
 
   const filters = useMemo(() => ({
@@ -142,9 +151,10 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
     element,
     kind,
     trigger,
+    emit_condition: position,
     sort: sort.key,
     order: sort.dir
-  }), [search, sourceType, element, kind, trigger, sort]);
+  }), [search, sourceType, element, kind, trigger, position, sort]);
 
   const { items: skills, total, isInitialLoading, isFetchingNextPage, sentinelRef, lang } = usePaginatedCategory('skills', filters, 30);
 
@@ -154,7 +164,7 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
       : { key, dir: key === 'sources' || key === 'power' ? 'desc' : 'asc' });
   };
 
-  const hasActiveFilters = search || sourceType || element || kind || trigger || sort.key !== 'id' || sort.dir !== 'asc';
+  const hasActiveFilters = search || sourceType || element || kind || trigger || position || sort.key !== 'id' || sort.dir !== 'asc';
 
   return (
     <div className="tab-content">
@@ -183,13 +193,16 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
           <select value={trigger} onChange={e => setTrigger(e.target.value)}>
             {TRIGGER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+          <select value={position} onChange={e => setPosition(e.target.value)} title="Filter by where the unit must stand for the skill to activate (hidden in-game: 'pincer only' skills never fire from the chain)">
+            {POSITION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
         </div>
       </div>
 
       <div className="results-meta">
         <span><i className="fa-solid fa-wand-magic-sparkles"></i> Showing {skills.length} of {total} skills</span>
         {hasActiveFilters && (
-          <button className="results-reset" onClick={() => { setSearch(''); setSourceType(''); setElement(''); setKind(''); setTrigger(''); setSort({ key: 'id', dir: 'asc' }); }}>
+          <button className="results-reset" onClick={() => { setSearch(''); setSourceType(''); setElement(''); setKind(''); setTrigger(''); setPosition(''); setSort({ key: 'id', dir: 'asc' }); }}>
             <i className="fa-solid fa-rotate-left"></i> Reset
           </button>
         )}
@@ -242,18 +255,21 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
                         </span>
                       </td>
                       <td>
-                        {isTapSkill(skill) ? (
-                          <span
-                            className="badge trigger-badge tap"
-                            title={`Activated by tapping the unit before it moves — ${skill.emitRatio} charge${skill.emitRatio === 1 ? '' : 's'} per battle`}
-                          >
-                            <i className="fa-solid fa-hand-pointer" /> Tap · {skill.emitRatio} {skill.emitRatio === 1 ? 'charge' : 'charges'}
-                          </span>
-                        ) : skill.emitRatio === 0 ? (
-                          <span className="badge trigger-badge equip">Equip</span>
-                        ) : (
-                          <span className="badge trigger-badge active">{skill.emitRatio || 0}%</span>
-                        )}
+                        <div className="trigger-cell">
+                          {isTapSkill(skill) ? (
+                            <span
+                              className="badge trigger-badge tap"
+                              title={`Activated by tapping the unit before it moves — ${skill.emitRatio} charge${skill.emitRatio === 1 ? '' : 's'} per battle`}
+                            >
+                              <i className="fa-solid fa-hand-pointer" /> Tap · {skill.emitRatio} {skill.emitRatio === 1 ? 'charge' : 'charges'}
+                            </span>
+                          ) : skill.emitRatio === 0 ? (
+                            <span className="badge trigger-badge equip">Equip</span>
+                          ) : (
+                            <span className="badge trigger-badge active">{skill.emitRatio || 0}%</span>
+                          )}
+                          <PincerOnlyBadge skill={skill} />
+                        </div>
                       </td>
                       <td>{skill.power ? Number(skill.power.toFixed(2)) : '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>

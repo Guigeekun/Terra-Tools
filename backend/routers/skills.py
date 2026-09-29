@@ -8,9 +8,22 @@ router = APIRouter(tags=["skills"])
 # not a proc percentage.
 TAP_SKILL_KIND = 20
 
+# SkillData `condition` is a SkillEmitCondition (dump.cs): where the unit must
+# stand in the pincer formation for the skill to activate. The game never states
+# it. 0 = None (anywhere, chain included); 1 = Sandwich (only while this unit is
+# one of the two pincering, i.e. adjacent to the target — e.g. Ragnarok vs
+# Grand Ragnarok); 2/3/4 = horizontal/vertical/any pincer counters; the rest are
+# stated in skill descriptions (magic counter, fatal attack, ...).
+EMIT_CONDITION_SANDWICH = 1
+
 
 def _is_tap_skill(skill):
     return skill.get("kind") == TAP_SKILL_KIND
+
+
+def _matches_emit_condition(skill, emit_condition):
+    """emit_condition is the raw SkillEmitCondition value as a string ('' = no filter)."""
+    return emit_condition == "" or str(skill.get("condition", 0)) == str(emit_condition)
 
 # Lazy-built reverse index: skill_id -> {"character": {chr_id: entry}, "buddy": {id: entry}, "enemy": {name: entry}}
 # chr_meta: chr_id -> shared character display metadata (name, rarity, piece artwork)
@@ -149,6 +162,7 @@ def get_skills(
     element: str = "",
     kind: str = "",
     trigger: str = "",
+    emit_condition: str = "",
     sort: str = "id",
     order: str = "asc",
 ):
@@ -156,13 +170,15 @@ def get_skills(
     types = gamedata.get("skills", {}).get("types", [])
     q = search.lower().strip()
 
-    filtering = bool(q or source_type or element or kind or trigger)
+    filtering = bool(q or source_type or element or kind or trigger or emit_condition)
 
     filtered = []
     for idx, skill in enumerate(types):
         if element != "" and str(skill.get("attrib", 0)) != str(element):
             continue
         if kind != "" and str(skill.get("kind", 0)) != str(kind):
+            continue
+        if not _matches_emit_condition(skill, emit_condition):
             continue
         if trigger == "equip" and ((skill.get("emitRatio") or 0) != 0 or _is_tap_skill(skill)):
             continue

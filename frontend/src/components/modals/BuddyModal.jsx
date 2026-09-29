@@ -4,6 +4,7 @@ import { rarityLabels, triggerText } from '../../utils/constants';
 import { useGameData } from '../../contexts/GameDataContext';
 import { useLazyCategory } from '../../hooks/useLazyCategory';
 import SkillIcon from '../shared/SkillIcon';
+import PincerOnlyBadge from '../shared/PincerOnlyBadge';
 
 export default function BuddyModal({ buddy: initialBuddy, buddyId, onClose, onSelectBuddy, onOpenSkill }) {
   const { lang, data } = useGameData();
@@ -108,7 +109,10 @@ export default function BuddyModal({ buddy: initialBuddy, buddyId, onClose, onSe
                         </p>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
-                          <div><span style={{ color: 'var(--text-muted)' }}>Activation:</span> {triggerText(selectedSkill)}</div>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span><span style={{ color: 'var(--text-muted)' }}>Activation:</span> {triggerText(selectedSkill)}</span>
+                            <PincerOnlyBadge skill={selectedSkill} />
+                          </div>
                           <div><span style={{ color: 'var(--text-muted)' }}>Element:</span> {selectedSkill.attrib || 'None'}</div>
                           <div><span style={{ color: 'var(--text-muted)' }}>Area:</span> {loc(selectedSkill.rangePrefixString, lang, 'Self')}</div>
                           {(selectedSkill.power > 0 || selectedSkill.spower > 0) && (

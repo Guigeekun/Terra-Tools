@@ -89,6 +89,21 @@ export const TAP_SKILL_KIND = 20;
 
 export const isTapSkill = (skill) => skill?.kind === TAP_SKILL_KIND;
 
+// SkillEmitCondition enum (SkillData `condition` field): where the unit must
+// stand in the pincer formation for the skill to activate. The game never
+// states this anywhere. 0 = None (anywhere in the chain); 1 = Sandwich (only
+// while this unit is one of the two pincering units, adjacent to the target —
+// why Ragnarok works up close but Grand Ragnarok also fires from the chain).
+// Values 2-14 are counter directions and conditions already stated in the
+// skill descriptions ("counter lateral pincer attacks", ...).
+export const SKILL_EMIT_CONDITION_NONE = 0;
+export const SKILL_EMIT_CONDITION_SANDWICH = 1;
+
+export const isPincerOnlySkill = (skill) => (skill?.condition ?? 0) === SKILL_EMIT_CONDITION_SANDWICH;
+
+export const PINCER_ONLY_TITLE =
+  'Close range only: activates solely when this unit pincers the enemy (adjacent to it) — it never fires from the chain.';
+
 // Skill glyphs extracted to user-data/extracted-gamedata/ui_icons by the pipeline,
 // zero-padded to two digits (iconNo 1 -> skill_icon_01.png, 147 files in total).
 export function skillIconUrl(iconNo) {
