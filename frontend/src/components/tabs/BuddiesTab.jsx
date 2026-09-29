@@ -5,7 +5,7 @@ import { TabSpinner, useLazyCategory } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
 import SkillIcon from '../shared/SkillIcon';
-import PincerOnlyBadge from '../shared/PincerOnlyBadge';
+import PincerInitiatorBadge from '../shared/PincerInitiatorBadge';
 
 export default function BuddiesTab({ onSelectBuddy, initialSearch = '', onOpenSkill }) {
   // Search stays session-local so source-chip navigation (initialSearch) always wins;
@@ -144,11 +144,11 @@ export default function BuddiesTab({ onSelectBuddy, initialSearch = '', onOpenSk
                           title: 'View this skill in the Skills catalog',
                           onClick: (e) => { e.stopPropagation(); onOpenSkill(buddy.skill, data.skills[buddy.skill - 1]); },
                         } : {})}
-                        style={{ color: 'var(--accent-indigo)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                        style={{ color: 'var(--accent-indigo)', display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}
                       >
                         <SkillIcon skill={data.skills[buddy.skill - 1]} size={18} bare title={loc(data.skills[buddy.skill - 1].nameString, lang, '')} />
                         {loc(data.skills[buddy.skill - 1].nameString, lang)} ({triggerText(data.skills[buddy.skill - 1])})
-                        <PincerOnlyBadge skill={data.skills[buddy.skill - 1]} />
+                        <PincerInitiatorBadge skill={data.skills[buddy.skill - 1]} />
                       </span>
                     ) : buddy.skill && !data?.skills ? (
                       <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>

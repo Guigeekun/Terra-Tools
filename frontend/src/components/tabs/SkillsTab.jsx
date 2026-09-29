@@ -5,7 +5,7 @@ import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
 import SkillIcon from '../shared/SkillIcon';
-import PincerOnlyBadge from '../shared/PincerOnlyBadge';
+import PincerInitiatorBadge from '../shared/PincerInitiatorBadge';
 
 const SOURCE_OPTIONS = [
   { value: '', label: 'All Sources' },
@@ -26,7 +26,7 @@ const TRIGGER_OPTIONS = [
 // restriction the game hides — the other values are counter descriptions.
 const POSITION_OPTIONS = [
   { value: '', label: 'All Positions' },
-  { value: '1', label: 'Pincer Only (Close Range)' }
+  { value: '1', label: 'Pincer Initiator Only (Close Range)' }
 ];
 
 function SortHeader({ label, sortKey, sort, onSort }) {
@@ -193,7 +193,7 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
           <select value={trigger} onChange={e => setTrigger(e.target.value)}>
             {TRIGGER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <select value={position} onChange={e => setPosition(e.target.value)} title="Filter by where the unit must stand for the skill to activate (hidden in-game: 'pincer only' skills never fire from the chain)">
+          <select value={position} onChange={e => setPosition(e.target.value)} title="Filter by where the unit must stand for the skill to activate (hidden in-game: 'Pincer Initiator only' skills never fire from the chain)">
             {POSITION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
@@ -268,7 +268,7 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
                           ) : (
                             <span className="badge trigger-badge active">{skill.emitRatio || 0}%</span>
                           )}
-                          <PincerOnlyBadge skill={skill} />
+                          <PincerInitiatorBadge skill={skill} />
                         </div>
                       </td>
                       <td>{skill.power ? Number(skill.power.toFixed(2)) : '—'}</td>

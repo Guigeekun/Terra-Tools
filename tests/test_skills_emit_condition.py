@@ -7,8 +7,8 @@ class TestEmitConditionFilter(unittest.TestCase):
         self.assertTrue(_matches_emit_condition({"condition": 0}, ""))
         self.assertTrue(_matches_emit_condition({"condition": 1}, ""))
 
-    def test_sandwich_matches_pincer_only(self):
-        """Ragnarok's skill: close range (Sandwich) only."""
+    def test_sandwich_matches_pincer_initiator_only(self):
+        """Ragnarok's skill: close range (Sandwich) only, displayed as 'Pincer Initiator only'."""
         self.assertTrue(_matches_emit_condition({"condition": 1}, "1"))
         self.assertFalse(_matches_emit_condition({"condition": 0}, "1"))
 

@@ -99,10 +99,10 @@ export const isTapSkill = (skill) => skill?.kind === TAP_SKILL_KIND;
 export const SKILL_EMIT_CONDITION_NONE = 0;
 export const SKILL_EMIT_CONDITION_SANDWICH = 1;
 
-export const isPincerOnlySkill = (skill) => (skill?.condition ?? 0) === SKILL_EMIT_CONDITION_SANDWICH;
+export const isPincerInitiatorSkill = (skill) => (skill?.condition ?? 0) === SKILL_EMIT_CONDITION_SANDWICH;
 
-export const PINCER_ONLY_TITLE =
-  'Close range only: activates solely when this unit pincers the enemy (adjacent to it) — it never fires from the chain.';
+export const PINCER_INITIATOR_TITLE =
+  'Pincer Initiator only: activates solely while this unit initiates the pincer (adjacent to the enemy) — it never fires from the chain.';
 
 // Skill glyphs extracted to user-data/extracted-gamedata/ui_icons by the pipeline,
 // zero-padded to two digits (iconNo 1 -> skill_icon_01.png, 147 files in total).

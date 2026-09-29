@@ -10,10 +10,11 @@ TAP_SKILL_KIND = 20
 
 # SkillData `condition` is a SkillEmitCondition (dump.cs): where the unit must
 # stand in the pincer formation for the skill to activate. The game never states
-# it. 0 = None (anywhere, chain included); 1 = Sandwich (only while this unit is
-# one of the two pincering, i.e. adjacent to the target — e.g. Ragnarok vs
-# Grand Ragnarok); 2/3/4 = horizontal/vertical/any pincer counters; the rest are
-# stated in skill descriptions (magic counter, fatal attack, ...).
+# it. 0 = None (anywhere, chain included); 1 = Sandwich ("Pincer Initiator only"
+# in the UI — only while this unit is one of the two pincering, i.e. adjacent to
+# the target; e.g. Ragnarok vs Grand Ragnarok); 2/3/4 = horizontal/vertical/any
+# pincer counters; the rest are stated in skill descriptions (magic counter,
+# fatal attack, ...).
 EMIT_CONDITION_SANDWICH = 1
 
 

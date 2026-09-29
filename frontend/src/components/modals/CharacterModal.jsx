@@ -5,7 +5,7 @@ import { useGameData } from '../../contexts/GameDataContext';
 import { useLazyCategory } from '../../hooks/useLazyCategory';
 import LightboxModal from './LightboxModal';
 import SkillIcon from '../shared/SkillIcon';
-import PincerOnlyBadge from '../shared/PincerOnlyBadge';
+import PincerInitiatorBadge from '../shared/PincerInitiatorBadge';
 
 export default function CharacterModal({ character, onClose, onOpenItem, onOpenCharacter, onOpenSkill }) {
   const { lang, data } = useGameData();
@@ -256,7 +256,7 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
                                   </div>
                                   <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                     Trigger: {triggerText(skill)}
-                                    <PincerOnlyBadge skill={skill} />
+                                    <PincerInitiatorBadge skill={skill} />
                                   </span>
                                   <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>{loc(skill.descString, lang)}</p>
                                 </div>
