@@ -7,9 +7,8 @@ import { loc } from '../../utils/localization';
 
 export default function StorybookTab() {
   const { lang, data } = useGameData();
-  const { syncStoryBgm, togglePlayPause, isPlaying } = useAudio();
+  const { playTrack, queueTrack, togglePlayPause, openFloatingPlayer, isPlaying, activeTrack } = useAudio();
   const containerRef = useRef(null);
-  const lastSyncedBgmId = useRef(null);
 
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,26 +71,42 @@ export default function StorybookTab() {
     return stories[clamped];
   }, [stories, sceneIdx]);
 
-  // Sync background music when scene BGM changes (without auto-unpausing if user paused)
+  // BGM is strictly opt-in: scene tracks are never auto-played (each WAV is
+  // ~20 MB of billed egress). The scene's track is queued as metadata only so
+  // the corner player always shows the correct music; audio downloads only
+  // when the user presses play.
+  const sceneTrack = useMemo(() => {
+    if (!currentStory?.bgmID || !currentStory?.bgm_url) return null;
+    return {
+      bgmID: currentStory.bgmID,
+      name: `BGM #${currentStory.bgmID}`,
+      filename: `${currentStory.bgmID}.wav`,
+      url: currentStory.bgm_url,
+    };
+  }, [currentStory?.bgmID, currentStory?.bgm_url]);
+
+  const isSceneBgmActive = !!sceneTrack && (
+    activeTrack?.bgmID === sceneTrack.bgmID ||
+    activeTrack?.filename === sceneTrack.filename
+  );
+
   useEffect(() => {
-    if (!currentStory) return;
-    const bgmId = currentStory.bgmID;
+    if (!sceneTrack) return;
+    if (isSceneBgmActive) return;
+    queueTrack(sceneTrack, 'bgm');
+  }, [sceneTrack, isSceneBgmActive, queueTrack]);
 
-    // Only sync if scene BGM actually changed
-    if (lastSyncedBgmId.current === bgmId) {
-      return;
+  const handleBgmPill = useCallback(() => {
+    if (!sceneTrack) return;
+    if (isSceneBgmActive && isPlaying) {
+      togglePlayPause(); // pause
+    } else if (isSceneBgmActive) {
+      openFloatingPlayer(); // resume the already-loaded track where it was
+      togglePlayPause();
+    } else {
+      playTrack(sceneTrack, 'bgm'); // load + play + open the player
     }
-    lastSyncedBgmId.current = bgmId;
-
-    if (bgmId && currentStory.bgm_url) {
-      syncStoryBgm({
-        bgmID: bgmId,
-        name: `BGM #${bgmId}`,
-        filename: `${bgmId}.wav`,
-        url: currentStory.bgm_url,
-      }, 'bgm');
-    }
-  }, [currentStory?.bgmID, currentStory?.bgm_url, syncStoryBgm]);
+  }, [sceneTrack, isSceneBgmActive, isPlaying, togglePlayPause, openFloatingPlayer, playTrack]);
 
   // Page navigation handlers
   const nextPage = useCallback(() => {
@@ -314,18 +329,18 @@ export default function StorybookTab() {
                     {currentStory.scenarioID}
                   </span>
                 )}
-                {currentStory?.bgmID > 0 && (
-                  <button 
-                    className={`meta-pill bgm-pill ${isPlaying ? 'playing' : 'paused'}`}
+                {sceneTrack && (
+                  <button
+                    className={`meta-pill bgm-pill ${isSceneBgmActive && isPlaying ? 'playing' : 'paused'}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      togglePlayPause();
+                      handleBgmPill();
                     }}
-                    title={isPlaying ? "Pause Music" : "Play Music"}
+                    title={isSceneBgmActive && isPlaying ? `Pause ${sceneTrack.name}` : `Play ${sceneTrack.name}`}
                     style={{ cursor: 'pointer', border: '1px solid rgba(99, 102, 241, 0.4)' }}
                   >
-                    <i className={`fa-solid ${isPlaying ? 'fa-volume-high' : 'fa-play'}`} style={{ marginRight: 4 }}></i>
-                    BGM #{currentStory.bgmID} {isPlaying ? '' : '(Paused)'}
+                    <i className={`fa-solid ${isSceneBgmActive && isPlaying ? 'fa-volume-high' : 'fa-play'}`} style={{ marginRight: 4 }}></i>
+                    {sceneTrack.name}{isSceneBgmActive && isPlaying ? '' : ' (Paused)'}
                   </button>
                 )}
               </div>

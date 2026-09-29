@@ -6,6 +6,9 @@ export function AudioProvider({ children }) {
   const [activeTrack, setActiveTrack] = useState(null);
   const [playlistCategory, setPlaylistCategory] = useState('bgm'); // 'bgm' or 'se'
   const [isPlaying, setIsPlaying] = useState(false);
+  // False while activeTrack is metadata-only (shown in the player but never
+  // downloaded); true once an <audio src> has actually been set for it.
+  const [isTrackLoaded, setIsTrackLoaded] = useState(false);
   const [userPaused, setUserPaused] = useState(false);
   const userPausedRef = useRef(false);
 
@@ -46,65 +49,55 @@ export function AudioProvider({ children }) {
   const handlePlay = () => setIsPlaying(true);
   const handlePause = () => setIsPlaying(false);
 
-  // Explicit user action to play a track
+  // Actually set <audio src> and play. Only ever called from a user action:
+  // BGM WAVs are ~20 MB each and egress is billed per GB.
+  const startTrack = useCallback((track, category = 'bgm') => {
+    if (!audioRef.current || !track) return;
+
+    const catLower = (category || 'bgm').toLowerCase();
+    const src = track.url || `/api/play/${catLower}/${track.filename}`;
+
+    userPausedRef.current = false;
+    setUserPaused(false);
+    setIsTrackLoaded(true);
+
+    audioRef.current.loop = (catLower === 'bgm');
+    audioRef.current.src = src;
+    audioRef.current.play().then(() => {
+      setIsPlaying(true);
+    }).catch(e => console.error('Audio play error:', e));
+  }, []);
+
+  // Explicit user action: set the track and start playing it right away.
   const playTrack = useCallback((track, category = 'bgm') => {
     if (!track) return;
 
     const catLower = (category || 'bgm').toLowerCase();
-    const src = track.url || `/api/play/${catLower}/${track.filename}`;
-
-    // User explicitly triggered play
-    userPausedRef.current = false;
-    setUserPaused(false);
-
     setActiveTrack({ ...track, category: catLower });
     setPlaylistCategory(catLower);
     setIsFloatingOpen(true);
 
-    if (audioRef.current) {
-      audioRef.current.loop = (catLower === 'bgm');
-      audioRef.current.src = src;
-      audioRef.current.play().then(() => {
-        setIsPlaying(true);
-      }).catch(e => console.error('Audio play error:', e));
-    }
-  }, []);
+    startTrack(track, catLower);
+  }, [startTrack]);
 
-  // Sync BGM for Storybook without unpausing if user manually paused
-  const syncStoryBgm = useCallback((track, category = 'bgm') => {
+  // Show a track in the player without downloading it. Used by the storybook
+  // to keep the corner player pointing at the current scene's BGM; audio
+  // loads only when the user presses play.
+  const queueTrack = useCallback((track, category = 'bgm') => {
     if (!track) return;
 
     const catLower = (category || 'bgm').toLowerCase();
-    const src = track.url || `/api/play/${catLower}/${track.filename}`;
-
     setActiveTrack({ ...track, category: catLower });
     setPlaylistCategory(catLower);
+    setIsPlaying(false);
+    setUserPaused(false);
+    userPausedRef.current = false;
+    setIsTrackLoaded(false);
+    setCurrentTime(0);
+    setDuration(0);
 
-    if (audioRef.current) {
-      audioRef.current.loop = (catLower === 'bgm');
-
-      const currentSrc = audioRef.current.currentSrc || audioRef.current.src;
-      const isSameSrc = currentSrc && (currentSrc.endsWith(src) || currentSrc === src);
-
-      if (!isSameSrc) {
-        audioRef.current.src = src;
-      }
-
-      // CRITICAL: If the user paused the music, NEVER unpause by itself!
-      if (userPausedRef.current) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-        return;
-      }
-
-      // User has not paused, so play new scene track
-      if (!isSameSrc || audioRef.current.paused) {
-        audioRef.current.play().then(() => {
-          setIsPlaying(true);
-        }).catch(e => {
-          console.warn('Autoplay prevented or waiting for interaction:', e);
-        });
-      }
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
     }
   }, []);
 
@@ -117,6 +110,9 @@ export function AudioProvider({ children }) {
       setUserPaused(true);
       audioRef.current.pause();
       setIsPlaying(false);
+    } else if (!isTrackLoaded) {
+      // Metadata-only track: pressing play is what starts the download
+      startTrack(activeTrack, activeTrack.category);
     } else {
       // User explicitly resumed
       userPausedRef.current = false;
@@ -125,14 +121,14 @@ export function AudioProvider({ children }) {
         setIsPlaying(true);
       }).catch(e => console.error('Audio play error:', e));
     }
-  }, [isPlaying, activeTrack]);
+  }, [isPlaying, activeTrack, isTrackLoaded, startTrack]);
 
   const seek = useCallback((timeInSeconds) => {
-    if (audioRef.current) {
+    if (audioRef.current && isTrackLoaded) {
       audioRef.current.currentTime = timeInSeconds;
       setCurrentTime(timeInSeconds);
     }
-  }, []);
+  }, [isTrackLoaded]);
 
   const setVolume = useCallback((val) => {
     const clamped = Math.max(0, Math.min(1, val));
@@ -154,6 +150,7 @@ export function AudioProvider({ children }) {
       audioRef.current.currentTime = 0;
     }
     setIsPlaying(false);
+    setIsTrackLoaded(false);
     setActiveTrack(null);
     setCurrentTime(0);
     setDuration(0);
@@ -185,7 +182,7 @@ export function AudioProvider({ children }) {
         isMinimized,
         isFloatingOpen,
         playTrack,
-        syncStoryBgm,
+        queueTrack,
         togglePlayPause,
         seek,
         setVolume,
