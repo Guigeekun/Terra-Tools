@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { loc } from '../../utils/localization';
 import { rarityLabels, rarityShortLabels, speciesTranslations, weaponMeta, elementMeta } from '../../utils/constants';
 import JobBadge from '../shared/JobBadge';
@@ -8,8 +8,10 @@ import { usePersistentState } from '../../hooks/usePersistentState';
 
 export default function CharactersTab({ onSelectCharacter, initialSearch = '' }) {
   // Search stays session-local so source-chip navigation (initialSearch) always wins;
-  // dropdown filters persist in localStorage across sessions.
+  // dropdown filters persist in localStorage across sessions. The URL is the
+  // exception: back/forward through '?q=' entries re-applies the search.
   const [search, setSearch] = useState(initialSearch);
+  useEffect(() => { setSearch(initialSearch); }, [initialSearch]);
   const [species, setSpecies] = usePersistentState('characters.species', '');
   const [rarity, setRarity] = usePersistentState('characters.rarity', '');
   const [weapon, setWeapon] = usePersistentState('characters.weapon', '');

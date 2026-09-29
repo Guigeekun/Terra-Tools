@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { loc } from '../../utils/localization';
 import { rarityLabels, triggerText } from '../../utils/constants';
 import { TabSpinner, useLazyCategory } from '../../hooks/useLazyCategory';
@@ -8,8 +8,10 @@ import SkillIcon from '../shared/SkillIcon';
 
 export default function BuddiesTab({ onSelectBuddy, initialSearch = '', onOpenSkill }) {
   // Search stays session-local so source-chip navigation (initialSearch) always wins;
-  // dropdown filters persist in localStorage across sessions.
+  // dropdown filters persist in localStorage across sessions. The URL is the
+  // exception: back/forward through '?q=' entries re-applies the search.
   const [search, setSearch] = useState(initialSearch);
+  useEffect(() => { setSearch(initialSearch); }, [initialSearch]);
   const [rarity, setRarity] = usePersistentState('buddies.rarity', '');
   const [selectedBuddy, setSelectedBuddy] = useState(null);
 
