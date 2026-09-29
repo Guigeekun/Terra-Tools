@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GameDataProvider, useGameData } from './contexts/GameDataContext';
 import { AudioProvider } from './contexts/AudioContext';
+import { navigate, tabHash, useHashRoute } from './router';
+import { TAB_KEYS } from './utils/constants';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import LoadingOverlay from './components/layout/LoadingOverlay';
@@ -24,87 +26,126 @@ import { fetchCharacter } from './api';
 
 function AppContent() {
   const { loading } = useGameData();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const route = useHashRoute();
+  const activeTab = TAB_KEYS.includes(route.tab) ? route.tab : 'dashboard';
+  const params = route.params;
+  // Modal ids arrive as strings in the URL; the modals' fetch paths want numbers.
+  const numericParam = (value) =>
+    value != null && /^\d+$/.test(value) ? Number(value) : (value ?? null);
+  const charParam = params.char;
+  const itemParam = numericParam(params.item);
+  const buddyParam = numericParam(params.buddy);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  const [selectedCharacter, setSelectedCharacter] = useState(null);
-  const [selectedItemId, setSelectedItemId] = useState(null);
-  const [selectedBuddy, setSelectedBuddy] = useState(null);
+  // Tab navigation is a push: the back button walks back through visited tabs.
+  const handleTabChange = (tab) => navigate(tabHash(tab));
 
-  // Cross-tab navigation from source chips: { tab, search } consumed as the target tab's initial search
-  const [sourceSearch, setSourceSearch] = useState(null);
-
-  const openSourceTab = (tab, search) => {
-    setSourceSearch({ tab, search });
-    setActiveTab(tab);
-  };
-
-  // Skill mentions (modals, companion cards) jump to the Skills catalog pre-filtered
-  // to that skill. Search keys off the English name (backend-searchable in any UI
-  // language); unnamed skills fall back to their 1-based ID.
+  // Cross-tab navigation from skill/source chips: '?q=' pre-fills the target
+  // tab's search. Search keys off the English name (backend-searchable in any
+  // UI language); unnamed skills fall back to their 1-based ID.
+  const openSourceTab = (tab, search) => navigate(tabHash(tab, search ? { q: search } : {}));
   const openSkillTab = (skillId, skill) => {
     const name = skill?.nameString?.en?.trim();
     openSourceTab('skills', name || String(skillId || ''));
   };
 
-  // Open a character modal by game-data ID (recode targets / recode material units)
-  const openCharacterById = (charId) => {
-    fetchCharacter(charId).then(setSelectedCharacter).catch(e => console.error('Error fetching character:', e));
+  // Modal selection lives in the URL as ?char= / ?item= / ?buddy= on the
+  // active tab, so opening one pushes a history entry: Back closes the
+  // topmost modal (and walks chained modals step by step), and a copied URL
+  // restores the exact view, modals included.
+  const pushedModalRef = useRef(false);
+  const openModal = (extra) => {
+    pushedModalRef.current = true;
+    navigate(tabHash(activeTab, { ...params, ...extra }));
   };
-
-  const handleTabChange = (tab) => {
-    setSourceSearch(null);
-    setActiveTab(tab);
-    // Docs reflect their state in the hash; other tabs clear it so a stale
-    // deep link doesn't resurrect the Docs tab on the next reload.
-    if (tab !== 'docs') {
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  const closeModal = (key) => {
+    if (pushedModalRef.current) {
+      window.history.back(); // the hashchange updates the route
+    } else {
+      // Modal reached via a pasted URL (nothing of ours to go back to):
+      // rewrite the current entry without it.
+      const rest = { ...params };
+      delete rest[key];
+      navigate(tabHash(activeTab, rest), { replace: true });
     }
   };
-
-  // Deep links: '#/docs/...' (or '#/docs') opens the Docs tab directly, so a
-  // URL copied from a doc can be pasted anywhere.
+  // The flag only tracks "we pushed this modal"; once no modal is on screen
+  // (closed via Back, or navigated away) the next open must push again.
   useEffect(() => {
-    const applyHash = () => {
-      if (window.location.hash.startsWith('#/docs')) {
-        setActiveTab('docs');
-      }
-    };
-    applyHash();
-    window.addEventListener('hashchange', applyHash);
-    return () => window.removeEventListener('hashchange', applyHash);
-  }, []);
+    if (charParam == null && itemParam == null && buddyParam == null) pushedModalRef.current = false;
+  }, [charParam, itemParam, buddyParam]);
+
+  // Character modals need the full character object: list clicks seed the
+  // cache, anything else (deep links, recode chains) is fetched by ID.
+  const [selectedCharacter, setSelectedCharacter] = useState(null);
+  const characterCacheRef = useRef(new Map());
+
+  useEffect(() => {
+    if (charParam == null) {
+      setSelectedCharacter(null);
+      return;
+    }
+    const cached = characterCacheRef.current.get(charParam);
+    if (cached) {
+      setSelectedCharacter(cached);
+      return;
+    }
+    let cancelled = false;
+    fetchCharacter(charParam)
+      .then(character => {
+        if (cancelled) return;
+        characterCacheRef.current.set(charParam, character);
+        setSelectedCharacter(character);
+      })
+      .catch(e => console.error('Error fetching character:', e));
+    return () => { cancelled = true; };
+  }, [charParam]);
+
+  const openCharacterById = (charId) => openModal({ char: String(charId) });
+  // List clicks already hold the full object — cache it so the modal renders
+  // without waiting for the by-ID fetch that deep links need.
+  const openCharacter = (character) => {
+    if (character?.ID != null) characterCacheRef.current.set(String(character.ID), character);
+    openCharacterById(character?.ID ?? character);
+  };
+
+  const openItem = (itemId) => openModal({ item: String(itemId) });
+
+  const openBuddy = (buddy) => {
+    const id = typeof buddy === 'object' ? (buddy?.ID ?? buddy?.id) : buddy;
+    if (id == null) return;
+    openModal({ buddy: String(id) });
+  };
 
   return (
     <>
       {loading && <LoadingOverlay />}
       <div className="app-container">
         {mobileSidebarOpen && (
-          <div 
-            className="sidebar-backdrop active" 
+          <div
+            className="sidebar-backdrop active"
             onClick={() => setMobileSidebarOpen(false)}
             aria-hidden="true"
           />
         )}
         <Sidebar
           activeTab={activeTab}
-          onTabChange={handleTabChange}
           isOpen={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
         />
         <main className="app-main">
-          <Header 
-            activeTab={activeTab} 
+          <Header
+            activeTab={activeTab}
             onToggleSidebar={() => setMobileSidebarOpen(prev => !prev)}
           />
           <div className="content-container">
             {activeTab === 'dashboard' && <DashboardTab onTabChange={handleTabChange} />}
             {activeTab === 'storybook' && <StorybookTab />}
-            {activeTab === 'characters' && <CharactersTab onSelectCharacter={setSelectedCharacter} initialSearch={sourceSearch?.tab === 'characters' ? sourceSearch.search : ''} />}
-            {activeTab === 'buddies' && <BuddiesTab onSelectBuddy={setSelectedBuddy} initialSearch={sourceSearch?.tab === 'buddies' ? sourceSearch.search : ''} onOpenSkill={openSkillTab} />}
-            {activeTab === 'skills' && <SkillsTab onOpenSource={openSourceTab} initialSearch={sourceSearch?.tab === 'skills' ? sourceSearch.search : ''} />}
-            {activeTab === 'items' && <ItemsTab onSelectItem={setSelectedItemId} />}
-            {activeTab === 'stages' && <StagesTab onSelectItem={setSelectedItemId} onSelectBuddy={setSelectedBuddy} />}
+            {activeTab === 'characters' && <CharactersTab onSelectCharacter={openCharacter} initialSearch={params.q ?? ''} />}
+            {activeTab === 'buddies' && <BuddiesTab onSelectBuddy={openBuddy} initialSearch={params.q ?? ''} onOpenSkill={openSkillTab} />}
+            {activeTab === 'skills' && <SkillsTab onOpenSource={openSourceTab} initialSearch={params.q ?? ''} />}
+            {activeTab === 'items' && <ItemsTab onSelectItem={openItem} />}
+            {activeTab === 'stages' && <StagesTab onSelectItem={openItem} onSelectBuddy={openBuddy} />}
             {activeTab === 'audio' && <AudioTab />}
             {activeTab === 'saveEditor' && <SaveConverterTab />}
             {activeTab === 'docs' && <DocsTab />}
@@ -112,34 +153,33 @@ function AppContent() {
         </main>
       </div>
 
-      <FloatingAudioPlayer 
-        activeTab={activeTab} 
-        onNavigateToAudio={() => setActiveTab('audio')} 
+      <FloatingAudioPlayer
+        activeTab={activeTab}
+        onNavigateToAudio={() => handleTabChange('audio')}
       />
 
       {selectedCharacter && (
         <CharacterModal
           key={selectedCharacter.ID}
           character={selectedCharacter}
-          onClose={() => setSelectedCharacter(null)}
-          onOpenItem={(id) => setSelectedItemId(id)}
+          onClose={() => closeModal('char')}
+          onOpenItem={openItem}
           onOpenCharacter={openCharacterById}
-          onOpenSkill={(id, skill) => { setSelectedCharacter(null); openSkillTab(id, skill); }}
+          onOpenSkill={openSkillTab}
         />
       )}
-      {selectedItemId && (
-        <ItemModal 
-          itemId={selectedItemId} 
-          onClose={() => setSelectedItemId(null)} 
+      {itemParam != null && (
+        <ItemModal
+          itemId={itemParam}
+          onClose={() => closeModal('item')}
         />
       )}
-      {selectedBuddy && (
+      {buddyParam != null && (
         <BuddyModal
-          buddy={typeof selectedBuddy === 'object' ? selectedBuddy : null}
-          buddyId={typeof selectedBuddy === 'number' || typeof selectedBuddy === 'string' ? selectedBuddy : (selectedBuddy?.ID || selectedBuddy?.id)}
-          onClose={() => setSelectedBuddy(null)}
-          onSelectBuddy={setSelectedBuddy}
-          onOpenSkill={(id, skill) => { setSelectedBuddy(null); openSkillTab(id, skill); }}
+          buddyId={buddyParam}
+          onClose={() => closeModal('buddy')}
+          onSelectBuddy={openBuddy}
+          onOpenSkill={openSkillTab}
         />
       )}
     </>
@@ -147,6 +187,12 @@ function AppContent() {
 }
 
 export default function App() {
+  // Make the default view addressable so the URL is always a shareable state
+  // snapshot (a bare '/' becomes '#/dashboard' without a history entry).
+  useEffect(() => {
+    if (!window.location.hash) navigate('#/dashboard', { replace: true });
+  }, []);
+
   return (
     <GameDataProvider>
       <AudioProvider>
@@ -155,4 +201,3 @@ export default function App() {
     </GameDataProvider>
   );
 }
-

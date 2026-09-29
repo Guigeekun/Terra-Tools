@@ -1,11 +1,9 @@
 import { TAB_META, TAB_KEYS } from '../../utils/constants';
 
-export default function Sidebar({ activeTab, onTabChange, isOpen, onClose }) {
-  const handleNavClick = (key) => {
-    onTabChange(key);
-    if (onClose) onClose();
-  };
-
+// Plain hash links (no preventDefault): navigation goes through the router's
+// hashchange listener, and middle-click / "open in new tab" yield a working
+// deep link into that tab.
+export default function Sidebar({ activeTab, isOpen, onClose }) {
   return (
     <aside className={`app-sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-brand">
@@ -15,8 +13,8 @@ export default function Sidebar({ activeTab, onTabChange, isOpen, onClose }) {
           <span>Data Visualizer</span>
         </div>
         {onClose && (
-          <button 
-            className="sidebar-close-btn" 
+          <button
+            className="sidebar-close-btn"
             onClick={onClose}
             aria-label="Close menu"
             title="Close Menu"
@@ -30,9 +28,9 @@ export default function Sidebar({ activeTab, onTabChange, isOpen, onClose }) {
         {TAB_KEYS.map(key => (
           <a
             key={key}
-            href={`#${key}`}
+            href={`#/${key}`}
             className={`nav-item ${activeTab === key ? 'active' : ''}`}
-            onClick={e => { e.preventDefault(); handleNavClick(key); }}
+            onClick={() => { if (onClose) onClose(); }}
           >
             <i className={`fa-solid ${TAB_META[key].icon}`}></i>
             <span>{TAB_META[key].label}</span>
