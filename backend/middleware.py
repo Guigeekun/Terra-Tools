@@ -47,10 +47,12 @@ GZIP_EXCLUDED_PATHS = (
 
 
 class CacheControlMiddleware:
-    """Attach a Cache-Control policy to successful GET/HEAD responses.
+    """Attach a Cache-Control policy to successful cacheable GET/HEAD responses.
 
-    Responses that already carry Cache-Control (e.g. the no-cache SPA entry
-    point) are left untouched.
+    Covers 200 bodies, 206 range partials (audio scrubbing streams via
+    ranges — without a policy those would fall back to heuristic freshness)
+    and 304 revalidation answers.  Responses that already carry Cache-Control
+    (e.g. the no-cache SPA entry point) are left untouched.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -65,7 +67,7 @@ class CacheControlMiddleware:
         policy = next((value for prefix, value in CACHE_RULES if path.startswith(prefix)), None)
 
         async def send_with_cache_control(message: Message) -> None:
-            if message["type"] == "http.response.start" and policy and message["status"] == 200:
+            if message["type"] == "http.response.start" and policy and message["status"] in (200, 206, 304):
                 headers = dict((k.decode("latin-1"), v.decode("latin-1")) for k, v in message["headers"])
                 if "cache-control" not in headers:
                     message["headers"] = [

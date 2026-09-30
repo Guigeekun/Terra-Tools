@@ -31,11 +31,14 @@ def build_media_indices():
 
     bgm_dir = os.path.join(EXTRACTED_DIR, "BGM")
     if os.path.exists(bgm_dir):
+        # MP3 (transcoded) preferred; WAV kept as the fallback format.
+        candidates: dict[int, str] = {}
         for f in os.listdir(bgm_dir):
-            if f.endswith(".wav"):
+            if f.endswith((".mp3", ".wav")):
                 m = _re.search(r"bgm_?(\d+)", f, _re.IGNORECASE)
                 if m:
-                    BGM_MAP[int(m.group(1))] = f
+                    candidates.setdefault(int(m.group(1)), f)
+        BGM_MAP.update(candidates)
 
     banner_dir = os.path.join(EXTRACTED_DIR, "Banner")
     if os.path.exists(banner_dir):

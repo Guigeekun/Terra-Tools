@@ -80,7 +80,7 @@ export default function StorybookTab() {
     return {
       bgmID: currentStory.bgmID,
       name: `BGM #${currentStory.bgmID}`,
-      filename: `${currentStory.bgmID}.wav`,
+      filename: `${currentStory.bgmID}.mp3`,
       url: currentStory.bgm_url,
     };
   }, [currentStory?.bgmID, currentStory?.bgm_url]);
