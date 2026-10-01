@@ -7,6 +7,7 @@ Requires:
     - UnityPy >= 1.25.2
     - TypeTreeGeneratorAPI >= 0.0.10
     - capstone (for IL2CPP disassembly)
+    - lameenc (audio is encoded straight to MP3; see transcode_audio_to_mp3.py)
 """
 
 from __future__ import annotations
@@ -38,6 +39,8 @@ import shutil
 import struct
 import tempfile
 import traceback
+
+from transcode_audio_to_mp3 import wav_bytes_to_mp3
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -614,26 +617,27 @@ def extract_images_from_dir(category: str, input_dir: Path, output_dir: Path, in
     print(f"  Successfully extracted {count} images in {category}")
 
 
-def extract_audio_from_dir(category: str, input_dir: Path, output_dir: Path, inverse_table: bytes) -> None:
+def extract_audio_from_dir(category: str, input_dir: Path, output_dir: Path, inverse_table: bytes,
+                           bitrate_kbps: int = 192) -> None:
     cat_in_dir = input_dir / category
     if not cat_in_dir.exists():
         print(f"  Directory not found: {cat_in_dir}")
         return
-        
+
     cat_out_dir = output_dir / category
     cat_out_dir.mkdir(parents=True, exist_ok=True)
-    
+
     bin_files = list(cat_in_dir.glob("*.bin"))
     if not bin_files:
         return
-        
-    print(f"  Extracting {len(bin_files)} audio clips from {category}...")
+
+    print(f"  Extracting {len(bin_files)} audio clips from {category} (MP3 @ {bitrate_kbps} kbps)...")
     count = 0
     for f in bin_files:
         try:
             file_bytes = f.read_bytes()
             decrypted_bytes = decrypt_enca(file_bytes, inverse_table)
-            
+
             env = UnityPy.load(decrypted_bytes)
             extracted = False
             for obj in env.objects:
@@ -642,9 +646,17 @@ def extract_audio_from_dir(category: str, input_dir: Path, output_dir: Path, inv
                     if clip.samples:
                         wav_name = next(iter(clip.samples.keys()))
                         wav_bytes = clip.samples[wav_name]
-                        
-                        out_path = cat_out_dir / f"{f.stem}.wav"
-                        out_path.write_bytes(wav_bytes)
+
+                        try:
+                            mp3_bytes = wav_bytes_to_mp3(wav_bytes, bitrate_kbps)
+                            out_path = cat_out_dir / f"{f.stem}.mp3"
+                            out_path.write_bytes(mp3_bytes)
+                        except ValueError as e:
+                            # Clip outside what LAME accepts: keep the WAV so
+                            # the audio endpoints still serve something.
+                            print(f"    Keeping WAV for {f.name}: {e}")
+                            out_path = cat_out_dir / f"{f.stem}.wav"
+                            out_path.write_bytes(wav_bytes)
                         extracted = True
                         count += 1
                         break
@@ -652,7 +664,7 @@ def extract_audio_from_dir(category: str, input_dir: Path, output_dir: Path, inv
                 print(f"    No AudioClip found in {f.name}")
         except Exception as e:
             print(f"    Failed to extract audio {f.name}: {e}")
-            
+
     print(f"  Successfully extracted {count} audio clips in {category}")
 
 
@@ -853,8 +865,9 @@ def main() -> int:
         # Step 5d: Extract audio from local android bundles
         print("  Extracting audio from local Android asset bundles...")
         if android_dir.exists():
-            for category in ("BGM", "SE"):
-                extract_audio_from_dir(category, android_dir, output_dir, inverse_table)
+            for category, bitrate in (("BGM", 192), ("SE", 128)):
+                extract_audio_from_dir(category, android_dir, output_dir, inverse_table,
+                                       bitrate_kbps=bitrate)
         print()
 
     finally:
