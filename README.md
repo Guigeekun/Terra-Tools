@@ -281,7 +281,7 @@ docker compose up -d
 * Logs are the container stdout (JSON access logs in the deployed image), auto-multi-line detected and tagged `source:python`, `service:terra-tools`. On the Render deployment there is no agent container (Render bills per container and its sandbox forbids the socket mounts): logs flow through Render's Datadog log stream instead, configured in the Render dashboard.
 * Intake site defaults to `datadoghq.eu`; override with `DD_SITE`.
 
-**Frontend telemetry (RUM)** is agent-free: `@datadog/browser-rum` reports views, JS errors, resource timing, user actions and long tasks straight from visitors' browsers. Each hash-router tab is a RUM view; render errors are caught by an error boundary. Values live in [`frontend/.env.production`](frontend/.env.production) (template: [`frontend/.env.example`](frontend/.env.example)) and are baked into production builds only — `npm run dev` stays telemetry-free.
+**Frontend telemetry (RUM)** is agent-free: `@datadog/browser-rum` reports views, JS errors, resource timing, user actions and long tasks straight from visitors' browsers. Each hash-router tab is a RUM view; render errors are caught by an error boundary. Values live in [`frontend/.env.production`](frontend/.env.production) (template: [`frontend/.env.example`](frontend/.env.example)) and are baked into production builds only — `npm run dev` stays telemetry-free. The SDK is fail-safe: a refused Datadog org (e.g. an expired trial) just drops events and never affects the app, and `VITE_DD_RUM_ENABLED=false` ships a build without the SDK entirely.
 
 ### Without Docker (local Python)
 
