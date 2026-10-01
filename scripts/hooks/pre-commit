@@ -1,0 +1,23 @@
+#!/bin/sh
+# Pull-only guard for the primary worktree.
+# Install: cp scripts/hooks/pre-commit .git/hooks/pre-commit
+#
+# Rejects commits on main in the primary worktree; feature work belongs in
+# linked worktrees created with scripts/new-worktree.sh.
+
+branch=$(git symbolic-ref --short -q HEAD) || exit 0
+[ "$branch" = "main" ] || exit 0
+
+git_dir=$(git rev-parse --absolute-git-dir)
+common_dir=$(git rev-parse --git-common-dir)
+case "$common_dir" in
+  /*) ;;
+  *) common_dir="$(git rev-parse --show-toplevel)/$common_dir" ;;
+esac
+
+if [ "$git_dir" = "$common_dir" ]; then
+  echo "main is pull-only in the primary worktree." >&2
+  echo "Derive a worktree instead: scripts/new-worktree.sh <topic>" >&2
+  exit 1
+fi
+exit 0
