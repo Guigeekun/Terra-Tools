@@ -15,6 +15,10 @@ import { reactPlugin } from '@datadog/browser-rum-react';
 const rum = initRum();
 
 function initRum() {
+    // Telemetry is for the deployed site only: never initialize outside a
+    // production build, whatever env files a developer has locally.
+    if (import.meta.env.MODE !== 'production') return null;
+
     // Ship-without-RUM kill switch, e.g. while the Datadog trial is paused.
     if (['false', '0'].includes(import.meta.env.VITE_DD_RUM_ENABLED)) return null;
 
