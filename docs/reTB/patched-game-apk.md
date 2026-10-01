@@ -140,6 +140,14 @@ adb logcat -d -b all > session.txt
 grep -E "WebViewFactory|Fatal signal" session.txt
 ```
 
+## Soak-testing memory
+
+If you run a memory soak to check the patched build for leaks, let WebView
+finish its initial memory allocation before starting the soak — otherwise
+the startup spike looks like a leak. Launch the game, give it a few minutes
+to settle, and record from that baseline (e.g. `adb shell dumpsys meminfo
+<package>`), not from the moment of launch.
+
 ## If a future WebView update breaks it again
 
 The crash always has the same fingerprint, and the log tells you the culprit
