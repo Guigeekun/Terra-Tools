@@ -5,6 +5,7 @@ const endpoints = {
   skills:     '/api/skills',
   stages:     '/api/stages',
   chapters:   '/api/chapters',
+  enemies:    '/api/enemies',
   strings:    '/api/strings',
   audio:      '/api/audio',
 };
@@ -62,6 +63,18 @@ export async function fetchItemDetails(itemId) {
 export async function fetchCharacter(charId) {
   const res = await fetch(`/api/characters/${charId}`);
   if (!res.ok) throw new Error(`Failed to fetch character ${charId}`);
+  return res.json();
+}
+
+export async function fetchEnemy(enemyId) {
+  const res = await fetch(`/api/enemies/${enemyId}`);
+  if (!res.ok) throw new Error(`Failed to fetch enemy ${enemyId}`);
+  return res.json();
+}
+
+export async function fetchStageChapter(chapterNo) {
+  const res = await fetch(`/api/stages/chapter/${chapterNo}`);
+  if (!res.ok) throw new Error(`Failed to fetch chapter ${chapterNo}`);
   return res.json();
 }
 

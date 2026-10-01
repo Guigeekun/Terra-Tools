@@ -21,7 +21,8 @@ def get_stats():
     item_count = len(gamedata.get("items", {}).get("itemSet", []))
     skill_count = len(gamedata.get("skills", {}).get("types", []))
     stage_count = len(gamedata.get("stages", {}).get("chapters", []))
-    
+    enemy_count = len(gamedata.get("enemies", {}).get("data", []))
+
     bgm_count = 0
     se_count = 0
     bgm_dir = os.path.join(EXTRACTED_DIR, "BGM")
@@ -37,6 +38,7 @@ def get_stats():
         "items": item_count,
         "skills": skill_count,
         "stages": stage_count,
+        "enemies": enemy_count,
         "audio": {
             "BGM": list(range(bgm_count)),
             "SE": list(range(se_count))

@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { loc, translateStageTitle } from '../../utils/localization';
 import WaveBoard from '../shared/WaveBoard';
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { useAudio } from '../../contexts/AudioContext';
+import { fetchStageChapter } from '../../api';
 
-export default function StagesTab({ onSelectItem, onSelectBuddy }) {
+export default function StagesTab({ onSelectItem, onSelectBuddy, initialChapter = null, initialSection = null }) {
   const [search, setSearch] = useState('');
   const [currentChapter, setCurrentChapter] = useState(null);
   const [openSections, setOpenSections] = useState({});
@@ -19,6 +20,35 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
 
   const { items: stages, total, isInitialLoading, isFetchingNextPage, sentinelRef, lang, data } = usePaginatedCategory('stages', filters, 20);
   const strings = data?.strings;
+
+  // Deep links (?chapter=N&section=M, e.g. from bestiary occurrences): select
+  // the chapter even when it sits on a later, not-yet-fetched page of the
+  // paginated list by fetching it on its own, then open + scroll to the section.
+  const chapterNo = Number(initialChapter);
+  useEffect(() => {
+    if (!initialChapter) return undefined;
+    if (currentChapter?.chapterNo === chapterNo) return undefined;
+    const inPages = stages.find(ch => ch.chapterNo === chapterNo);
+    if (inPages) {
+      setCurrentChapter(inPages);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchStageChapter(chapterNo)
+      .then(ch => { if (!cancelled && ch) setCurrentChapter(ch); })
+      .catch(e => console.error(`Error fetching chapter ${chapterNo}:`, e));
+    return () => { cancelled = true; };
+  }, [initialChapter, chapterNo, currentChapter?.chapterNo, stages]);
+
+  const sectionNo = Number(initialSection);
+  useEffect(() => {
+    if (!initialChapter || !initialSection || currentChapter?.chapterNo !== chapterNo) return;
+    setOpenSections(prev => ({ ...prev, [sectionNo - 1]: true }));
+    const timer = setTimeout(() => {
+      document.getElementById(`stage-card-${chapterNo}-${sectionNo}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [initialChapter, initialSection, chapterNo, sectionNo, currentChapter?.chapterNo]);
 
   const toggleSection = (idx) => {
     setOpenSections(prev => ({ ...prev, [idx]: !prev[idx] }));
@@ -197,7 +227,7 @@ export default function StagesTab({ onSelectItem, onSelectBuddy }) {
               const infoText = sec.info ? (sec.info[lang] || sec.info.en || '') : '';
 
               return (
-                <div key={idx} className="stage-item-card">
+                <div key={idx} className="stage-item-card" id={`stage-card-${currentChapter.chapterNo}-${idx + 1}`}>
                   {sec.banner_url && (
                     <div className="stage-section-banner">
                       <img
