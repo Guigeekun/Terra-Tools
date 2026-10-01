@@ -232,3 +232,8 @@ export const TAB_META = {
 };
 
 export const TAB_KEYS = Object.keys(TAB_META);
+
+// Tabs stacked under the collapsible "Database" section of the sidebar, in
+// sidebar order. Keys stay flat in TAB_KEYS: URLs, the header and the router
+// are group-agnostic — this only shapes the sidebar.
+export const DATABASE_TAB_KEYS = ['characters', 'buddies', 'skills', 'items', 'bestiary', 'stages'];
