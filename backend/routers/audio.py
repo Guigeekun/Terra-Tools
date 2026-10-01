@@ -4,13 +4,12 @@ from email.utils import formatdate
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import FileResponse
-from backend.config import EXTRACTED_DIR
+from backend.config import AUDIO_EXTENSIONS, EXTRACTED_DIR
 
 router = APIRouter(tags=["audio"])
 
 # Preferred extension first; the same stem is accepted in either format so
 # pre-MP3 user-data (WAV only) and stale client URLs keep working.
-AUDIO_EXTENSIONS = (".mp3", ".wav")
 MEDIA_TYPES = {".mp3": "audio/mpeg", ".wav": "audio/wav"}
 
 
