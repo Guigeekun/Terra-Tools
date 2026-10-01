@@ -5,3 +5,4 @@ pillow>=10.0.0
 TypeTreeGeneratorAPI>=0.0.10
 capstone
 lameenc>=1.8.0
+ddtrace>=3.0.0

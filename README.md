@@ -267,6 +267,20 @@ Then open [http://127.0.0.1:5001](http://127.0.0.1:5001) in your browser.
 * The entrypoint honors `BUILD_MODE`: `auto` (default) fetches user-data only when missing, `force-download` replaces existing data with the latest release (see [Refreshing user-data in deployed containers](#refreshing-user-data-in-deployed-containers)).
 * `docker compose watch` syncs backend code and a rebuilt `frontend/dist` into the running container for development.
 
+### Observability (Datadog)
+
+Compose ships an optional `datadog` service (the official `agent:7` container) that collects host & container metrics, APM traces, and every container's stdout logs. To enable it, create a `.env` file next to `docker-compose.yml` (see [`.env.example`](.env.example)) with your key:
+
+```bash
+cp .env.example .env   # then fill in DD_API_KEY
+docker compose up -d
+```
+
+* Without `DD_API_KEY` the agent container simply exits — the rest of the stack is unaffected.
+* Traces and continuous profiling are emitted by the backend through Unix sockets shared with the agent (`datadog-sockets` volume, no published ports); disable them by setting `DD_TRACE_ENABLED=false`. If `ddtrace` slows startup in a dev-only scenario, also unset `DD_PROFILING_ENABLED` by setting it to `false`.
+* Logs are the container stdout (JSON access logs in the deployed image), auto-multi-line detected and tagged `source:python`, `service:terra-tools`.
+* Intake site defaults to `datadoghq.eu`; override with `DD_SITE`.
+
 ### Without Docker (local Python)
 
 1. **Install the backend dependencies**:
