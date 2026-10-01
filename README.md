@@ -276,6 +276,8 @@ Datadog telemetry comes from two agent-free surfaces — no agent container anyw
 
 Distributed tracing was deliberately left out: without an agent there is no supported ddtrace path, and the OpenTelemetry→OTLP-gateway route can be added later if ever needed.
 
+**Frontend telemetry (RUM)** is agent-free: `@datadog/browser-rum` reports views, JS errors, resource timing, user actions and long tasks straight from visitors' browsers. Each hash-router tab is a RUM view; render errors are caught by an error boundary. Values live in [`frontend/.env.production`](frontend/.env.production) (template: [`frontend/.env.example`](frontend/.env.example)) — committed because the client token is public by design and a gitignored file would never reach Render's Docker build; the gitignored `frontend/.env` is for local overrides only. The SDK initializes in production builds only (`npm run dev` stays telemetry-free) and is fail-safe: a refused Datadog org (e.g. an expired trial) just drops events and never affects the app, while `VITE_DD_RUM_ENABLED=false` ships a build without the SDK entirely.
+
 ### Without Docker (local Python)
 
 1. **Install the backend dependencies**:
