@@ -51,12 +51,5 @@ else
     echo "Extracted game data found, skipping download/extraction."
 fi
 
-# Datadog APM: route the server through ddtrace-run when tracing is enabled
-# so uvicorn/FastAPI are auto-instrumented (traces + DD_PROFILING_ENABLED).
-# Skipped when the runner is unavailable so non-instrumented images still start.
-if [ "${DD_TRACE_ENABLED:-false}" = "true" ] && command -v ddtrace-run >/dev/null 2>&1; then
-    set -- ddtrace-run "$@"
-fi
-
 # Execute the CMD from the Dockerfile
 exec "$@"
