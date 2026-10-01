@@ -8,6 +8,7 @@ import wave
 from starlette.responses import FileResponse
 
 from backend.routers import audio as audio_router
+from backend.routers import system as system_router
 from scripts.transcode_audio_to_mp3 import (
     parse_wav_pcm,
     transcode_directory,
@@ -165,6 +166,48 @@ class TestResolveAudioPath(unittest.TestCase):
     def test_path_traversal_is_neutralized(self):
         self._touch("a.mp3")
         self.assertIsNone(audio_router._resolve_audio_path("BGM", "../../config.json"))
+
+
+class TestStatsAudioCount(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self._orig = system_router.EXTRACTED_DIR
+        system_router.EXTRACTED_DIR = self.tmp.name
+
+    def tearDown(self):
+        system_router.EXTRACTED_DIR = self._orig
+
+    def _touch(self, category, name):
+        directory = os.path.join(self.tmp.name, category)
+        os.makedirs(directory, exist_ok=True)
+        with open(os.path.join(directory, name), "wb") as f:
+            f.write(b"x")
+
+    def test_counts_mp3_and_wav_tracks(self):
+        self._touch("BGM", "bgm_1.mp3")
+        self._touch("BGM", "bgm_2.mp3")
+        self._touch("SE", "se_1.wav")
+        stats = system_router.get_stats()
+        self.assertEqual(stats["bgm_count"], 2)
+        self.assertEqual(stats["se_count"], 1)
+
+    def test_stem_in_both_formats_counts_once(self):
+        self._touch("BGM", "bgm_1.mp3")
+        self._touch("BGM", "bgm_1.wav")
+        stats = system_router.get_stats()
+        self.assertEqual(stats["bgm_count"], 1)
+
+    def test_missing_directory_counts_zero(self):
+        stats = system_router.get_stats()
+        self.assertEqual(stats["bgm_count"], 0)
+        self.assertEqual(stats["se_count"], 0)
+
+    def test_non_audio_files_ignored(self):
+        self._touch("BGM", "notes.txt")
+        self._touch("BGM", "bgm_1.mp3")
+        stats = system_router.get_stats()
+        self.assertEqual(stats["bgm_count"], 1)
 
 
 if __name__ == "__main__":

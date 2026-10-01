@@ -1,9 +1,23 @@
 import os
 from fastapi import APIRouter
 from backend.database import gamedata
-from backend.config import EXTRACTED_DIR
+from backend.config import AUDIO_EXTENSIONS, EXTRACTED_DIR
 
 router = APIRouter(tags=["system"])
+
+
+def _count_audio_tracks(directory: str) -> int:
+    """Count tracks in an audio directory, in either serving format.
+
+    Deduplicates by stem so a track present as both .mp3 and .wav (stale
+    user-data over a transcoded one) is still one track.
+    """
+    try:
+        entries = os.listdir(directory)
+    except OSError:
+        return 0
+    stems = {os.path.splitext(f)[0] for f in entries if f.endswith(AUDIO_EXTENSIONS)}
+    return len(stems)
 
 
 @router.get('/api/strings')
@@ -23,14 +37,8 @@ def get_stats():
     stage_count = len(gamedata.get("stages", {}).get("chapters", []))
     enemy_count = len(gamedata.get("enemies", {}).get("data", []))
 
-    bgm_count = 0
-    se_count = 0
-    bgm_dir = os.path.join(EXTRACTED_DIR, "BGM")
-    if os.path.exists(bgm_dir):
-        bgm_count = len([f for f in os.listdir(bgm_dir) if f.endswith(".wav")])
-    se_dir = os.path.join(EXTRACTED_DIR, "SE")
-    if os.path.exists(se_dir):
-        se_count = len([f for f in os.listdir(se_dir) if f.endswith(".wav")])
+    bgm_count = _count_audio_tracks(os.path.join(EXTRACTED_DIR, "BGM"))
+    se_count = _count_audio_tracks(os.path.join(EXTRACTED_DIR, "SE"))
 
     return {
         "characters": char_count,

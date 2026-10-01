@@ -17,6 +17,10 @@ ASSET_CATEGORIES = (
     "Illust", "Pieces", "SE", "Scenario",
 )
 
+# Audio is served as MP3 (pipeline transcode) with the original WAV kept only
+# when transcoding failed, so every consumer must accept either extension.
+AUDIO_EXTENSIONS = (".mp3", ".wav")
+
 # Fallback used when no gdresources* folder can be located (previous behaviour).
 LEGACY_LOCAL_INPUT_DIR = os.path.join(
     LOCAL_INPUT_ROOT, "gdresources", "data_u2017", "android"
