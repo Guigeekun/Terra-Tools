@@ -44,7 +44,10 @@ export default function EnemyModal({ enemy, onClose, onOpenItem, onOpenSkill, on
           <div className="modal-header">
             <h3>{loc(enemy.name, lang)}</h3>
             <div className="modal-char-meta">
-              <span><i className="fa-solid fa-paw" style={{ marginRight: 4 }}></i> Species: {enemySpeciesLabel(enemy.species)}</span>
+              {/* Null group species = variants disagree; each tab shows its own species badge */}
+              {enemy.species != null && (
+                <span><i className="fa-solid fa-paw" style={{ marginRight: 4 }}></i> Species: {enemySpeciesLabel(enemy.species)}</span>
+              )}
               {enemy.boss && (
                 <span style={{ color: 'var(--accent-pink)' }}><i className="fa-solid fa-crown"></i> Boss</span>
               )}

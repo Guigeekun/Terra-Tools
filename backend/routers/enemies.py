@@ -50,6 +50,17 @@ _STAGE_DROP_INDEX: dict[int, list] | None = None
 _SECTION_TITLES: dict[tuple, dict] = {}
 
 
+def _common_value(members, field: str):
+    """The field's value shared by every member, else None.
+
+    Same-name variants can differ (33 groups span several elements — Orbling
+    alone covers all five — and 4 groups even mix species), so a group may
+    only claim an attribute that holds for all of its variants; the cards omit
+    the rest and the variant tabs show each record's own values."""
+    values = {m.get(field, 0) for m in members}
+    return next(iter(values)) if len(values) == 1 else None
+
+
 def _enemy_groups() -> list:
     """One bestiary group per distinct enemy name, members sorted by ID.
 
@@ -84,8 +95,8 @@ def _enemy_groups() -> list:
             "name": name,
             "NameString": first.get("NameString"),
             "image_file": image_file,
-            "species": first.get("Species", 0),
-            "attrib": first.get("Attrib", 0),
+            "species": _common_value(members, "Species"),
+            "attrib": _common_value(members, "Attrib"),
             "boss": any((m.get("FrameType") or 0) >= BOSS_FRAME_MIN for m in members),
             "variant_count": len(members),
             "min_lv": min(m.get("LV", 0) for m in members),
@@ -334,9 +345,13 @@ def get_enemies(
     q = search.lower().strip()
     filtered = []
     for group in groups:
-        if species and str(group["species"]) != str(species):
+        # Species/element filters match a group when ANY of its variants has
+        # the value — mixed-element foes (e.g. Orbling) stay discoverable even
+        # though the card itself only shows attributes common to all variants.
+        members = _GROUP_BY_ID.get(group["first_id"], [])
+        if species and not any(str(m.get("Species", 0)) == str(species) for m in members):
             continue
-        if element and str(group["attrib"]) != str(element):
+        if element and not any(str(m.get("Attrib", 0)) == str(element) for m in members):
             continue
         if frame == "boss" and not group["boss"]:
             continue
@@ -393,8 +408,8 @@ def get_enemy(enemy_id: int):
     return {
         "first_id": first["ID"],
         "name": first.get("NameString"),
-        "species": first.get("Species", 0),
-        "attrib": first.get("Attrib", 0),
+        "species": _common_value(members, "Species"),
+        "attrib": _common_value(members, "Attrib"),
         "boss": any((m.get("FrameType") or 0) >= BOSS_FRAME_MIN for m in members),
         "image_file": find_local_asset("Pieces", first.get("ImageID"), "img"),
         "variant_count": len(members),
