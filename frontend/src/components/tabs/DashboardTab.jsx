@@ -10,6 +10,7 @@ export default function DashboardTab({ onTabChange }) {
   const skillCount = data.skills?.length ?? statsData.skills ?? 0;
   const itemCount = data.items?.length ?? statsData.items ?? 0;
   const stageCount = data.stages?.length ?? statsData.stages ?? 0;
+  const enemyCount = statsData.enemies ?? 0;
   const bgmCount = statsData.bgm_count ?? data.audio?.BGM?.length ?? 0;
   const seCount = statsData.se_count ?? data.audio?.SE?.length ?? 0;
 
@@ -19,6 +20,7 @@ export default function DashboardTab({ onTabChange }) {
     { key: 'buddies', label: 'Companions', count: buddyCount, icon: 'fa-paw', bg: 'buddy-bg' },
     { key: 'skills', label: 'Skills', count: skillCount, icon: 'fa-wand-magic-sparkles', bg: 'skill-bg' },
     { key: 'items', label: 'Items', count: itemCount, icon: 'fa-gem', bg: 'item-bg' },
+    { key: 'bestiary', label: 'Bestiary', count: enemyCount, icon: 'fa-dragon', bg: 'enemy-bg' },
     { key: 'stages', label: 'Chapters & Stages', count: stageCount, icon: 'fa-map-location-dot', bg: 'stage-bg' },
     { key: 'audio', label: 'Audio Tracks', count: `${bgmCount} BGM / ${seCount} SE`, icon: 'fa-music', bg: 'audio-bg' },
     { key: 'saveEditor', label: 'PLG ⇄ ReTB', count: 'Save Editor', icon: 'fa-arrow-right-arrow-left', bg: 'save-bg' },

@@ -60,6 +60,11 @@
     color: var(--accent-blue);
 }
 
+.enemy-bg {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--accent-red);
+}
+
 .audio-bg {
     background-color: rgba(99, 102, 241, 0.1);
     color: var(--accent-indigo);

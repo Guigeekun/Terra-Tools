@@ -37,6 +37,7 @@ from backend.routers import (
     items,
     skills,
     stages,
+    enemies,
     audio,
     assets,
     system,
@@ -82,6 +83,7 @@ app.include_router(buddies.router)
 app.include_router(items.router)
 app.include_router(skills.router)
 app.include_router(stages.router)
+app.include_router(enemies.router)
 app.include_router(audio.router)
 app.include_router(assets.router)
 app.include_router(system.router)

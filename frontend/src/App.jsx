@@ -14,6 +14,7 @@ import CharactersTab from './components/tabs/CharactersTab';
 import BuddiesTab from './components/tabs/BuddiesTab';
 import SkillsTab from './components/tabs/SkillsTab';
 import ItemsTab from './components/tabs/ItemsTab';
+import BestiaryTab from './components/tabs/BestiaryTab';
 import StagesTab from './components/tabs/StagesTab';
 import AudioTab from './components/tabs/AudioTab';
 import SaveConverterTab from './components/tabs/SaveConverterTab';
@@ -22,7 +23,8 @@ import DocsTab from './components/tabs/DocsTab';
 import CharacterModal from './components/modals/CharacterModal';
 import ItemModal from './components/modals/ItemModal';
 import BuddyModal from './components/modals/BuddyModal';
-import { fetchCharacter } from './api';
+import EnemyModal from './components/modals/EnemyModal';
+import { fetchCharacter, fetchEnemy } from './api';
 
 function AppContent() {
   const { loading } = useGameData();
@@ -35,6 +37,9 @@ function AppContent() {
   const charParam = params.char;
   const itemParam = numericParam(params.item);
   const buddyParam = numericParam(params.buddy);
+  const enemyParam = numericParam(params.enemy);
+  const chapterParam = numericParam(params.chapter);
+  const sectionParam = numericParam(params.section);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Tab navigation is a push: the back button walks back through visited tabs.
@@ -72,8 +77,8 @@ function AppContent() {
   // The flag only tracks "we pushed this modal"; once no modal is on screen
   // (closed via Back, or navigated away) the next open must push again.
   useEffect(() => {
-    if (charParam == null && itemParam == null && buddyParam == null) pushedModalRef.current = false;
-  }, [charParam, itemParam, buddyParam]);
+    if (charParam == null && itemParam == null && buddyParam == null && enemyParam == null) pushedModalRef.current = false;
+  }, [charParam, itemParam, buddyParam, enemyParam]);
 
   // Character modals need the full character object: list clicks seed the
   // cache, anything else (deep links, recode chains) is fetched by ID.
@@ -117,6 +122,46 @@ function AppContent() {
     openModal({ buddy: String(id) });
   };
 
+  // Enemy modal: unlike characters, the bestiary list returns lightweight
+  // summaries, so the modal always fetches the full variant group by ID
+  // (deep links ?enemy=<any variant ID> hit the same path). The cache serves
+  // reopenings and back/forward.
+  const [selectedEnemy, setSelectedEnemy] = useState(null);
+  const enemyCacheRef = useRef(new Map());
+
+  useEffect(() => {
+    if (enemyParam == null) {
+      setSelectedEnemy(null);
+      return;
+    }
+    const cached = enemyCacheRef.current.get(enemyParam);
+    if (cached) {
+      setSelectedEnemy(cached);
+      return;
+    }
+    let cancelled = false;
+    fetchEnemy(enemyParam)
+      .then(group => {
+        if (cancelled) return;
+        enemyCacheRef.current.set(enemyParam, group);
+        setSelectedEnemy(group);
+      })
+      .catch(e => console.error('Error fetching enemy:', e));
+    return () => { cancelled = true; };
+  }, [enemyParam]);
+
+  const openEnemy = (group) => {
+    const id = typeof group === 'object' ? (group?.first_id ?? group?.enemy_ids?.[0]) : group;
+    if (id == null) return;
+    openModal({ enemy: String(id) });
+  };
+
+  // Occurrence links jump straight to the chapter (and section) in the
+  // Chapters & Stages tab; the tab selects the chapter even if it sits on a
+  // later page of the paginated list.
+  const openStage = (chapterNo, sectionIndex) =>
+    navigate(tabHash('stages', { chapter: chapterNo, section: sectionIndex }));
+
   return (
     <>
       {loading && <LoadingOverlay />}
@@ -145,7 +190,8 @@ function AppContent() {
             {activeTab === 'buddies' && <BuddiesTab onSelectBuddy={openBuddy} initialSearch={params.q ?? ''} onOpenSkill={openSkillTab} />}
             {activeTab === 'skills' && <SkillsTab onOpenSource={openSourceTab} initialSearch={params.q ?? ''} />}
             {activeTab === 'items' && <ItemsTab onSelectItem={openItem} />}
-            {activeTab === 'stages' && <StagesTab onSelectItem={openItem} onSelectBuddy={openBuddy} />}
+            {activeTab === 'bestiary' && <BestiaryTab onSelectEnemy={openEnemy} initialSearch={params.q ?? ''} />}
+            {activeTab === 'stages' && <StagesTab onSelectItem={openItem} onSelectBuddy={openBuddy} initialChapter={chapterParam} initialSection={sectionParam} />}
             {activeTab === 'audio' && <AudioTab />}
             {activeTab === 'saveEditor' && <SaveConverterTab />}
             {activeTab === 'docs' && <DocsTab />}
@@ -180,6 +226,21 @@ function AppContent() {
           onClose={() => closeModal('buddy')}
           onSelectBuddy={openBuddy}
           onOpenSkill={openSkillTab}
+        />
+      )}
+      {selectedEnemy && (
+        <EnemyModal
+          key={selectedEnemy.first_id}
+          enemy={selectedEnemy}
+          onClose={() => closeModal('enemy')}
+          // Replacement links: the enemy param is dropped so the target modal
+          // isn't hidden underneath this one; Back returns to the bestiary
+          // modal since each open pushes a history entry.
+          onOpenItem={(itemId) => openModal({ item: String(itemId), enemy: null })}
+          onOpenSkill={openSkillTab}
+          onOpenCharacter={(charId) => openModal({ char: String(charId), enemy: null })}
+          onOpenBuddy={(buddyId) => openModal({ buddy: String(buddyId), enemy: null })}
+          onOpenStage={openStage}
         />
       )}
     </>

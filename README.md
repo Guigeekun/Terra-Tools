@@ -14,6 +14,7 @@ Live version : https://terratools.ggkfigment.fr/
 * **Companions**: companion (buddy) metadata, stats and granted skills, with thumbnails and full artwork.
 * **Skills**: every skill lists its potential sources — characters (with granting jobs), companions, and enemies (aggregated variants, boss-flagged) — with clickable links.
 * **Items**: browse all game items with their "Where to Obtain" drop sources.
+* **Bestiary**: every enemy grouped by name with all its level variants — per-variant stats, skills, resistances, loot (including event-boss drop tables) and clickable stage occurrences.
 * Server-side filtering (source type, element, skill kind, trigger type, search across entries *and* source names), column sorting, and dynamic translation support (English, Japanese, French, German, Spanish, Traditional Chinese).
 
 ### 2. Chapter Information & Stage Layouts

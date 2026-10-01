@@ -106,6 +106,80 @@ def _section_random_pool(random_reason: str, metal_pools: dict | None, fallback_
     return fallback_pool
 
 
+def _stage_context() -> dict:
+    """Shared lookups for stage enrichment, built once per request."""
+    return {
+        "chapters": gamedata.get("stages", {}).get("chapters", []),
+        "layout_db": gamedata.get("stages_layout", {}),
+        "enemies_by_id": {e["ID"]: e for e in gamedata.get("enemies", {}).get("data", [])},
+        "buddies_by_id": {b["ID"]: b for b in gamedata.get("buddies", {}).get("data", [])},
+        "strings_db": gamedata.get("strings", {}),
+        "scenario_lookup": gamedata.get("scenario_lookup", {}),
+        "translation_lookup": gamedata.get("translation_lookup", {}),
+    }
+
+
+def _section_possible_pool(ch_no_int, sec, sec_layout, metal_pools, family_pool, ctx) -> tuple:
+    """(reason, pool) for a section's random-enemy pool, or (None, []).
+
+    Fixed-layout sections only expose a pool when the section itself is random;
+    sections without a layout fall back to the event family pool or to the
+    fixed-layout sections sharing the same title — mirroring exactly what the
+    stages endpoint serves as possible_enemies."""
+    sec_title_raw = sec.get("title", "")
+    random_reason = is_random_section(sec_title_raw)
+    if sec_layout:
+        if random_reason:
+            return random_reason, _section_random_pool(random_reason, metal_pools, [])
+        return None, []
+    if sec.get("battleCnt", 0) <= 0:
+        return None, []
+    fallback_pool = []
+    if not random_reason:
+        if family_pool:
+            random_reason = EVENT_FAMILY_POOL_REASON
+            fallback_pool = family_pool
+        else:
+            random_reason, fallback_pool = _derive_fallback_random(
+                sec_title_raw, ctx["chapters"], ctx["layout_db"], ctx["enemies_by_id"]
+            )
+    return random_reason, _section_random_pool(random_reason, metal_pools, fallback_pool)
+
+
+def iter_chapter_fixed_spawns(ctx: dict):
+    """Yield (chapter_no, sec_num, enemies) for every fixed-layout wave, with
+    CH1 placeholder filler stripped exactly like the stages endpoint."""
+    for ch in ctx["chapters"]:
+        ch_no = ch.get("chapterNo", 0)
+        ch_layout, _placeholder = _chapter_layout(ch_no, ctx["layout_db"].get(str(ch_no), {}))
+        if _placeholder or not isinstance(ch_layout, dict) or not ch_layout:
+            continue
+        for idx, sec in enumerate(ch.get("sections", [])):
+            for item in ch_layout.get(str(idx + 1)) or []:
+                if item.get("type") == "wave":
+                    yield ch_no, idx + 1, item.get("enemies", [])
+
+
+def iter_section_pools(ctx: dict):
+    """Yield (chapter_no, sec_num, reason, pool) for every random-enemy pool,
+    using the same derivation the stages endpoint serves."""
+    for ch in ctx["chapters"]:
+        ch_no = ch.get("chapterNo", 0)
+        ch_layout, _placeholder = _chapter_layout(ch_no, ctx["layout_db"].get(str(ch_no), {}))
+        metal_pools = (
+            build_metal_zone_pools(ctx["enemies_by_id"]) if ch_no in METAL_ZONE_CHAPTERS else None
+        )
+        family_prefix = RANDOM_POOL_FAMILY_PREFIX.get(ch_no)
+        family_pool = build_family_pool(family_prefix, ctx["enemies_by_id"]) if family_prefix else []
+        for idx, sec in enumerate(ch.get("sections", [])):
+            sec_layout = ch_layout.get(str(idx + 1)) if isinstance(ch_layout, dict) else None
+            reason, pool = _section_possible_pool(
+                ch_no, sec, sec_layout, metal_pools, family_pool, ctx
+            )
+            if reason and pool:
+                yield ch_no, idx + 1, reason, pool
+
+
 def _get_title_pool_index(chapters: list, layout_db: dict) -> dict[str, list]:
     """Map section titles (raw and variant-stripped) to the enemy lists of every
     fixed-layout section with that title, so random sections without their own
@@ -218,24 +292,210 @@ def get_chapters():
     return result
 
 
+def _enrich_stage_chapter(ch, display_name, ctx: dict) -> dict:
+    """Fully enrich one chapter: sections, wave layouts, drops, story sequence."""
+    chapters = ctx["chapters"]
+    layout_db = ctx["layout_db"]
+    enemies_by_id = ctx["enemies_by_id"]
+    buddies_by_id = ctx["buddies_by_id"]
+    scenario_lookup = ctx["scenario_lookup"]
+
+    chapter_no = str(ch.get("chapterNo", ""))
+    ch_no_int = ch.get("chapterNo", 0)
+    ch_layout, _placeholder = _chapter_layout(ch_no_int, layout_db.get(chapter_no, {}))
+    if _placeholder:
+        ch_layout = {}
+    book_sec_stories = get_chapter_stories_by_section(chapter_no)
+
+    # Pre-build the possible enemies pools for random sections of this chapter
+    metal_pools = (
+        build_metal_zone_pools(enemies_by_id) if ch_no_int in METAL_ZONE_CHAPTERS else None
+    )
+    family_prefix = RANDOM_POOL_FAMILY_PREFIX.get(ch_no_int)
+    family_pool = build_family_pool(family_prefix, enemies_by_id) if family_prefix else []
+
+    result_sections = []
+    for idx, sec in enumerate(ch.get("sections", [])):
+        sec_copy = dict(sec)
+        sec_id = str(idx + 1)
+        sec_num = idx + 1
+        sec_copy["section_index"] = sec_num
+        sec_copy["banner_url"] = get_section_banner(ch_no_int, sec_num)
+
+
+        title_info = resolve_section_title(ch.get("chapterNo", chapter_no), sec_num, sec.get("title", ""))
+        sec_copy["title"] = title_info["title"]
+        sec_copy["title_loc"] = title_info["title_loc"]
+        sec_copy["subtitle"] = title_info["subtitle"]
+
+        # Resolve companion drops (dropBuddies)
+        raw_drop_buddies = sec.get("dropBuddies", [])
+        resolved_buddies = []
+        for b_entry in raw_drop_buddies:
+            if isinstance(b_entry, dict):
+                code = b_entry.get("code", 0)
+                b_id = b_entry.get("id") or (code // 256 if code > 0 else 0)
+                count = b_entry.get("count") or (code % 256 if code > 0 else 1)
+            elif isinstance(b_entry, int):
+                b_id = b_entry // 256 if b_entry > 256 else b_entry
+                count = b_entry % 256 if b_entry > 256 else 1
+            else:
+                b_id = 0
+                count = 1
+
+            if b_id > 0:
+                buddy_info = buddies_by_id.get(b_id)
+                if buddy_info:
+                    image_id = buddy_info.get("ImageID", 0)
+                    resolved_buddies.append({
+                        "id": b_id,
+                        "ID": b_id,
+                        "NameString": buddy_info.get("NameString", {}),
+                        "name": buddy_info.get("NameString", {}),
+                        "DescString": buddy_info.get("DescString", {}),
+                        "desc": buddy_info.get("DescString", {}),
+                        "count": count,
+                        "rarity": buddy_info.get("rarity", 0),
+                        "ImageID": image_id,
+                        "image_id": image_id,
+                        "thumb_file": find_local_asset("BuddyThumbs", image_id, "img"),
+                        "image_file": find_local_asset("BuddyImages", image_id, "img"),
+                        "skill": buddy_info.get("skill"),
+                        "ATKmax": buddy_info.get("ATKmax", 0),
+                        "DEFmax": buddy_info.get("DEFmax", 0),
+                        "SATKmax": buddy_info.get("SATKmax", 0),
+                        "SDEFmax": buddy_info.get("SDEFmax", 0),
+                        "MaxLevel": buddy_info.get("MaxLevel", 0),
+                        "evolveID": buddy_info.get("evolveID", 0),
+                    })
+                else:
+                    resolved_buddies.append({
+                        "id": b_id,
+                        "ID": b_id,
+                        "NameString": {"en": f"Companion #{b_id}"},
+                        "name": {"en": f"Companion #{b_id}"},
+                        "count": count,
+                        "rarity": 0,
+                        "ImageID": 0,
+                        "image_id": 0,
+                        "thumb_file": None
+                    })
+        sec_copy["dropBuddies"] = resolved_buddies
+
+        # Surface the localized section info text (level range, tips, etc.)
+        sec_copy["info"] = sec.get("info", {})
+
+        sec_layout = ch_layout.get(sec_id)  # list of {type:'story'|'wave', ...}
+
+        # Random-enemy pool for this section (None when the layout is fixed)
+        pool_reason, section_pool = _section_possible_pool(
+            ch_no_int, sec, sec_layout, metal_pools, family_pool, ctx
+        )
+
+        if sec_layout:
+            # Use exact parsed Lua sequence (Chapters 1-7 via decompiled Lua, 6000-6006)
+            sequence = []
+            for item in sec_layout:
+                item_type = item.get("type", "wave")
+                if item_type == "story":
+                    sid = item.get("scenarioID", "")
+                    story_data = dict(scenario_lookup.get(sid, {
+                        "scenarioID": sid, "bgID": 0, "bgmID": 0,
+                        "text_clean": {}, "text_raw": {}
+                    }))
+                    bg_id = story_data.get("bgID", 0)
+                    bgm_id = story_data.get("bgmID", 0)
+                    story_data["bg_url"] = f"/api/bg/{bg_id}" if bg_id in BG_MAP else None
+                    story_data["bgm_url"] = f"/api/play/BGM/{BGM_MAP[bgm_id]}" if bgm_id in BGM_MAP else None
+                    sequence.append({"type": "story", **story_data})
+                else:
+                    # Wave item — resolve enemy details, BG, and BGM
+                    w_bg = item.get("bgID", 0)
+                    w_bgm = item.get("bgmID", 0)
+                    enemies_list = []
+                    for enemy in item.get("enemies", []):
+                        enemy_id = enemy.get("enemy_id")
+                        enemy_info = enemies_by_id.get(enemy_id) if enemy_id else None
+                        enemy_detail = {
+                            "enemy_var": enemy.get("enemy_var"),
+                            "enemy_id": enemy_id,
+                            "x": enemy.get("x"),
+                            "y": enemy.get("y"),
+                            "vid": enemy.get("vid")
+                        }
+                        if enemy_info:
+                            enemy_detail["NameString"] = enemy_info.get("NameString")
+                            enemy_detail["HP"] = enemy_info.get("HP")
+                            enemy_detail["ATK"] = enemy_info.get("ATK")
+                            enemy_detail["DEF"] = enemy_info.get("DEF")
+                            enemy_detail["LV"] = enemy_info.get("LV")
+                            enemy_detail["ImageID"] = enemy_info.get("ImageID")
+                        enemies_list.append(enemy_detail)
+                    wave_entry = {
+                        "type": "wave",
+                        "wave_index": item.get("wave_index"),
+                        "battle_name": item.get("battle_name"),
+                        "bgID": w_bg,
+                        "bgmID": w_bgm,
+                        "bg_url": f"/api/bg/{w_bg}" if w_bg in BG_MAP else None,
+                        "bgm_url": f"/api/play/BGM/{BGM_MAP[w_bgm]}" if w_bgm in BGM_MAP else None,
+                        "enemies": enemies_list
+                    }
+                    if pool_reason:
+                        wave_entry["random_layout"] = True
+                        wave_entry["random_layout_reason"] = pool_reason
+                        wave_entry["possible_enemies"] = section_pool
+                    sequence.append(wave_entry)
+            sec_copy["sequence"] = sequence
+        else:
+            # Synthesize section sequence from BattleData + BookData (native IL2CPP chapters: 8+, 100+, 1000+, etc.)
+            sequence = []
+            sec_stories = book_sec_stories.get(sec_num, [])
+            sequence.extend(sec_stories)
+
+            default_bg = sec_stories[0].get("bgID", 0) if sec_stories else 0
+            default_bgm = sec_stories[0].get("bgmID", 10) if sec_stories else 10
+
+            for w in range(1, sec.get("battleCnt", 0) + 1):
+                wave_entry = {
+                    "type": "wave",
+                    "wave_index": w,
+                    "battle_name": f"Wave {w}",
+                    "bgID": default_bg,
+                    "bgmID": default_bgm,
+                    "bg_url": f"/api/bg/{default_bg}" if default_bg in BG_MAP else None,
+                    "bgm_url": f"/api/play/BGM/{BGM_MAP[default_bgm]}" if default_bgm in BGM_MAP else None,
+                    "enemies": []
+                }
+                if pool_reason:
+                    wave_entry["random_layout"] = True
+                    wave_entry["random_layout_reason"] = pool_reason
+                    wave_entry["possible_enemies"] = section_pool
+                sequence.append(wave_entry)
+            sec_copy["sequence"] = sequence
+
+        if sec.get("battleCnt", 0) > 0 or sec_layout or sec_copy.get("sequence"):
+            result_sections.append(sec_copy)
+
+    ch_copy = dict(ch)
+    ch_copy["sections"] = result_sections
+    ch_copy["display_name"] = display_name
+    ch_copy["banner_url"] = get_chapter_banner(ch_no_int)
+    return ch_copy
+
+
 @router.get('/api/stages')
 def get_stages(page: int = None, limit: int = 20, search: str = ""):
     """Retrieve chapters and stages with their wave, enemy layout, and story narrative details."""
-    chapters = gamedata.get("stages", {}).get("chapters", [])
-    layout_db = gamedata.get("stages_layout", {})
-    enemy_db = gamedata.get("enemies", {}).get("data", [])
-    strings_db = gamedata.get("strings", {})
-    scenario_lookup = gamedata.get("scenario_lookup", {})
-
-    enemies_by_id = {e["ID"]: e for e in enemy_db}
-    buddy_db = gamedata.get("buddies", {}).get("data", [])
-    buddies_by_id = {b["ID"]: b for b in buddy_db}
+    ctx = _stage_context()
+    chapters = ctx["chapters"]
+    strings_db = ctx["strings_db"]
 
     q = search.lower().strip()
     filtered_chapters = []
     for ch in chapters:
         ch_no = ch.get("chapterNo", 0)
-        display_name = derive_chapter_display_name(ch, ch_no, strings_db, gamedata.get("translation_lookup", {}))
+        display_name = derive_chapter_display_name(ch, ch_no, strings_db, ctx["translation_lookup"])
 
 
         if q and not (q in str(ch_no) or q in display_name.lower()):
@@ -253,199 +513,7 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
 
     result_chapters = []
     for ch, display_name in target_chapters:
-        chapter_no = str(ch.get("chapterNo", ""))
-        ch_no_int = ch.get("chapterNo", 0)
-        ch_layout, _placeholder = _chapter_layout(ch_no_int, layout_db.get(chapter_no, {}))
-        if _placeholder:
-            ch_layout = {}
-        book_sec_stories = get_chapter_stories_by_section(chapter_no)
-
-        # Pre-build the possible enemies pools for random sections of this chapter
-        metal_pools = (
-            build_metal_zone_pools(enemies_by_id) if ch_no_int in METAL_ZONE_CHAPTERS else None
-        )
-        family_prefix = RANDOM_POOL_FAMILY_PREFIX.get(ch_no_int)
-        family_pool = build_family_pool(family_prefix, enemies_by_id) if family_prefix else []
-
-        result_sections = []
-        for idx, sec in enumerate(ch.get("sections", [])):
-            sec_copy = dict(sec)
-            sec_id = str(idx + 1)
-            sec_num = idx + 1
-            sec_copy["section_index"] = sec_num
-            sec_copy["banner_url"] = get_section_banner(ch_no_int, sec_num)
-
-
-            title_info = resolve_section_title(ch.get("chapterNo", chapter_no), sec_num, sec.get("title", ""))
-            sec_copy["title"] = title_info["title"]
-            sec_copy["title_loc"] = title_info["title_loc"]
-            sec_copy["subtitle"] = title_info["subtitle"]
-
-            # Resolve companion drops (dropBuddies)
-            raw_drop_buddies = sec.get("dropBuddies", [])
-            resolved_buddies = []
-            for b_entry in raw_drop_buddies:
-                if isinstance(b_entry, dict):
-                    code = b_entry.get("code", 0)
-                    b_id = b_entry.get("id") or (code // 256 if code > 0 else 0)
-                    count = b_entry.get("count") or (code % 256 if code > 0 else 1)
-                elif isinstance(b_entry, int):
-                    b_id = b_entry // 256 if b_entry > 256 else b_entry
-                    count = b_entry % 256 if b_entry > 256 else 1
-                else:
-                    b_id = 0
-                    count = 1
-
-                if b_id > 0:
-                    buddy_info = buddies_by_id.get(b_id)
-                    if buddy_info:
-                        image_id = buddy_info.get("ImageID", 0)
-                        resolved_buddies.append({
-                            "id": b_id,
-                            "ID": b_id,
-                            "NameString": buddy_info.get("NameString", {}),
-                            "name": buddy_info.get("NameString", {}),
-                            "DescString": buddy_info.get("DescString", {}),
-                            "desc": buddy_info.get("DescString", {}),
-                            "count": count,
-                            "rarity": buddy_info.get("rarity", 0),
-                            "ImageID": image_id,
-                            "image_id": image_id,
-                            "thumb_file": find_local_asset("BuddyThumbs", image_id, "img"),
-                            "image_file": find_local_asset("BuddyImages", image_id, "img"),
-                            "skill": buddy_info.get("skill"),
-                            "ATKmax": buddy_info.get("ATKmax", 0),
-                            "DEFmax": buddy_info.get("DEFmax", 0),
-                            "SATKmax": buddy_info.get("SATKmax", 0),
-                            "SDEFmax": buddy_info.get("SDEFmax", 0),
-                            "MaxLevel": buddy_info.get("MaxLevel", 0),
-                            "evolveID": buddy_info.get("evolveID", 0),
-                        })
-                    else:
-                        resolved_buddies.append({
-                            "id": b_id,
-                            "ID": b_id,
-                            "NameString": {"en": f"Companion #{b_id}"},
-                            "name": {"en": f"Companion #{b_id}"},
-                            "count": count,
-                            "rarity": 0,
-                            "ImageID": 0,
-                            "image_id": 0,
-                            "thumb_file": None
-                        })
-            sec_copy["dropBuddies"] = resolved_buddies
-
-            # Surface the localized section info text (level range, tips, etc.)
-            sec_copy["info"] = sec.get("info", {})
-
-            # Detect if this section has a provably random enemy layout
-            sec_title_raw = sec.get("title", "")
-            random_reason = is_random_section(sec_title_raw)
-
-            sec_layout = ch_layout.get(sec_id)  # list of {type:'story'|'wave', ...}
-
-            if sec_layout:
-                # Use exact parsed Lua sequence (Chapters 1-7 via decompiled Lua, 6000-6006)
-                sequence = []
-                for item in sec_layout:
-                    item_type = item.get("type", "wave")
-                    if item_type == "story":
-                        sid = item.get("scenarioID", "")
-                        story_data = dict(scenario_lookup.get(sid, {
-                            "scenarioID": sid, "bgID": 0, "bgmID": 0,
-                            "text_clean": {}, "text_raw": {}
-                        }))
-                        bg_id = story_data.get("bgID", 0)
-                        bgm_id = story_data.get("bgmID", 0)
-                        story_data["bg_url"] = f"/api/bg/{bg_id}" if bg_id in BG_MAP else None
-                        story_data["bgm_url"] = f"/api/play/BGM/{BGM_MAP[bgm_id]}" if bgm_id in BGM_MAP else None
-                        sequence.append({"type": "story", **story_data})
-                    else:
-                        # Wave item — resolve enemy details, BG, and BGM
-                        w_bg = item.get("bgID", 0)
-                        w_bgm = item.get("bgmID", 0)
-                        enemies_list = []
-                        for enemy in item.get("enemies", []):
-                            enemy_id = enemy.get("enemy_id")
-                            enemy_info = enemies_by_id.get(enemy_id) if enemy_id else None
-                            enemy_detail = {
-                                "enemy_var": enemy.get("enemy_var"),
-                                "enemy_id": enemy_id,
-                                "x": enemy.get("x"),
-                                "y": enemy.get("y"),
-                                "vid": enemy.get("vid")
-                            }
-                            if enemy_info:
-                                enemy_detail["NameString"] = enemy_info.get("NameString")
-                                enemy_detail["HP"] = enemy_info.get("HP")
-                                enemy_detail["ATK"] = enemy_info.get("ATK")
-                                enemy_detail["DEF"] = enemy_info.get("DEF")
-                                enemy_detail["LV"] = enemy_info.get("LV")
-                                enemy_detail["ImageID"] = enemy_info.get("ImageID")
-                            enemies_list.append(enemy_detail)
-                        wave_entry = {
-                            "type": "wave",
-                            "wave_index": item.get("wave_index"),
-                            "battle_name": item.get("battle_name"),
-                            "bgID": w_bg,
-                            "bgmID": w_bgm,
-                            "bg_url": f"/api/bg/{w_bg}" if w_bg in BG_MAP else None,
-                            "bgm_url": f"/api/play/BGM/{BGM_MAP[w_bgm]}" if w_bgm in BGM_MAP else None,
-                            "enemies": enemies_list
-                        }
-                        if random_reason:
-                            wave_entry["random_layout"] = True
-                            wave_entry["random_layout_reason"] = random_reason
-                            wave_entry["possible_enemies"] = _section_random_pool(random_reason, metal_pools, [])
-                        sequence.append(wave_entry)
-                sec_copy["sequence"] = sequence
-            else:
-                # Synthesize section sequence from BattleData + BookData (native IL2CPP chapters: 8+, 100+, 1000+, etc.)
-                sequence = []
-                sec_stories = book_sec_stories.get(sec_num, [])
-                sequence.extend(sec_stories)
-
-                default_bg = sec_stories[0].get("bgID", 0) if sec_stories else 0
-                default_bgm = sec_stories[0].get("bgmID", 10) if sec_stories else 10
-
-                battle_cnt = sec.get("battleCnt", 0)
-                fallback_pool = []
-                if battle_cnt > 0 and not random_reason:
-                    if family_pool:
-                        random_reason = EVENT_FAMILY_POOL_REASON
-                        fallback_pool = family_pool
-                    else:
-                        random_reason, fallback_pool = _derive_fallback_random(
-                            sec_title_raw, chapters, layout_db, enemies_by_id
-                        )
-
-                for w in range(1, battle_cnt + 1):
-                    wave_entry = {
-                        "type": "wave",
-                        "wave_index": w,
-                        "battle_name": f"Wave {w}",
-                        "bgID": default_bg,
-                        "bgmID": default_bgm,
-                        "bg_url": f"/api/bg/{default_bg}" if default_bg in BG_MAP else None,
-                        "bgm_url": f"/api/play/BGM/{BGM_MAP[default_bgm]}" if default_bgm in BGM_MAP else None,
-                        "enemies": []
-                    }
-                    if random_reason:
-                        wave_entry["random_layout"] = True
-                        wave_entry["random_layout_reason"] = random_reason
-                        wave_entry["possible_enemies"] = _section_random_pool(random_reason, metal_pools, fallback_pool)
-                    sequence.append(wave_entry)
-                sec_copy["sequence"] = sequence
-
-            if sec.get("battleCnt", 0) > 0 or sec_layout or sec_copy.get("sequence"):
-                result_sections.append(sec_copy)
-
-        ch_copy = dict(ch)
-        ch_copy["sections"] = result_sections
-        ch_copy["display_name"] = display_name
-        ch_copy["banner_url"] = get_chapter_banner(ch_no_int)
-
-        result_chapters.append(ch_copy)
+        result_chapters.append(_enrich_stage_chapter(ch, display_name, ctx))
 
     if page is not None:
         return {
@@ -455,6 +523,20 @@ def get_stages(page: int = None, limit: int = 20, search: str = ""):
             "has_more": (page * limit) < total
         }
     return result_chapters
+
+
+@router.get('/api/stages/chapter/{chapter_no}')
+def get_stage_chapter(chapter_no: int):
+    """Retrieve a single fully-enriched chapter — the deep-link counterpart of
+    the paginated /api/stages list (e.g. bestiary occurrence links)."""
+    ctx = _stage_context()
+    for ch in ctx["chapters"]:
+        if ch.get("chapterNo") == chapter_no:
+            display_name = derive_chapter_display_name(
+                ch, chapter_no, ctx["strings_db"], ctx["translation_lookup"]
+            )
+            return _enrich_stage_chapter(ch, display_name, ctx)
+    raise HTTPException(status_code=404, detail=f"Chapter {chapter_no} not found")
 
 
 @router.get('/api/bg/{bg_id}')

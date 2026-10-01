@@ -203,6 +203,20 @@ export const sourceTypeMeta = {
   enemy:     { label: 'Enemy', icon: 'fa-skull', color: '#f87171' }
 };
 
+// Species enum (dump.cs). Values 0-3 double as the playable species; the rest
+// only occur on enemies (bestiary). 17+ is not in the dump's enum.
+export const enemySpeciesMeta = {
+  0: 'None', 1: 'Human', 2: 'Lizard', 3: 'Beast', 4: 'Stonefolk', 5: 'Alien',
+  6: 'Wild Beast', 7: 'Dragon', 8: 'Machine', 9: 'Cell', 10: 'Metal',
+  11: 'Summon Beast', 12: 'God Beast', 13: 'Fairy', 14: 'Buddy',
+  15: 'Riftworlder', 16: 'Cipher'
+};
+
+export const enemySpeciesLabel = (id) => enemySpeciesMeta[id] || `Species ${id}`;
+
+// FrameType enum (dump.cs): NormalEnemy=0, Boss1=1, Boss2=2.
+export const isBossEnemy = (frameType) => (frameType || 0) >= 1;
+
 export const TAB_META = {
   dashboard:   { title: 'Dashboard Overview', desc: 'High-level statistics and category index of the exported game data.', icon: 'fa-chart-pie', label: 'Dashboard' },
   storybook:   { title: 'Interactive Storybook', desc: 'Experience the full Terra Battle narrative with background art, soundtracks, and chapter timeline.', icon: 'fa-book-open-reader', label: 'Storybook' },
@@ -210,6 +224,7 @@ export const TAB_META = {
   buddies:     { title: 'Companions (Buddies)', desc: 'Explore the companion stats, description profiles, and thumbnails.', icon: 'fa-paw', label: 'Companions' },
   skills:      { title: 'Skills Catalog', desc: 'List of active skills, status triggers, powers, and area calculations.', icon: 'fa-wand-magic-sparkles', label: 'Skills' },
   items:       { title: 'Items Inventory', desc: 'Browse equipment, job evolve materials, tokens, and materials.', icon: 'fa-gem', label: 'Items' },
+  bestiary:    { title: 'Bestiary', desc: 'Browse every enemy with its level variants, stats, skills, loot and stage occurrences.', icon: 'fa-dragon', label: 'Bestiary' },
   stages:      { title: 'Chapters & Stages', desc: 'Select chapters to view sections, recommended levels, enemy detail and drops.', icon: 'fa-map-location-dot', label: 'Chapters & Stages' },
   audio:         { title: 'Audio Asset Player', desc: 'Stream background music and sound effects directly extracted from the game files.', icon: 'fa-music', label: 'Audio Player' },
   saveEditor: { title: 'Savefile Editor', desc: 'Edit savefiles — characters, companions, items and more — and export them in their own format or convert between Project Liminal Gate and ReTB.', icon: 'fa-arrow-right-arrow-left', label: 'Save Editor' },
