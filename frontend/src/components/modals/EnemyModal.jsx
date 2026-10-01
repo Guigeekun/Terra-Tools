@@ -53,7 +53,7 @@ export default function EnemyModal({ enemy, onClose, onOpenItem, onOpenSkill, on
           </div>
 
           {/* Variant Tabs */}
-          <div className="modal-tabs">
+          <div className="modal-tabs variant-tabs">
             {variants.map((v, i) => (
               <button key={v.enemy_id} className={`modal-tab-btn ${i === variantIndex ? 'active' : ''}`} onClick={() => setVariantIndex(i)}>
                 {tabLabel(v, i)}{isBossEnemy(v.FrameType) && <i className="fa-solid fa-crown" style={{ marginLeft: 5, fontSize: 9, color: 'var(--accent-pink)' }}></i>}

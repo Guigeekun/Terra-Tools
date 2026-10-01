@@ -77,7 +77,8 @@
 
 .modal-tabs {
     display: flex;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 8px 12px;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 12px;
     margin-bottom: 24px;
@@ -92,6 +93,8 @@
     font-family: var(--font-heading);
     font-weight: 600;
     font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
     cursor: pointer;
     transition: var(--transition-smooth);
 }
@@ -100,6 +103,19 @@
     background-color: rgba(56, 189, 248, 0.08);
     border-color: var(--accent-blue);
     color: var(--accent-blue);
+}
+
+/* Bestiary variant tabs: a foe can carry 20+ variants, so keep the chips
+   small and let them flow onto rows instead of one oversized strip. */
+.modal-tabs.variant-tabs {
+    gap: 6px;
+    padding-bottom: 10px;
+}
+
+.modal-tabs.variant-tabs .modal-tab-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 8px;
 }
 
 .job-detail-layout {
