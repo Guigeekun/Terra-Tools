@@ -8,17 +8,6 @@ services:
       # auto: fetch user-data only when missing;
       # force-download: always fetch the latest release user-data, replacing existing data
       BUILD_MODE: ${BUILD_MODE:-auto}
-      # Datadog unified service tagging + APM. Traces and profiling are sent
-      # to the agent through the sockets shared with the datadog service
-      # below; they only flow when DD_TRACE_ENABLED=true (ddtrace-run is
-      # applied by docker-entrypoint.sh, so a dead agent costs nothing).
-      DD_SERVICE: terra-tools
-      DD_ENV: ${DD_ENV:-production}
-      DD_VERSION: ${DD_VERSION:-latest}
-      DD_TRACE_ENABLED: ${DD_TRACE_ENABLED:-true}
-      DD_PROFILING_ENABLED: ${DD_PROFILING_ENABLED:-true}
-      DD_TRACE_AGENT_URL: unix:///var/run/datadog/apm.socket
-      DD_DOGSTATSD_SOCKET: /var/run/datadog/dsd.socket
     develop:
       watch:
         # Sync Python backend code and restart container automatically
@@ -54,50 +43,4 @@ services:
       - ./local-input:/app/local-input:ro
       # Map frontend dist so npm run build updates the container instantly with or without --watch
       - ./frontend/dist:/app/frontend/dist
-      # Agent receiver sockets (APM, DogStatsD); created by the datadog service
-      - datadog-sockets:/var/run/datadog
-    labels:
-      # Unified service tagging: the agent stamps these onto the metrics,
-      # traces and logs it collects from this container
-      com.datadoghq.tags.service: terra-tools
-      com.datadoghq.tags.env: ${DD_ENV:-production}
-      # Explicit log source (JSON access logs from RequestLoggingMiddleware)
-      com.datadoghq.adm.logs: '{"source": "python", "service": "terra-tools"}'
     restart: unless-stopped
-
-  # Datadog agent: host/container metrics, APM traces, DogStatsD and stdout
-  # log collection for the whole compose project. Needs DD_API_KEY in .env
-  # (see .env.example); without it this container exits and the rest of the
-  # stack keeps running untouched.
-  datadog:
-    image: registry.datadoghq.com/agent:7
-    container_name: dd-agent
-    environment:
-      DD_API_KEY: ${DD_API_KEY:-}
-      DD_SITE: ${DD_SITE:-datadoghq.eu}
-      # Docker integration: container metrics + collect every container's stdout
-      DD_LOGS_ENABLED: "true"
-      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true"
-      DD_LOGS_CONFIG_AUTO_MULTI_LINE_DETECTION: "true"
-      DD_CONTAINER_EXCLUDE_LOGS: "name:dd-agent"
-      # APM + DogStatsD endpoints reachable from other containers through the
-      # shared datadog-sockets volume (no published ports needed)
-      DD_APM_ENABLED: "true"
-      DD_APM_NON_LOCAL_TRAFFIC: "true"
-      DD_APM_RECEIVER_SOCKET: /var/run/datadog/apm.socket
-      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: "true"
-      DD_DOGSTATSD_SOCKET: /var/run/datadog/dsd.socket
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /proc/:/host/proc/:ro
-      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - dd-agent-run:/opt/datadog-agent/run
-      - datadog-sockets:/var/run/datadog
-    restart: unless-stopped
-
-volumes:
-  # Named volume so the app and the agent share the APM/DogStatsD sockets
-  datadog-sockets:
-  # Persist agent payload state across restarts (required for log collection)
-  dd-agent-run:

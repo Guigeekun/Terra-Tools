@@ -269,17 +269,12 @@ Then open [http://127.0.0.1:5001](http://127.0.0.1:5001) in your browser.
 
 ### Observability (Datadog)
 
-Compose ships an optional `datadog` service (the official `agent:7` container) that collects host & container metrics, APM traces, and every container's stdout logs. To enable it, create a `.env` file next to `docker-compose.yml` (see [`.env.example`](.env.example)) with your key:
+Datadog telemetry comes from two agent-free surfaces — no agent container anywhere (the production host is Render, which bills per container and forbids the socket mounts an agent needs):
 
-```bash
-cp .env.example .env   # then fill in DD_API_KEY
-docker compose up -d
-```
+* **Backend logs**: the deployed image logs one JSON line per request (`LOG_FORMAT=json`, see `RequestLoggingMiddleware`), and production ships them to Datadog via **Render's Datadog log stream**, configured in the Render dashboard (Logs → Log Streams). Local Docker runs just log to stdout.
+* **Frontend RUM**: [`@datadog/browser-rum`](frontend/src/rum.js) reports views, JS errors, resource timing, user actions and long tasks straight from visitors' browsers. Values live in [`frontend/.env.production`](frontend/.env.production) (template: [`frontend/.env.example`](frontend/.env.example)); local dev stays telemetry-free, and a refused Datadog (e.g. an expired trial) never affects the app — `VITE_DD_RUM_ENABLED=false` ships a build without it entirely.
 
-* Without `DD_API_KEY` the agent container simply exits — the rest of the stack is unaffected.
-* Traces and continuous profiling are emitted by the backend through Unix sockets shared with the agent (`datadog-sockets` volume, no published ports); disable them by setting `DD_TRACE_ENABLED=false`. If `ddtrace` slows startup in a dev-only scenario, also unset `DD_PROFILING_ENABLED` by setting it to `false`.
-* Logs are the container stdout (JSON access logs in the deployed image), auto-multi-line detected and tagged `source:python`, `service:terra-tools`.
-* Intake site defaults to `datadoghq.eu`; override with `DD_SITE`.
+Distributed tracing was deliberately left out: without an agent there is no supported ddtrace path, and the OpenTelemetry→OTLP-gateway route can be added later if ever needed.
 
 ### Without Docker (local Python)
 
