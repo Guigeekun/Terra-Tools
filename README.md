@@ -278,8 +278,10 @@ docker compose up -d
 
 * Without `DD_API_KEY` the agent container simply exits — the rest of the stack is unaffected.
 * Traces and continuous profiling are emitted by the backend through Unix sockets shared with the agent (`datadog-sockets` volume, no published ports); disable them by setting `DD_TRACE_ENABLED=false`. If `ddtrace` slows startup in a dev-only scenario, also unset `DD_PROFILING_ENABLED` by setting it to `false`.
-* Logs are the container stdout (JSON access logs in the deployed image), auto-multi-line detected and tagged `source:python`, `service:terra-tools`.
+* Logs are the container stdout (JSON access logs in the deployed image), auto-multi-line detected and tagged `source:python`, `service:terra-tools`. On the Render deployment there is no agent container (Render bills per container and its sandbox forbids the socket mounts): logs flow through Render's Datadog log stream instead, configured in the Render dashboard.
 * Intake site defaults to `datadoghq.eu`; override with `DD_SITE`.
+
+**Frontend telemetry (RUM)** is agent-free: `@datadog/browser-rum` reports views, JS errors, resource timing, user actions and long tasks straight from visitors' browsers. Each hash-router tab is a RUM view; render errors are caught by an error boundary. Values live in [`frontend/.env.production`](frontend/.env.production) (template: [`frontend/.env.example`](frontend/.env.example)) — committed because the client token is public by design and a gitignored file would never reach Render's Docker build; the gitignored `frontend/.env` is for local overrides only. The SDK initializes in production builds only (`npm run dev` stays telemetry-free) and is fail-safe: a refused Datadog org (e.g. an expired trial) just drops events and never affects the app, while `VITE_DD_RUM_ENABLED=false` ships a build without the SDK entirely.
 
 ### Without Docker (local Python)
 
