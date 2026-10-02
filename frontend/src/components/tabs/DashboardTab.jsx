@@ -1,6 +1,8 @@
 import { useGameData } from '../../contexts/GameDataContext';
 
-export default function DashboardTab({ onTabChange }) {
+// Cards are plain hash links (same scheme as the sidebar), so the browser's
+// own open-in-new-tab (middle-click / ctrl-click / context menu) works.
+export default function DashboardTab() {
   const { data } = useGameData();
   if (!data) return null;
 
@@ -31,7 +33,7 @@ export default function DashboardTab({ onTabChange }) {
     <div className="tab-content">
       <div className="stats-grid">
         {stats.map(s => (
-          <div key={s.key} className="stat-card" onClick={() => onTabChange(s.key)}>
+          <a key={s.key} href={`#/${s.key}`} className="stat-card">
             <div className={`stat-icon ${s.bg}`}>
               <i className={`fa-solid ${s.icon}`}></i>
             </div>
@@ -39,7 +41,7 @@ export default function DashboardTab({ onTabChange }) {
               <h3>{s.count}</h3>
               <p>{s.label}</p>
             </div>
-          </div>
+          </a>
         ))}
       </div>
       <div className="welcome-box">

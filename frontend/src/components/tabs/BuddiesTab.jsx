@@ -89,7 +89,13 @@ export default function BuddiesTab({ onSelectBuddy, initialSearch = '', onOpenSk
             {selectedBuddy.evolveID > 0 && buddies.find(b => b.ID === selectedBuddy.evolveID) && (
               <div style={{ padding: 12, border: '1px solid var(--border-color)', borderRadius: 8 }}>
                 <h4 style={{ margin: '0 0 8px 0', fontSize: 14, color: 'var(--text-secondary)' }}>Evolves Into</h4>
-                <a href="#" onClick={(e) => { e.preventDefault(); handleSelectBuddy(buddies.find(b => b.ID === selectedBuddy.evolveID)); }} style={{ color: 'var(--accent-blue)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* Real deep link so middle-click opens the evolution target
+                    in a new tab; left-click keeps the in-session handler. */}
+                <a
+                  href={`#/buddies?buddy=${selectedBuddy.evolveID}`}
+                  onClick={(e) => { e.preventDefault(); handleSelectBuddy(buddies.find(b => b.ID === selectedBuddy.evolveID)); }}
+                  style={{ color: 'var(--accent-blue)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}
+                >
                   <i className="fa-solid fa-arrow-right"></i> {loc(buddies.find(b => b.ID === selectedBuddy.evolveID).NameString, lang)}
                 </a>
               </div>
@@ -123,8 +129,15 @@ export default function BuddiesTab({ onSelectBuddy, initialSearch = '', onOpenSk
           <>
             {buddies.map(buddy => {
               const thumbUrl = buddy.thumb_file ? `/api/assets/image?path=${encodeURIComponent(buddy.thumb_file)}` : null;
+              // Real deep link so middle-click opens the companion in a new
+              // tab; left-click keeps the session handler (?q= safe).
               return (
-                <div key={buddy.ID} className="card-item" onClick={() => handleSelectBuddy(buddy)} style={{ cursor: 'pointer' }}>
+                <a
+                  key={buddy.ID}
+                  href={`#/buddies?buddy=${buddy.ID}`}
+                  className="card-item"
+                  onClick={(e) => { e.preventDefault(); handleSelectBuddy(buddy); }}
+                >
                   <span className="card-badge badge-rarity">{rarityLabels[buddy.rarity] || 'Class ' + buddy.rarity}</span>
                   {thumbUrl ? (
                     <div className="card-image" style={{ width: '100%', aspectRatio: '1 / 1', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, border: '1px solid var(--border-color)', overflow: 'hidden' }}>
@@ -143,7 +156,10 @@ export default function BuddiesTab({ onSelectBuddy, initialSearch = '', onOpenSk
                         {...(onOpenSkill ? {
                           className: 'skill-jump',
                           title: 'View this skill in the Skills catalog',
-                          onClick: (e) => { e.stopPropagation(); onOpenSkill(buddy.skill, data.skills[buddy.skill - 1]); },
+                          // preventDefault: the chip sits inside the card's
+                          // link — without it the browser would still follow
+                          // the card href (stopPropagation doesn't stop that).
+                          onClick: (e) => { e.preventDefault(); e.stopPropagation(); onOpenSkill(buddy.skill, data.skills[buddy.skill - 1]); },
                         } : {})}
                         style={{ color: 'var(--accent-indigo)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
@@ -163,7 +179,7 @@ export default function BuddiesTab({ onSelectBuddy, initialSearch = '', onOpenSk
                       Thumb: {buddy.thumb_file ? buddy.thumb_file.split('/').pop() : 'None'}
                     </span>
                   </div>
-                </div>
+                </a>
               );
             })}
             <div ref={sentinelRef} style={{ height: 30, gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

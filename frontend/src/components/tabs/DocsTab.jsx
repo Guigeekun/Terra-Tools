@@ -341,7 +341,9 @@ export default function DocsTab() {
 
           <div className="docs-grid">
             {visibleDocs.map(d => (
-              <article key={d.slug} className="docs-card" onClick={() => openDoc(d.slug)}>
+              // Real hash link so middle-click opens the doc in a new tab;
+              // the hashchange listener above picks the navigation up.
+              <a key={d.slug} href={docHash(d.slug)} className="docs-card">
                 <h3>{d.title}</h3>
                 {d.description && <p>{d.description}</p>}
                 <div className="docs-card-foot">
@@ -350,7 +352,7 @@ export default function DocsTab() {
                   </div>
                   {d.updated && <span className="docs-updated">{formatDate(d.updated)}</span>}
                 </div>
-              </article>
+              </a>
             ))}
           </div>
         </>

@@ -193,12 +193,12 @@ function AppContent() {
             onToggleSidebar={() => setMobileSidebarOpen(prev => !prev)}
           />
           <div className="content-container">
-            {activeTab === 'dashboard' && <DashboardTab onTabChange={handleTabChange} />}
+            {activeTab === 'dashboard' && <DashboardTab />}
             {activeTab === 'storybook' && <StorybookTab />}
             {activeTab === 'characters' && <CharactersTab onSelectCharacter={openCharacter} initialSearch={params.q ?? ''} />}
             {activeTab === 'buddies' && <BuddiesTab onSelectBuddy={openBuddy} initialSearch={params.q ?? ''} onOpenSkill={openSkillTab} />}
             {activeTab === 'skills' && <SkillsTab onOpenSource={openSourceTab} initialSearch={params.q ?? ''} />}
-            {activeTab === 'items' && <ItemsTab onSelectItem={openItem} />}
+            {activeTab === 'items' && <ItemsTab />}
             {activeTab === 'bestiary' && <BestiaryTab onSelectEnemy={openEnemy} initialSearch={params.q ?? ''} />}
             {activeTab === 'stages' && (
               <StagesTab

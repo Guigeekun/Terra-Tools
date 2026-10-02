@@ -3,7 +3,7 @@ import { loc } from '../../utils/localization';
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 
-export default function ItemsTab({ onSelectItem }) {
+export default function ItemsTab() {
   const [search, setSearch] = useState('');
   const filters = useMemo(() => ({ search }), [search]);
 
@@ -29,8 +29,11 @@ export default function ItemsTab({ onSelectItem }) {
           <>
             {items.map((item, idx) => {
               const itemIndex = item.item_index || (idx + 1);
+              // Real deep link so middle-click opens the item modal in a new
+              // tab; the anchor's default action routes through the hash
+              // router exactly like the old click handler did.
               return (
-                <div key={itemIndex} className="card-item" style={{ padding: 16 }} onClick={() => onSelectItem(itemIndex)}>
+                <a key={itemIndex} href={`#/items?item=${itemIndex}`} className="card-item" style={{ padding: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, minHeight: 64 }}>
                     {item.icon_url ? (
                       <img src={item.icon_url} alt={loc(item.NameString, lang)} style={{ width: 64, height: 64, objectFit: 'contain', imageRendering: 'pixelated' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }} />
@@ -47,7 +50,7 @@ export default function ItemsTab({ onSelectItem }) {
                     <span>ID: {itemIndex}</span>
                     <span>Sort: {item.sortOrder || 0}</span>
                   </div>
-                </div>
+                </a>
               );
             })}
             <div ref={sentinelRef} style={{ height: 30, gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

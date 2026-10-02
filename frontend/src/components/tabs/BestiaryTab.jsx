@@ -68,8 +68,16 @@ export default function BestiaryTab({ onSelectEnemy, initialSearch = '' }) {
             {enemies.map(enemy => {
               const pieceUrl = enemy.image_file ? `/api/assets/image?path=${encodeURIComponent(enemy.image_file)}` : null;
               const levelRange = enemy.min_lv === enemy.max_lv ? `Lv ${enemy.min_lv}` : `Lv ${enemy.min_lv}–${enemy.max_lv}`;
+              // Real deep link so middle-click opens the enemy modal in a new
+              // tab; left-click still routes through onSelectEnemy to keep the
+              // ?q= search param in the pushed history entry.
               return (
-                <div key={enemy.first_id} className="card-item" onClick={() => onSelectEnemy(enemy)}>
+                <a
+                  key={enemy.first_id}
+                  href={`#/bestiary?enemy=${enemy.first_id}`}
+                  className="card-item"
+                  onClick={(e) => { e.preventDefault(); onSelectEnemy(enemy); }}
+                >
                   <span className="card-badge badge-rarity">{enemy.variant_count} variant{enemy.variant_count === 1 ? '' : 's'}</span>
                   {enemy.boss && (
                     <span className="card-badge badge-recode" title="At least one variant uses a boss battle frame">
@@ -99,7 +107,7 @@ export default function BestiaryTab({ onSelectEnemy, initialSearch = '' }) {
                       </span>
                     )}
                   </div>
-                </div>
+                </a>
               );
             })}
             <div ref={sentinelRef} style={{ height: 30, gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
