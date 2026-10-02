@@ -71,8 +71,16 @@ export default function CharactersTab({ onSelectCharacter, initialSearch = '' })
             {characters.map(char => {
               const firstJob = char.JobsInfo?.[0];
               const pieceUrl = firstJob?.piece_file ? `/api/assets/image?path=${encodeURIComponent(firstJob.piece_file)}` : null;
+              // Real hash link so middle-click opens the modal in a new tab;
+              // left-click still routes through onSelectCharacter to seed the
+              // modal cache and keep the ?q= search param.
               return (
-                <div key={char.ID} className="card-item" onClick={() => onSelectCharacter(char)}>
+                <a
+                  key={char.ID}
+                  href={`#/characters?char=${char.ID}`}
+                  className="card-item"
+                  onClick={(e) => { e.preventDefault(); onSelectCharacter(char); }}
+                >
                   <span className="card-badge badge-rarity">{rarityShortLabels[char.rarity] || char.rarity}</span>
                   {char.recode && (
                     <span className="card-badge badge-recode" title="This character can be recoded into its lambda form">
@@ -93,7 +101,7 @@ export default function CharactersTab({ onSelectCharacter, initialSearch = '' })
                       {char.JobsInfo.map((job, i) => <JobBadge key={i} job={job} />)}
                     </div>
                   )}
-                </div>
+                </a>
               );
             })}
             <div ref={sentinelRef} style={{ height: 30, gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

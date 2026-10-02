@@ -179,7 +179,10 @@ export default function StagesTab({ onSelectItem, onSelectBuddy, initialChapter 
               <p className="stages-panel-placeholder">No stages/sections registered in this chapter.</p>
             ) : currentChapter.sections.map((sec, idx) => {
               const dropItems = sec.itemID ? (
-                <>Drop Item ID: <a href="#" style={{color: 'var(--accent-blue)', textDecoration: 'underline'}} onClick={(e) => { e.preventDefault(); onSelectItem(sec.itemID); }}>{sec.itemID}</a> ({sec.itemCount || 1})</>
+                // Real deep link so middle-click opens the item modal in a new
+                // tab; left-click keeps onSelectItem to preserve the current
+                // ?chapter=&section= params in the pushed history entry.
+                <>Drop Item ID: <a href={`#/stages?item=${sec.itemID}`} style={{color: 'var(--accent-blue)', textDecoration: 'underline'}} onClick={(e) => { e.preventDefault(); onSelectItem(sec.itemID); }}>{sec.itemID}</a> ({sec.itemCount || 1})</>
               ) : 'No Item Drops';
 
               let buddiesDisplay = 'No Companion Drops';
@@ -196,8 +199,12 @@ export default function StagesTab({ onSelectItem, onSelectBuddy, initialChapter 
                         <span key={bIdx}>
                           {bIdx > 0 && ', '}
                           {bId ? (
+                            // Real deep link so middle-click opens the
+                            // companion modal in a new tab; left-click keeps
+                            // onSelectBuddy to preserve the current
+                            // ?chapter=&section= params in the history entry.
                             <a
-                              href="#"
+                              href={`#/stages?buddy=${bId}`}
                               style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}
                               onClick={(e) => {
                                 e.preventDefault();

@@ -16,6 +16,8 @@
     cursor: pointer;
     transition: var(--transition-smooth);
     box-shadow: var(--shadow-premium);
+    color: inherit;
+    text-decoration: none;
 }
 
 .stat-card:hover {

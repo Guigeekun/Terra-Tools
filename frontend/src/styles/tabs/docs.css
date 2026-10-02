@@ -63,6 +63,8 @@
     background: var(--bg-card);
     cursor: pointer;
     transition: var(--transition-smooth);
+    color: inherit;
+    text-decoration: none;
 }
 
 .docs-card:hover {
