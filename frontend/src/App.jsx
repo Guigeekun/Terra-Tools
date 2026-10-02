@@ -162,6 +162,15 @@ function AppContent() {
   const openStage = (chapterNo, sectionIndex) =>
     navigate(tabHash('stages', { chapter: chapterNo, section: sectionIndex }));
 
+  // Chapter selection inside the tab writes the URL too (a push, so Back
+  // walks chapter history). The hash stays the single source of truth, so the
+  // tab's sync-from-URL effect can never fight a local selection. Open modals
+  // (?item=…) survive; a stale ?section from the previous chapter is dropped.
+  const selectStageChapter = (chapterNo) =>
+    navigate(tabHash('stages', { ...params, chapter: chapterNo, section: undefined }));
+  const clearStageChapter = () =>
+    navigate(tabHash('stages', { ...params, chapter: undefined, section: undefined }));
+
   return (
     <>
       {loading && <LoadingOverlay />}
@@ -191,7 +200,16 @@ function AppContent() {
             {activeTab === 'skills' && <SkillsTab onOpenSource={openSourceTab} initialSearch={params.q ?? ''} />}
             {activeTab === 'items' && <ItemsTab onSelectItem={openItem} />}
             {activeTab === 'bestiary' && <BestiaryTab onSelectEnemy={openEnemy} initialSearch={params.q ?? ''} />}
-            {activeTab === 'stages' && <StagesTab onSelectItem={openItem} onSelectBuddy={openBuddy} initialChapter={chapterParam} initialSection={sectionParam} />}
+            {activeTab === 'stages' && (
+              <StagesTab
+                onSelectItem={openItem}
+                onSelectBuddy={openBuddy}
+                initialChapter={chapterParam}
+                initialSection={sectionParam}
+                onSelectChapter={selectStageChapter}
+                onClearChapter={clearStageChapter}
+              />
+            )}
             {activeTab === 'audio' && <AudioTab />}
             {activeTab === 'saveEditor' && <SaveConverterTab />}
             {activeTab === 'docs' && <DocsTab />}
