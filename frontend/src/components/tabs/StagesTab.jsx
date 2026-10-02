@@ -6,7 +6,7 @@ import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { useAudio } from '../../contexts/AudioContext';
 import { fetchStageChapter } from '../../api';
 
-export default function StagesTab({ onSelectItem, onSelectBuddy, initialChapter = null, initialSection = null }) {
+export default function StagesTab({ onSelectItem, onSelectBuddy, initialChapter = null, initialSection = null, onSelectChapter, onClearChapter }) {
   const [search, setSearch] = useState('');
   const [currentChapter, setCurrentChapter] = useState(null);
   const [openSections, setOpenSections] = useState({});
@@ -21,12 +21,17 @@ export default function StagesTab({ onSelectItem, onSelectBuddy, initialChapter 
   const { items: stages, total, isInitialLoading, isFetchingNextPage, sentinelRef, lang, data } = usePaginatedCategory('stages', filters, 20);
   const strings = data?.strings;
 
-  // Deep links (?chapter=N&section=M, e.g. from bestiary occurrences): select
-  // the chapter even when it sits on a later, not-yet-fetched page of the
-  // paginated list by fetching it on its own, then open + scroll to the section.
+  // The URL is the single source of truth for the selected chapter: deep
+  // links (?chapter=N&section=M, e.g. from bestiary occurrences), chapter
+  // clicks (which navigate via onSelectChapter) and Back/Forward all land
+  // here. Select the chapter even when it sits on a later, not-yet-fetched
+  // page of the paginated list by fetching it on its own.
   const chapterNo = Number(initialChapter);
   useEffect(() => {
-    if (!initialChapter) return undefined;
+    if (!initialChapter) {
+      setCurrentChapter(null); // URL dropped the chapter (Back to Chapters, Back button)
+      return undefined;
+    }
     if (currentChapter?.chapterNo === chapterNo) return undefined;
     const inPages = stages.find(ch => ch.chapterNo === chapterNo);
     if (inPages) {
@@ -126,7 +131,7 @@ export default function StagesTab({ onSelectItem, onSelectBuddy, initialChapter 
                 <button
                   key={ch.chapterNo}
                   className={`chapter-btn ${currentChapter?.chapterNo === ch.chapterNo ? 'active' : ''} ${ch.banner_url ? 'has-banner' : ''}`}
-                  onClick={() => setCurrentChapter(ch)}
+                  onClick={() => onSelectChapter(ch.chapterNo)}
                 >
                   {ch.banner_url && (
                     <div
@@ -153,9 +158,9 @@ export default function StagesTab({ onSelectItem, onSelectBuddy, initialChapter 
           </div>
         ) : (
           <div>
-            <button 
-              className="stages-mobile-back-btn" 
-              onClick={() => setCurrentChapter(null)}
+            <button
+              className="stages-mobile-back-btn"
+              onClick={onClearChapter}
               title="Return to Chapter List"
             >
               <i className="fa-solid fa-arrow-left"></i>
