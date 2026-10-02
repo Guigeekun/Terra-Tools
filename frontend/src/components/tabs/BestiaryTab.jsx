@@ -89,8 +89,11 @@ export default function BestiaryTab({ onSelectEnemy, initialSearch = '' }) {
                     <span><i className="fa-solid fa-angles-up"></i> {levelRange}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
-                    <span className="badge" style={{ fontSize: 10, padding: '2px 7px' }}>{enemySpeciesLabel(enemy.species)}</span>
-                    {elementMeta[enemy.attrib] && Number(enemy.attrib) > 0 && (
+                    {/* Group-level species/element are null when variants disagree: only claim what every variant shares */}
+                    {enemy.species != null && (
+                      <span className="badge" style={{ fontSize: 10, padding: '2px 7px' }}>{enemySpeciesLabel(enemy.species)}</span>
+                    )}
+                    {enemy.attrib != null && Number(enemy.attrib) > 0 && elementMeta[enemy.attrib] && (
                       <span className="badge" style={{ fontSize: 10, padding: '2px 7px', color: elementMeta[enemy.attrib].color, borderColor: elementMeta[enemy.attrib].color + '44' }}>
                         {elementMeta[enemy.attrib].name}
                       </span>
