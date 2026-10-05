@@ -940,7 +940,8 @@
   border: 1px solid var(--border-color);
   border-radius: 12px;
   margin-top: 10px;
-  overflow: hidden;
+  max-height: 380px;
+  overflow-y: auto;
 }
 
 .item-picker-result {

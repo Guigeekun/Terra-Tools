@@ -4,8 +4,13 @@ import { loc } from '../../utils/localization';
 import { detectSaveFormat, inspectSaveData, convertSaveData, applySaveEdits, EMPTY_SAVE_EDITS, hasSaveEdits, sanitizeCountInput, ITEM_MAX_STACK, decimalizeClientDoubles } from '../../utils/saveConverter';
 import { inspectSave, convertSave } from '../../api';
 
-// Add-picker search results shown before the list needs scrolling.
-const PICKER_LIMIT = 8;
+// Rows an add-picker renders; the result list scrolls beyond this. Matches are
+// ranked so an exact-name entry (e.g. "Dragon") is never crowded out by
+// substring hits.
+const PICKER_LIMIT = 50;
+
+// Exact name match first, then names starting with the query, then everything else.
+const rankMatch = (name, q) => (name === q ? 0 : name.startsWith(q) ? 1 : 2);
 
 // Fallback level cap for companions missing from the game catalog.
 const BUDDY_LEVEL_FALLBACK = 99;
@@ -502,11 +507,11 @@ export default function SaveConverterTab() {
       if (id === undefined || heldItemIds.has(id)) continue;
       const name = (itemNameById[id] || '').toLowerCase();
       if (name.includes(q) || String(id) === q) {
-        matches.push(id);
-        if (matches.length >= PICKER_LIMIT) break;
+        matches.push({ id, rank: rankMatch(name, q) });
       }
     }
-    return matches;
+    matches.sort((a, b) => a.rank - b.rank || a.id - b.id);
+    return matches.slice(0, PICKER_LIMIT).map(m => m.id);
   }, [gamedataItems, itemSearch, heldItemIds, itemNameById]);
 
   // Effective character roster: loaded characters plus the add-picker recruits,
@@ -551,11 +556,11 @@ export default function SaveConverterTab() {
       if (id === undefined) continue;
       const name = (charNameById[id] || '').toLowerCase();
       if (name.includes(q) || String(id) === q) {
-        matches.push({ id, owned: ownedCharIds.has(id) });
-        if (matches.length >= PICKER_LIMIT) break;
+        matches.push({ id, owned: ownedCharIds.has(id), rank: rankMatch(name, q) });
       }
     }
-    return matches;
+    matches.sort((a, b) => a.rank - b.rank || a.id - b.id);
+    return matches.slice(0, PICKER_LIMIT);
   }, [gamedataCharacters, charSearch, ownedCharIds, charNameById]);
 
   // Effective companion roster: the loaded copies overlaid with level edits
@@ -593,11 +598,11 @@ export default function SaveConverterTab() {
       if (id === undefined) continue;
       const name = (buddyNameById[id] || '').toLowerCase();
       if (name.includes(q) || String(id) === q) {
-        matches.push(id);
-        if (matches.length >= PICKER_LIMIT) break;
+        matches.push({ id, rank: rankMatch(name, q) });
       }
     }
-    return matches;
+    matches.sort((a, b) => a.rank - b.rank || a.id - b.id);
+    return matches.slice(0, PICKER_LIMIT).map(m => m.id);
   }, [gamedataBuddies, buddySearch, buddyNameById]);
 
   return (
