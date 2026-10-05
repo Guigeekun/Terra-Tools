@@ -256,6 +256,7 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
                                   </div>
                                   <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                     Trigger: {triggerText(skill)}
+                                    <span className="badge area-badge">{loc(skill.rangePrefixString, lang, 'Self')}{skill.range > 1 ? ` · ${skill.range}` : ''}</span>
                                     <EmitConditionBadge skill={skill} />
                                   </span>
                                   <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>{loc(skill.descString, lang)}</p>
