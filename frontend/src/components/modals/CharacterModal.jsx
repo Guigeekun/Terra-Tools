@@ -102,7 +102,7 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
                     {(option.items || []).map((mat, i) => (
                       <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
                         title="Click to view item details & drop locations"
-                        onClick={() => { onClose(); onOpenItem(mat.item_id); }}>
+                        onClick={() => onOpenItem(mat.item_id)}>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                           {mat.icon_url && <img src={mat.icon_url} alt="" style={{ width: 24, height: 24, objectFit: 'contain', imageRendering: 'pixelated', marginRight: 8, borderRadius: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }} />}
                           <span>{loc(mat.name, lang)}</span>
@@ -214,7 +214,7 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
                       {(job.unlock_materials || []).map((mat, i) => (
                         <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}
                           title="Click to view item details & drop locations"
-                          onClick={() => { onClose(); onOpenItem(mat.item_id); }}>
+                          onClick={() => onOpenItem(mat.item_id)}>
                           <div style={{ display: 'flex', alignItems: 'center' }}>
                             {mat.icon_url && <img src={mat.icon_url} alt="" style={{ width: 24, height: 24, objectFit: 'contain', imageRendering: 'pixelated', marginRight: 8, borderRadius: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }} />}
                             <span>{loc(mat.name, lang)}</span>
