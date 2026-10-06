@@ -1,6 +1,13 @@
 services:
   terra-tools:
-    build: .
+    build:
+      context: .
+      # The runtime bind mount supplies ./user-data, so local worktree builds
+      # can skip baking a release download into the image: set
+      # FETCH_USER_DATA=false in .env. Default stays true for bare builds
+      # (Render) that need the data baked in.
+      args:
+        FETCH_USER_DATA: ${FETCH_USER_DATA:-true}
     container_name: terra-tools
     ports:
       - "5001:5001"

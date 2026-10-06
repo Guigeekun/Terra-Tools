@@ -23,3 +23,6 @@ config.json
 
 # Secrets: compose reads the Datadog API key (and other overrides) from .env
 .env
+
+# Per-worktree compose overrides (shifted port + container name)
+docker-compose.override.yml
