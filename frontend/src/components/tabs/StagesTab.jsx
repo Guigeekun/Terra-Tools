@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { loc, translateStageTitle } from '../../utils/localization';
+import { chestTierOdds as chestTierOddsLabel } from '../../utils/luckChests';
 import WaveBoard from '../shared/WaveBoard';
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
@@ -286,6 +287,10 @@ export default function StagesTab({ onSelectItem, onSelectBuddy, initialChapter 
                     <span><i className="fa-solid fa-paw"></i> {buddiesDisplay}</span>
                   </div>
 
+                  {sec.luck_chests?.length > 0 && (
+                    <LuckChestPanel chests={sec.luck_chests} lang={lang} onSelectItem={onSelectItem} />
+                  )}
+
                   {sequence.length > 0 && (
                     <div className="stage-layout-expander">
                       <button className="toggle-layout-btn" onClick={() => toggleSection(idx)}>
@@ -420,6 +425,139 @@ function SectionSequenceView({ sequence, lang, onOpenBg, onToggleBgm, isBgmPlayi
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ── Luck Chest Panel ──────────────────────────────────────────────────────────
+
+function LuckChestPanel({ chests, lang, onSelectItem }) {
+  const [openTier, setOpenTier] = useState(null);
+  const sorted = [...chests].sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+
+  return (
+    <div style={{
+      marginTop: 10,
+      background: 'rgba(234,179,8,0.06)',
+      border: '1px solid rgba(234,179,8,0.28)',
+      borderRadius: 8,
+      padding: '9px 11px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#fde68a' }}>
+          <i className="fa-solid fa-box-open" style={{ marginRight: 6 }}></i>Luck Treasure Chests
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+          odds scale with the team's average Luck
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 7 }}>
+        {sorted.map(tier => (
+          <button
+            key={tier.key}
+            onClick={() => setOpenTier(openTier === tier.key ? null : tier.key)}
+            title={chestTierOddsLabel(tier)}
+            style={{
+              cursor: 'pointer',
+              fontSize: 10,
+              fontWeight: 600,
+              padding: '3px 9px',
+              borderRadius: 20,
+              border: `1px solid ${openTier === tier.key ? 'rgba(234,179,8,0.65)' : 'rgba(234,179,8,0.3)'}`,
+              background: openTier === tier.key ? 'rgba(234,179,8,0.22)' : 'rgba(234,179,8,0.1)',
+              color: '#fde68a',
+            }}
+          >
+            {tier.key}
+          </button>
+        ))}
+      </div>
+      {openTier && (() => {
+        const tier = sorted.find(t => t.key === openTier);
+        if (!tier) return null;
+        return (
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed rgba(234,179,8,0.25)' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
+              {chestTierOddsLabel(tier)} — one of:
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 5 }}>
+              {tier.rewards.map((reward, i) => (
+                <ChestRewardChip key={i} reward={reward} lang={lang} onSelectItem={onSelectItem} />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+function ChestRewardChip({ reward, lang, onSelectItem }) {
+  const chipStyle = {
+    display: 'flex', alignItems: 'center', gap: 6,
+    background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)',
+    borderRadius: 6, padding: '4px 8px', fontSize: 11, color: 'var(--text-secondary)',
+  };
+
+  if (reward.kind === 'coins') {
+    return (
+      <div style={chipStyle}>
+        <i className="fa-solid fa-coins" style={{ fontSize: 10, color: '#fbbf24', flexShrink: 0 }}></i>
+        <span>{reward.amount} Coins</span>
+      </div>
+    );
+  }
+
+  if (reward.kind === 'item') {
+    const name = loc(reward.name, lang, `Item #${reward.item_id}`);
+    const inner = (
+      <>
+        <img
+          src={reward.icon_url}
+          alt=""
+          style={{ width: 18, height: 18, objectFit: 'contain', imageRendering: 'pixelated', flexShrink: 0 }}
+          onError={e => { e.target.style.display = 'none'; }}
+        />
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+      </>
+    );
+    // Real hash link so middle-click opens the item in a new tab.
+    return (
+      <a
+        href={`#/stages?item=${reward.item_id}`}
+        style={{ ...chipStyle, textDecoration: 'none' }}
+        onClick={e => { e.preventDefault(); if (onSelectItem) onSelectItem(reward.item_id); }}
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  if (reward.kind === 'buddy') {
+    return (
+      <div style={chipStyle}>
+        <i className="fa-solid fa-paw" style={{ fontSize: 10, opacity: 0.6, flexShrink: 0 }}></i>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {loc(reward.name, lang, `Companion #${reward.buddy_id}`)}
+        </span>
+      </div>
+    );
+  }
+
+  if (reward.kind === 'character') {
+    return (
+      <div style={chipStyle}>
+        <i className="fa-solid fa-user" style={{ fontSize: 10, opacity: 0.6, flexShrink: 0 }}></i>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {loc(reward.name, lang, `Character #${reward.character_id}`)}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={chipStyle}>
+      <span style={{ opacity: 0.6 }}>{reward.code || '?'}</span>
     </div>
   );
 }

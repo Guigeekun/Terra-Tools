@@ -285,6 +285,7 @@ def load_databases():
         "enemies": "EnemyData.json",
         "stages_layout": "StagesLayout.json",
         "stage_drops": "StageDrops.json",
+        "luck_chests": "LuckChests.json",
         "book": "BookData.json",
     }
     

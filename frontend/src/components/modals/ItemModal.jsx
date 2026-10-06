@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { loc, translateStageTitle, getSectionSubtitle } from '../../utils/localization';
+import { chestTierOdds } from '../../utils/luckChests';
 import { useGameData } from '../../contexts/GameDataContext';
 import { fetchItemDetails } from '../../api';
 
@@ -59,6 +60,23 @@ export default function ItemModal({ itemId, onClose }) {
                           <span className="badge" style={{ backgroundColor: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.2)', color: '#22c55e', fontSize: 10, marginTop: 4 }}>
                             Section Reward x{st.section_drop_count}
                           </span>
+                        )}
+                        {st.luck_chests?.length > 0 && (
+                          <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                              <i className="fa-solid fa-box-open" style={{ marginRight: 4, color: '#fde68a' }}></i>Luck Chest:
+                            </span>
+                            {st.luck_chests.map((tier, j) => (
+                              <span
+                                key={j}
+                                className="badge"
+                                title={chestTierOdds(tier)}
+                                style={{ backgroundColor: 'rgba(234,179,8,0.08)', borderColor: 'rgba(234,179,8,0.2)', color: '#fde68a', fontSize: 10 }}
+                              >
+                                {tier.key}
+                              </span>
+                            ))}
+                          </div>
                         )}
                         {st.spawning_enemies?.length > 0 && (
                           <div style={{ marginTop: 4, paddingLeft: 8, borderLeft: '2px solid rgba(255,255,255,0.05)' }}>

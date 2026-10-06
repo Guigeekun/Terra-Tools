@@ -513,6 +513,37 @@ def run_extract_native_drops(output_dir: Path) -> None:
         print(f"  Failed to run extract_native_drops.py: {err}")
 
 
+def run_extract_luck_chests(output_dir: Path) -> None:
+    """Assemble the Luck Treasure Chest pools into LuckChests.json (step 10).
+
+    Chest contents were server-authored and live only in the community record,
+    so this step needs no APK artifacts of its own — just BattleData.json from
+    step 5 to validate stages against, and the project-liminal-gate checkout
+    beside this repository (or ``liminal_gate_path`` in config.json)."""
+    import subprocess
+    scripts_dir = Path(__file__).resolve().parent
+    battle_data_path = output_dir / "game_data" / "BattleData.json"
+    if not battle_data_path.exists():
+        print("  Skipped: BattleData.json not extracted yet.")
+        return
+
+    print("  Running extract_luck_chests.py (Luck Treasure Chest pools)...")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(scripts_dir / "extract_luck_chests.py"),
+             "--output-dir", str(output_dir)],
+            capture_output=True, text=True
+        )
+        for line in result.stdout.splitlines():
+            print(f"    {line}")
+        if result.returncode != 0:
+            print(f"  Warning: extract_luck_chests exited with code {result.returncode}")
+            for line in result.stderr.splitlines():
+                print(f"    [ERR] {line}")
+    except Exception as err:
+        print(f"  Failed to run extract_luck_chests.py: {err}")
+
+
 def extract_item_icons(env: Any, output_dir: Path) -> None:
     """Extract and crop item icons from ItemAtlas sprite atlas."""
     atlas_img = None
@@ -791,7 +822,7 @@ def main() -> int:
     print()
 
     # Step 1: Load inverse table
-    print("[1/9] Loading string decryption table...")
+    print("[1/10] Loading string decryption table...")
     try:
         inverse_table = load_inverse_table(apk_path)
         print("  Decryption table loaded successfully")
@@ -801,7 +832,7 @@ def main() -> int:
     print()
 
     # Step 2: Setup type tree generator
-    print("[2/9] Setting up IL2CPP type tree generator...")
+    print("[2/10] Setting up IL2CPP type tree generator...")
     try:
         with zipfile.ZipFile(apk_path) as archive:
             il2cpp = archive.read(IL2CPP_MEMBER)
@@ -816,7 +847,7 @@ def main() -> int:
     print()
 
     # Step 3: Load Unity environment
-    print("[3/9] Loading Unity resources.assets...")
+    print("[3/10] Loading Unity resources.assets...")
     try:
         with zipfile.ZipFile(apk_path) as archive:
             data_payload = archive.read(APK_DATA_MEMBER)
@@ -834,7 +865,7 @@ def main() -> int:
         print()
 
         # Step 4: TextAssets
-        print("[4/9] Extracting Lua scripts and TextAssets...")
+        print("[4/10] Extracting Lua scripts and TextAssets...")
         extract_text_assets(env, output_dir)
 
         # Scan Scenario directory for DLC chapter scripts
@@ -874,23 +905,28 @@ def main() -> int:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
     # Step 6: Decompile Lua chapters and parse stage layouts (chapters 1-7)
-    print("[6/9] Decompiling Lua chapters and building StagesLayout.json (chapters 1–7)...")
+    print("[6/10] Decompiling Lua chapters and building StagesLayout.json (chapters 1–7)...")
     run_decompile_and_parse_all(output_dir)
     print()
 
     # Step 7: Generate dump.cs via Il2CppDumper
-    print("[7/9] Generating dump.cs via Il2CppDumper...")
+    print("[7/10] Generating dump.cs via Il2CppDumper...")
     run_il2cppdumper(apk_path, output_dir)
     print()
 
     # Step 8: Extract all native IL2CPP stage layouts (chapters 8+, 100+, 1000+, 2000+, etc.)
-    print("[8/9] Extracting native stage layouts (all IL2CPP chapters)...")
+    print("[8/10] Extracting native stage layouts (all IL2CPP chapters)...")
     run_extract_native_stages(apk_path, output_dir)
     print()
 
     # Step 9: Recover runtime-configured event boss drops from the native classes
-    print("[9/9] Extracting native event boss drop configs (StageDrops.json)...")
+    print("[9/10] Extracting native event boss drop configs (StageDrops.json)...")
     run_extract_native_drops(output_dir)
+    print()
+
+    # Step 10: Assemble the Luck Treasure Chest pools into LuckChests.json
+    print("[10/10] Assembling Luck Treasure Chest pools (LuckChests.json)...")
+    run_extract_luck_chests(output_dir)
     print()
 
     print("=" * 60)
@@ -899,6 +935,7 @@ def main() -> int:
     print(f"Lua/TextAssets scripts:   {output_dir / 'text_assets'}")
     print(f"Stage wave layouts:       {output_dir / 'game_data' / 'StagesLayout.json'}")
     print(f"Event boss drop configs:  {output_dir / 'game_data' / 'StageDrops.json'}")
+    print(f"Luck Treasure Chests:     {output_dir / 'game_data' / 'LuckChests.json'}")
     return 0
 
 
