@@ -95,6 +95,7 @@ TerraTools/
 
 * **`terra-battle-5.5.7-170.apk`** *(required)* — Terra Battle v5.5.7 APK. The extraction pipeline pulls everything out of it: the game databases, the Lua stage scripts (Chapters 1–7), and the native ARM64 binary (Chapters 8–42 layouts and event boss drops).
 * **`gdresources/`** *(optional, recommended)* — vanilla client asset bundles (`data_u2017/android/...`): stage backgrounds, BGM/SE audio, banners, companion artwork and thumbnails, character job artwork, grid token sprites, and scenario files. These feed the media features (artwork, music player, story backgrounds). The trimmed `gdresources-light` variant distributed for the reTB emulator works too.
+* **`reTB - working adult edition/`** *(optional — only needed for Luck Treasure Chest data)* — the reTB private server checkout. Chest contents never shipped in the APK (they were authored on the retired official server), so the pipeline derives the Luck Treasure Chest tables from reTB's implementation (`tb_server/data/ltc_pools_by_stage.json` + `tb_server/handlers/userdata/quest_consts.py`). Any folder whose name starts with `reTB` and contains that server layout works. Without it the pipeline still completes — it just skips `LuckChests.json` (the rest of user-data is unaffected and the app simply shows no chest panels).
 
 No fixed path is assumed: `backend/config.py` scans `local-input/` for any
 `gdresources*` folder and picks the platform directory holding the most asset

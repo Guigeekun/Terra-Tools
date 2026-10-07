@@ -518,9 +518,11 @@ def run_extract_luck_chests(output_dir: Path) -> None:
 
     Chest contents were server-authored and live only in the community record,
     so this step needs no APK artifacts of its own — just BattleData.json from
-    step 5 to validate stages against, and the reTB server checkout beside
-    this repository (or ``retb_path`` in config.json) whose chest tables are
-    the record served."""
+    step 5, plus the reTB server checkout whose chest tables are the record
+    served (looked up by default in local-input/, then config.json's
+    retb_path, then a sibling checkout). A missing reTB checkout only skips
+    this step (user-data ships without luck chest data); it never fails the
+    extraction."""
     import subprocess
     scripts_dir = Path(__file__).resolve().parent
     battle_data_path = output_dir / "game_data" / "BattleData.json"

@@ -307,5 +307,45 @@ class TestPipelineAssembly(unittest.TestCase):
         self.assertIn(2005, extract_luck_chests.RETB_NOT_SERVED_CHAPTERS)
 
 
+class TestDonorDiscovery(unittest.TestCase):
+    def _make_retb(self, root: Path) -> Path:
+        checkout = root / "reTB - working adult edition"
+        consts_dir = checkout / "tb_server" / "handlers" / "userdata"
+        consts_dir.mkdir(parents=True)
+        (consts_dir / "quest_consts.py").write_text("", encoding="utf-8")
+        return checkout
+
+    def test_local_input_retb_folder_is_the_default(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo_root = root / "repo"
+            local_copy = repo_root / "local-input" / "reTB - copy"
+            consts_dir = local_copy / "tb_server" / "handlers" / "userdata"
+            consts_dir.mkdir(parents=True)
+            (consts_dir / "quest_consts.py").write_text("", encoding="utf-8")
+            sibling = self._make_retb(root)  # fallback also present
+            with patch.object(extract_luck_chests, "REPO_ROOT", repo_root):
+                self.assertEqual(extract_luck_chests.find_donor_repo(), local_copy)
+                self.assertNotEqual(extract_luck_chests.find_donor_repo(), sibling)
+
+    def test_sibling_checkout_is_the_fallback(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            sibling = self._make_retb(Path(tmp))
+            with patch.object(extract_luck_chests, "REPO_ROOT", Path(tmp) / "repo"):
+                (Path(tmp) / "repo").mkdir()
+                self.assertEqual(extract_luck_chests.find_donor_repo(), sibling)
+
+    def test_missing_donor_names_the_local_input_convention(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(extract_luck_chests, "REPO_ROOT", Path(tmp) / "repo"):
+                (Path(tmp) / "repo").mkdir()
+                with self.assertRaises(FileNotFoundError) as ctx:
+                    extract_luck_chests.find_donor_repo()
+        self.assertIn("local-input", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

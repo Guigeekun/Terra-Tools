@@ -12,8 +12,9 @@ Mutoh, Royal Rings, Melting Pot, chapter 2017). The UI labels the result as
 "based on reTB chests" — it is a server implementation, not original
 Mistwalker data.
 
-Sources, all from the reTB checkout (``retb_path`` in config.json, else
-auto-discovered beside this repository):
+Sources, all from the reTB checkout (looked up by default in ``local-input/``
+— see the README's Local Input Directory section — then ``retb_path`` in
+config.json, then a checkout beside this repository):
 
 * ``tb_server/data/ltc_pools_by_stage.json`` — per-stage pools keyed
   ``"<chapter>-<section0>"`` (0-based sections; reTB validated the client's
@@ -57,7 +58,12 @@ RETB_NOT_SERVED_CHAPTERS = {2005, 3004}  # Mobius FF (licensed), Crystal Road
 
 
 def find_donor_repo(explicit: str | None = None) -> Path:
-    """Locate the reTB server checkout holding the chest implementation."""
+    """Locate the reTB server checkout holding the chest implementation.
+
+    Default convention is a ``reTB*`` folder dropped into ``local-input/``
+    (same drop-zone as the APK and gdresources); ``retb_path`` in config.json
+    overrides, and a checkout beside this repository is the last fallback.
+    """
     candidates: list[Path] = []
     if explicit:
         candidates.append(Path(explicit))
@@ -69,6 +75,13 @@ def find_donor_repo(explicit: str | None = None) -> Path:
                 candidates.append(Path(configured))
         except (OSError, json.JSONDecodeError):
             pass
+    local_input = REPO_ROOT / "local-input"
+    if local_input.is_dir():
+        for entry in sorted(local_input.iterdir()):
+            if entry.name.lower().startswith("retb") and (
+                entry / "tb_server" / "handlers" / "userdata" / "quest_consts.py"
+            ).exists():
+                candidates.append(entry)
     candidates.append(REPO_ROOT.parent / DONOR_REPO_NAME)
 
     for candidate in candidates:
@@ -77,7 +90,8 @@ def find_donor_repo(explicit: str | None = None) -> Path:
     searched = ", ".join(str(c) for c in candidates)
     raise FileNotFoundError(
         f"Could not locate the {DONOR_REPO_NAME} checkout (searched: {searched}). "
-        'Set "retb_path" in config.json to its path.'
+        "Drop it into local-input/ as 'reTB - working adult edition', or set "
+        '"retb_path" in config.json to its path.'
     )
 
 
@@ -304,11 +318,22 @@ def main() -> int:
         "--source",
         type=Path,
         default=None,
-        help=f"Path to the {DONOR_REPO_NAME} checkout (default: config.json or auto-discovery)",
+        help=f"Path to the {DONOR_REPO_NAME} checkout (default: local-input/ or auto-discovery)",
     )
     args = parser.parse_args()
+
+    # A missing reTB checkout is not an error: the pipeline still produces
+    # (incomplete) user-data, just without LuckChests.json — the backend and
+    # UI already treat absent chest data as "no chest panels".
     try:
-        extract_luck_chests(args.output_dir.resolve(), args.source)
+        donor_root = find_donor_repo(args.source)
+    except FileNotFoundError as error:
+        print(f"  reTB checkout not found — skipping LuckChests.json "
+              f"(user-data will lack luck chest data): {error}")
+        return 0
+
+    try:
+        extract_luck_chests(args.output_dir.resolve(), donor_root)
     except (FileNotFoundError, SyntaxError) as error:
         print(f"  Failed to extract luck chests: {error}")
         return 1
