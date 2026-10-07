@@ -2,6 +2,7 @@ import os
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from backend.database import gamedata, find_local_asset, resolve_section_title
+from backend.luck_chests import chest_tier_summaries, item_chest_index
 
 router = APIRouter(tags=["items"])
 
@@ -258,7 +259,43 @@ def get_item_details(item_id: int):
                 "spawning_enemies": list(spawning.values()),
             })
     dropped_in_stages.sort(key=lambda x: (x["chapter_no"], x["section_index"]))
-    
+
+    # 7. Where to Obtain: Luck Treasure Chests (community-recorded pools).
+    # A stage whose chests hold the item joins the existing stage entry — or
+    # creates one, since a chest-only item (e.g. Bahamut's Fang from the
+    # Bahamut Recoded chests) spawns nothing that drops it.
+    chest_tier_index = item_chest_index()
+    for (chapter_no, sec_num) in sorted({
+        (ch, sec) for ch, sec, _tier, _order in chest_tier_index.get(item_id, [])
+    }):
+        tiers = chest_tier_summaries(item_id, chapter_no, sec_num)
+        if not tiers:
+            continue
+        existing = next(
+            (e for e in dropped_in_stages
+             if e["chapter_no"] == chapter_no and e["section_index"] == sec_num),
+            None,
+        )
+        if existing:
+            existing["luck_chests"] = tiers
+            continue
+        ch = chapters_by_no.get(chapter_no)
+        if not ch or sec_num > len(ch.get("sections", [])):
+            continue
+        title_info = resolve_section_title(chapter_no, sec_num, ch["sections"][sec_num - 1].get("title", ""))
+        dropped_in_stages.append({
+            "chapter_no": chapter_no,
+            "section_index": sec_num,
+            "section_title": title_info["title"],
+            "section_title_loc": title_info["title_loc"],
+            "subtitle": title_info["subtitle"],
+            "is_section_drop": False,
+            "section_drop_count": 0,
+            "spawning_enemies": [],
+            "luck_chests": tiers,
+        })
+    dropped_in_stages.sort(key=lambda x: (x["chapter_no"], x["section_index"]))
+
     return {
         "item_id": item_id,
         "name": item.get("NameString"),

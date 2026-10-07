@@ -14,6 +14,7 @@ from backend.database import (
     get_section_banner,
 )
 from backend.enemy_enum import ENEMY_ENUM_SYMBOLS
+from backend.luck_chests import resolve_section_chests
 from backend.stage_translations import (
     derive_chapter_display_name,
     METAL_ZONE_CHAPTERS,
@@ -384,6 +385,12 @@ def _enrich_stage_chapter(ch, display_name, ctx: dict) -> dict:
 
         # Surface the localized section info text (level range, tips, etc.)
         sec_copy["info"] = sec.get("info", {})
+
+        # Luck Treasure Chests: the section's documented chest pools, with
+        # every reward resolved (absent for stages the record doesn't cover).
+        sec_chests = resolve_section_chests(ch_no_int, sec_num)
+        if sec_chests:
+            sec_copy["luck_chests"] = sec_chests
 
         sec_layout = ch_layout.get(sec_id)  # list of {type:'story'|'wave', ...}
 

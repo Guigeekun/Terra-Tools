@@ -3,5 +3,6 @@
   "apk_path": "local-input/terra-battle-5.5.7-170.apk",
   "lib_path": "user-data/libil2cpp.so",
   "objdump_cmd": "llvm-objdump",
-  "stages_layout_path": "user-data/extracted-gamedata/game_data/StagesLayout.json"
+  "stages_layout_path": "user-data/extracted-gamedata/game_data/StagesLayout.json",
+  "retb_path": "../reTB - working adult edition"
 }

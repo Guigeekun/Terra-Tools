@@ -12,3 +12,13 @@ local-input.zip*
 .git
 .gitignore
 .vscode
+
+# Never ship data dirs into the image: the compose bind mount supplies
+# user-data at runtime, and a worktree junction becomes a dangling symlink
+# in the build context (breaks "mkdir -p /app/user-data" with EEXIST).
+user-data/
+user-data.zip*
+gdresources-light.zip*
+# Local-only config; compose watch syncs it into the container instead.
+config.json
+.pytest_cache
