@@ -118,7 +118,8 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 16px;
-  overflow: hidden;
+  /* visible so the picker dropdowns (position: absolute) can escape the card */
+  overflow: visible;
 }
 
 .mod-section-head {
@@ -128,6 +129,7 @@
   gap: 12px;
   background: none;
   border: none;
+  border-radius: 16px;
   padding: 14px 20px;
   cursor: pointer;
   color: var(--text-primary);
@@ -499,14 +501,15 @@ textarea.ms-input { resize: vertical; line-height: 1.5; }
   padding-top: 24px;
 }
 
-.ms-recode-source { position: relative; }
+.ms-recode-source { position: relative; min-width: 0; }
 .ms-recode-source .ms-inline-results {
   position: absolute;
   z-index: 30;
   left: 0;
   right: 0;
   top: 100%;
-  background: var(--bg-card);
+  /* opaque: --bg-card is 60% alpha and inputs would bleed through the overlay */
+  background: #141a2e;
   border: 1px solid var(--border-color);
   border-radius: 10px;
   box-shadow: var(--shadow-premium);

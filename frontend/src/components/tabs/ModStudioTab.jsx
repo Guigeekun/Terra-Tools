@@ -1050,32 +1050,34 @@ function RecodeItemRow({ index, row, catalogs, lang, itemName, onChange }) {
   return (
     <div className="mod-recode-row">
       <span className="mod-recode-row-label">Item {index + 1}</span>
-      {row.itemId ? (
-        <div className="ms-picked-row">
-          <span>{itemName(row.itemId)}</span>
-          <button type="button" className="ms-field-clear" title="Clear"
-            onClick={() => onChange({ ...row, itemId: null })}>
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      ) : (
-        <input type="text" value={search} placeholder="Search an item…"
-          onChange={e => setSearch(e.target.value)} />
-      )}
-      {search.trim() !== '' && !row.itemId && (
-        <div className="item-picker-results ms-inline-results">
-          {rows.length ? rows.map(r => (
-            <div key={r.id} className="item-picker-result">
-              <span className="item-picker-name">{r.label}</span>
-              <span className="item-picker-id">{r.meta}</span>
-              <button type="button" className="item-add-btn"
-                onClick={() => { onChange({ ...row, itemId: r.id }); setSearch(''); }}>
-                <i className="fa-solid fa-plus"></i> Pick
-              </button>
-            </div>
-          )) : <p className="item-picker-empty">No match.</p>}
-        </div>
-      )}
+      <div className="ms-recode-source">
+        {row.itemId ? (
+          <div className="ms-picked-row">
+            <span>{itemName(row.itemId)}</span>
+            <button type="button" className="ms-field-clear" title="Clear"
+              onClick={() => onChange({ ...row, itemId: null })}>
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        ) : (
+          <input type="text" value={search} placeholder="Search an item…"
+            onChange={e => setSearch(e.target.value)} />
+        )}
+        {search.trim() !== '' && !row.itemId && (
+          <div className="item-picker-results ms-inline-results">
+            {rows.length ? rows.map(r => (
+              <div key={r.id} className="item-picker-result">
+                <span className="item-picker-name">{r.label}</span>
+                <span className="item-picker-id">{r.meta}</span>
+                <button type="button" className="item-add-btn"
+                  onClick={() => { onChange({ ...row, itemId: r.id }); setSearch(''); }}>
+                  <i className="fa-solid fa-plus"></i> Pick
+                </button>
+              </div>
+            )) : <p className="item-picker-empty">No match.</p>}
+          </div>
+        )}
+      </div>
       <label className="ms-numfield">
         <span>Count</span>
         <input type="number" min={1} max={255} value={row.count ?? ''}
@@ -1110,32 +1112,34 @@ function RecodeMonRow({ index, row, catalogs, lang, charName, onChange }) {
   return (
     <div className="mod-recode-row">
       <span className="mod-recode-row-label">Material {index + 1}</span>
-      {row.chrId ? (
-        <div className="ms-picked-row">
-          <span>{charName(row.chrId)}</span>
-          <button type="button" className="ms-field-clear" title="Clear"
-            onClick={() => onChange({ ...row, chrId: null })}>
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      ) : (
-        <input type="text" value={search} placeholder="Search a character…"
-          onChange={e => setSearch(e.target.value)} />
-      )}
-      {search.trim() !== '' && !row.chrId && (
-        <div className="item-picker-results ms-inline-results">
-          {rows.length ? rows.map(r => (
-            <div key={r.id} className="item-picker-result">
-              <span className="item-picker-name">{r.label}</span>
-              <span className="item-picker-id">{r.meta}</span>
-              <button type="button" className="item-add-btn"
-                onClick={() => { onChange({ ...row, chrId: r.id }); setSearch(''); }}>
-                <i className="fa-solid fa-plus"></i> Pick
-              </button>
-            </div>
-          )) : <p className="item-picker-empty">No match.</p>}
-        </div>
-      )}
+      <div className="ms-recode-source">
+        {row.chrId ? (
+          <div className="ms-picked-row">
+            <span>{charName(row.chrId)}</span>
+            <button type="button" className="ms-field-clear" title="Clear"
+              onClick={() => onChange({ ...row, chrId: null })}>
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        ) : (
+          <input type="text" value={search} placeholder="Search a character…"
+            onChange={e => setSearch(e.target.value)} />
+        )}
+        {search.trim() !== '' && !row.chrId && (
+          <div className="item-picker-results ms-inline-results">
+            {rows.length ? rows.map(r => (
+              <div key={r.id} className="item-picker-result">
+                <span className="item-picker-name">{r.label}</span>
+                <span className="item-picker-id">{r.meta}</span>
+                <button type="button" className="item-add-btn"
+                  onClick={() => { onChange({ ...row, chrId: r.id }); setSearch(''); }}>
+                  <i className="fa-solid fa-plus"></i> Pick
+                </button>
+              </div>
+            )) : <p className="item-picker-empty">No match.</p>}
+          </div>
+        )}
+      </div>
       <label className="ms-numfield">
         <span>Level</span>
         <input type="number" min={1} max={99} value={row.level ?? ''}
