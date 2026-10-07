@@ -671,7 +671,16 @@ function Picker({ search, setSearch, rows, onPick, placeholder, emptyText }) {
                     <i className="fa-solid fa-check"></i> Cloned
                   </span>
                 ) : (
-                  <button type="button" className="item-add-btn" onClick={() => onPick(r.id)}>
+                  <button
+                    type="button"
+                    className="item-add-btn"
+                    onClick={() => {
+                      onPick(r.id);
+                      // One pick per query: close the results until the user
+                      // edits the search again.
+                      setSearch('');
+                    }}
+                  >
                     <i className="fa-solid fa-plus"></i> Add
                   </button>
                 )}
