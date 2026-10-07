@@ -518,8 +518,9 @@ def run_extract_luck_chests(output_dir: Path) -> None:
 
     Chest contents were server-authored and live only in the community record,
     so this step needs no APK artifacts of its own — just BattleData.json from
-    step 5 to validate stages against, and the project-liminal-gate checkout
-    beside this repository (or ``liminal_gate_path`` in config.json)."""
+    step 5 to validate stages against, and the reTB server checkout beside
+    this repository (or ``retb_path`` in config.json) whose chest tables are
+    the record served."""
     import subprocess
     scripts_dir = Path(__file__).resolve().parent
     battle_data_path = output_dir / "game_data" / "BattleData.json"

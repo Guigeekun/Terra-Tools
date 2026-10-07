@@ -12,6 +12,11 @@ from backend.database import gamedata
 #: Serve order for the six chest slots the client rendered.
 TIER_ORDER = ("A", "B", "C", "D", "Luck 80", "Luck 100")
 
+#: reTB's ANIMATA_CORE_ITEM_ID: the ``L<count>`` reward code renders the
+#: stage's exchange item, which for every chapter carrying L codes (Strikes
+#: Back, chapter >= 6) is the Animata Core (reTB's ShowLuck finding).
+ANIMATA_CORE_ITEM_ID = 181
+
 
 def luck_chest_db() -> dict:
     return gamedata.get("luck_chests") or {}
@@ -55,7 +60,7 @@ def parse_reward(code: str) -> tuple[str, int] | None:
         value = int(code[1:])
     except ValueError:
         return None
-    mapping = {"C": "coins", "I": "item", "O": "buddy", "M": "character"}
+    mapping = {"C": "coins", "I": "item", "O": "buddy", "M": "character", "L": "exchange"}
     if kind not in mapping:
         return None
     return mapping[kind], value
@@ -74,6 +79,16 @@ def resolve_reward(code: str) -> dict:
 
     if kind == "coins":
         return {"kind": "coins", "amount": value}
+
+    if kind == "exchange":
+        item = _items_by_id().get(ANIMATA_CORE_ITEM_ID)
+        return {
+            "kind": "item",
+            "item_id": ANIMATA_CORE_ITEM_ID,
+            "count": value,
+            "name": (item or {}).get("NameString"),
+            "icon_url": f"/api/assets/item/item_{ANIMATA_CORE_ITEM_ID:02d}.png",
+        }
 
     if kind == "item":
         item = _items_by_id().get(value)
@@ -116,6 +131,7 @@ def resolve_section_chests(chapter_no, section_index) -> list[dict]:
             "key": tier_key,
             "order": meta.get("order", len(TIER_ORDER)),
             "guaranteed_at_luck": meta.get("guaranteed_at_luck"),
+            "base_chance": meta.get("base_chance"),
             "ceiling": meta.get("ceiling"),
             "threshold_only": meta.get("threshold_only", False),
             "rewards": [resolve_reward(code) for code in codes],
@@ -157,6 +173,10 @@ def item_chest_index() -> dict[int, list[tuple[int, int, str]]]:
                         index.setdefault(parsed[1], []).append(
                             (chapter_no, section_index, tier_key, order)
                         )
+                    elif parsed and parsed[0] == "exchange":
+                        index.setdefault(ANIMATA_CORE_ITEM_ID, []).append(
+                            (chapter_no, section_index, tier_key, order)
+                        )
 
     for entries in index.values():
         entries.sort(key=lambda e: (e[0], e[1], e[3]))
@@ -167,18 +187,22 @@ def item_chest_index() -> dict[int, list[tuple[int, int, str]]]:
 
 
 def chest_tier_summaries(item_id: int, chapter_no: int, section_index: int) -> list[dict]:
-    """Tier metadata for the chests of one stage that hold ``item_id``."""
+    """Tier metadata for the chests of one stage that hold ``item_id``.
+
+    A tier can hold the item through several codes (e.g. the two L<count>
+    candidates of a Strikes Back A chest) — one summary per tier.
+    """
     tiers_by_key = {t["key"]: t for t in chest_tiers_meta()}
-    summaries = []
+    summaries: dict[str, dict] = {}
     for ch, sec, tier_key, order in item_chest_index().get(item_id, []):
-        if ch == chapter_no and sec == section_index:
+        if ch == chapter_no and sec == section_index and tier_key not in summaries:
             meta = tiers_by_key.get(tier_key, {})
-            summaries.append({
+            summaries[tier_key] = {
                 "key": tier_key,
                 "order": order,
                 "guaranteed_at_luck": meta.get("guaranteed_at_luck"),
+                "base_chance": meta.get("base_chance"),
                 "ceiling": meta.get("ceiling"),
                 "threshold_only": meta.get("threshold_only", False),
-            })
-    summaries.sort(key=lambda t: t["order"])
-    return summaries
+            }
+    return sorted(summaries.values(), key=lambda t: t["order"])

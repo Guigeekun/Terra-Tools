@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { loc, translateStageTitle } from '../../utils/localization';
-import { chestTierOdds as chestTierOddsLabel } from '../../utils/luckChests';
+import { chestTierOdds as chestTierOddsLabel, LUCK_CHEST_SOURCE_NOTICE } from '../../utils/luckChests';
 import WaveBoard from '../shared/WaveBoard';
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
@@ -444,8 +444,12 @@ function LuckChestPanel({ chests, lang, onSelectItem }) {
       padding: '9px 11px',
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#fde68a' }}>
+        <span
+          title={LUCK_CHEST_SOURCE_NOTICE}
+          style={{ fontSize: 12, fontWeight: 600, color: '#fde68a', cursor: 'help' }}
+        >
           <i className="fa-solid fa-box-open" style={{ marginRight: 6 }}></i>Luck Treasure Chests
+          <i className="fa-solid fa-circle-info" style={{ marginLeft: 6, fontSize: 10, opacity: 0.7 }}></i>
         </span>
         <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
           odds scale with the team's average Luck
@@ -480,11 +484,17 @@ function LuckChestPanel({ chests, lang, onSelectItem }) {
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
               {chestTierOddsLabel(tier)} — one of:
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 5 }}>
-              {tier.rewards.map((reward, i) => (
-                <ChestRewardChip key={i} reward={reward} lang={lang} onSelectItem={onSelectItem} />
-              ))}
-            </div>
+            {tier.rewards.length === 0 ? (
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>
+                No rewards recorded for this chest (it renders empty in game).
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 5 }}>
+                {tier.rewards.map((reward, i) => (
+                  <ChestRewardChip key={i} reward={reward} lang={lang} onSelectItem={onSelectItem} />
+                ))}
+              </div>
+            )}
           </div>
         );
       })()}
@@ -518,7 +528,9 @@ function ChestRewardChip({ reward, lang, onSelectItem }) {
           style={{ width: 18, height: 18, objectFit: 'contain', imageRendering: 'pixelated', flexShrink: 0 }}
           onError={e => { e.target.style.display = 'none'; }}
         />
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {name}{reward.count != null && reward.count > 1 ? ` ×${reward.count}` : ''}
+        </span>
       </>
     );
     // Real hash link so middle-click opens the item in a new tab.

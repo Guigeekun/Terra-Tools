@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { loc, translateStageTitle, getSectionSubtitle } from '../../utils/localization';
-import { chestTierOdds } from '../../utils/luckChests';
+import { chestTierOdds, LUCK_CHEST_SOURCE_NOTICE } from '../../utils/luckChests';
 import { useGameData } from '../../contexts/GameDataContext';
 import { fetchItemDetails } from '../../api';
 
@@ -63,15 +63,18 @@ export default function ItemModal({ itemId, onClose }) {
                         )}
                         {st.luck_chests?.length > 0 && (
                           <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                            <span
+                              title={LUCK_CHEST_SOURCE_NOTICE}
+                              style={{ fontSize: 10, color: 'var(--text-muted)', cursor: 'help' }}
+                            >
                               <i className="fa-solid fa-box-open" style={{ marginRight: 4, color: '#fde68a' }}></i>Luck Chest:
                             </span>
                             {st.luck_chests.map((tier, j) => (
                               <span
                                 key={j}
                                 className="badge"
-                                title={chestTierOdds(tier)}
-                                style={{ backgroundColor: 'rgba(234,179,8,0.08)', borderColor: 'rgba(234,179,8,0.2)', color: '#fde68a', fontSize: 10 }}
+                                title={`${tier.key} — ${chestTierOdds(tier)} (${LUCK_CHEST_SOURCE_NOTICE})`}
+                                style={{ backgroundColor: 'rgba(234,179,8,0.08)', borderColor: 'rgba(234,179,8,0.2)', color: '#fde68a', fontSize: 10, cursor: 'help' }}
                               >
                                 {tier.key}
                               </span>

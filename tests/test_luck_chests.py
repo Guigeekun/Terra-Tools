@@ -1,9 +1,10 @@
-"""Luck Treasure Chests: pool assembly (pipeline) and serving (backend)."""
+"""Luck Treasure Chests: reTB-source pool assembly (pipeline) and serving (backend)."""
 
 import sys
 import unittest
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend import database
@@ -20,34 +21,35 @@ import extract_luck_chests  # noqa: E402
 
 
 def make_luck_chests_db():
-    """The served document shape, with the Bahamut descent chapter as fixture."""
+    """The served document shape, with reTB-flavoured stages as fixture."""
     return {
         "schema": "luck-chests-1",
         "tiers": [
-            {"key": "A", "order": 1, "guaranteed_at_luck": 40.0, "ceiling": 1.0, "threshold_only": False},
-            {"key": "B", "order": 2, "guaranteed_at_luck": 85.0, "ceiling": 1.0, "threshold_only": False},
-            {"key": "C", "order": 3, "guaranteed_at_luck": 100.0, "ceiling": 0.5, "threshold_only": False},
-            {"key": "D", "order": 4, "guaranteed_at_luck": 100.0, "ceiling": 0.25, "threshold_only": False},
-            {"key": "Luck 80", "order": 5, "guaranteed_at_luck": 80.0, "ceiling": 1.0, "threshold_only": True},
-            {"key": "Luck 100", "order": 6, "guaranteed_at_luck": 100.0, "ceiling": 1.0, "threshold_only": True},
+            {"key": "A", "order": 1, "base_chance": 20.0, "guaranteed_at_luck": 40.0, "ceiling": 1.0, "threshold_only": False},
+            {"key": "B", "order": 2, "base_chance": 10.0, "guaranteed_at_luck": 85.0, "ceiling": 1.0, "threshold_only": False},
+            {"key": "C", "order": 3, "base_chance": 5.0, "guaranteed_at_luck": 100.0, "ceiling": 0.5, "threshold_only": False},
+            {"key": "D", "order": 4, "base_chance": 2.5, "guaranteed_at_luck": 100.0, "ceiling": 0.25, "threshold_only": False},
+            {"key": "Luck 80", "order": 5, "base_chance": None, "guaranteed_at_luck": 80.0, "ceiling": 1.0, "threshold_only": True},
+            {"key": "Luck 100", "order": 6, "base_chance": None, "guaranteed_at_luck": 100.0, "ceiling": 1.0, "threshold_only": True},
         ],
         "no_chest_chapters": [3000],
         "stages": {
+            # Bahamut Recoded: reTB's table (boss Λ in D).
             "2000": {
                 "4": {"tiers": {
                     "A": ('C1500', 'I12', 'I13', 'I14', 'I15', 'I16', 'I17', 'I46',),
                     "B": ('C1500', 'I12',),
-                    "C": ('I48', 'I49', 'M524', 'M519',),
-                    "D": ('I134', 'I50', 'I112', 'I81',),
+                    "C": ('I48', 'M632',),
+                    "D": ('I134', 'M632', 'I50', 'I112', 'I81',),
                     "Luck 80": ('I134', 'M632', 'O311',),
                     "Luck 100": ('I134', 'M632', 'O275', 'O311',),
                 }},
             },
-            # A donor-only stage (Eidolon Bahamut's served section).
-            "4107": {
-                "3": {"tiers": {
-                    "C": ('C1200', 'I74',),
-                    "Luck 100": ('I74', 'O385', 'O386', 'O311',),
+            # Strikes Back tier II: L<count> = Animata Core x count.
+            "8000": {
+                "2": {"tiers": {
+                    "A": ('L50', 'L130',),
+                    "Luck 100": ('M853', 'O317', 'O128',),
                 }},
             },
         },
@@ -58,12 +60,11 @@ def make_gamedata():
     items = [{"NameString": {"en": f"Item {n}"}} for n in range(1, 200)]
     items[134 - 1] = {"NameString": {"en": "Bahamut's Fang"}}
     items[50 - 1] = {"NameString": {"en": "Metal Ticket"}}
-    items[74 - 1] = {"NameString": {"en": "Naegling"}}
+    items[181 - 1] = {"NameString": {"en": "Animata Core"}}
     return {
         "items": {"itemSet": items},
         "characters": {"infos": [
             {"ID": 148, "NameString": {"en": "Bahamut"}},
-            {"ID": 524, "NameString": {"en": "Suzaku"}},
             {"ID": 632, "NameString": {"en": "Bahamut Λ"}},
         ]},
         "buddies": {"data": [
@@ -77,10 +78,9 @@ def make_gamedata():
                 {"title": "バハムート超進化", "battleCnt": 5},
                 {"title": "バハムート再構築", "battleCnt": 5},
             ]},
-            {"chapterNo": 4107, "sections": [
-                {"title": "バハムート（シングル）", "battleCnt": 0},
-                {"title": "バハムートⅡ（シングル）", "battleCnt": 0},
-                {"title": "バハムートⅢ（シングル）", "battleCnt": 1},
+            {"chapterNo": 8000, "sections": [
+                {"title": "Spinetrich Kino I", "battleCnt": 2},
+                {"title": "Spinetrich Kino II", "battleCnt": 2},
             ]},
             {"chapterNo": 3000, "sections": [{"title": "Metal Zone", "battleCnt": 3}]},
         ]},
@@ -129,6 +129,14 @@ class TestResolveReward(unittest.TestCase):
                 "kind": "character", "character_id": 632, "name": {"en": "Bahamut Λ"},
             })
 
+    def test_exchange_code_is_the_animata_core_x_count(self):
+        with patched_gamedata():
+            exchange = resolve_reward("L130")
+        self.assertEqual(exchange["kind"], "item")
+        self.assertEqual(exchange["item_id"], 181)
+        self.assertEqual(exchange["count"], 130)
+        self.assertEqual(exchange["name"], {"en": "Animata Core"})
+
     def test_unresolvable_codes_survive(self):
         with patched_gamedata():
             self.assertEqual(resolve_reward("X9"), {"kind": "unknown", "code": "X9"})
@@ -141,13 +149,14 @@ class TestSectionChests(unittest.TestCase):
     def setUp(self):
         reset_caches()
 
-    def test_tiers_resolve_in_order(self):
+    def test_tiers_resolve_in_order_with_odds_metadata(self):
         with patched_gamedata():
             chests = resolve_section_chests(2000, 4)
         self.assertEqual([t["key"] for t in chests],
                          ["A", "B", "C", "D", "Luck 80", "Luck 100"])
         luck100 = chests[-1]
         self.assertEqual(luck100["guaranteed_at_luck"], 100.0)
+        self.assertEqual(luck100["threshold_only"], True)
         self.assertEqual(luck100["rewards"], [
             {"kind": "item", "item_id": 134, "name": {"en": "Bahamut's Fang"},
              "icon_url": "/api/assets/item/item_134.png"},
@@ -155,6 +164,9 @@ class TestSectionChests(unittest.TestCase):
             {"kind": "buddy", "buddy_id": 275, "name": {"en": "Bahamut Ο"}},
             {"kind": "buddy", "buddy_id": 311, "name": {"en": "Bahamut ΟⅡ"}},
         ])
+        tier_a = chests[0]
+        self.assertEqual(tier_a["base_chance"], 20.0)
+        self.assertEqual(tier_a["guaranteed_at_luck"], 40.0)
 
     def test_stage_without_pool_has_none(self):
         with patched_gamedata():
@@ -193,15 +205,15 @@ class TestItemChestSources(unittest.TestCase):
         entry = details["dropped_in_stages"][0]
         self.assertEqual(entry["spawning_enemies"], [])
         self.assertEqual([t["key"] for t in entry["luck_chests"]], ["D", "Luck 80", "Luck 100"])
-        self.assertEqual(entry["luck_chests"][0]["guaranteed_at_luck"], 100.0)
+        self.assertEqual(entry["luck_chests"][0]["base_chance"], 2.5)
 
-    def test_item_in_several_chests_and_stages(self):
+    def test_exchange_item_is_indexed_through_l_codes(self):
         with patched_gamedata():
-            details = items_router.get_item_details(74)  # Naegling: Eidolon Bahamut C + Luck 100
+            details = items_router.get_item_details(181)  # Animata Core via Strikes Back A chest
         stage_sources = [(s["chapter_no"], s["section_index"]) for s in details["dropped_in_stages"]]
-        self.assertEqual(stage_sources, [(4107, 3)])
+        self.assertEqual(stage_sources, [(8000, 2)])
         tiers = [t["key"] for t in details["dropped_in_stages"][0]["luck_chests"]]
-        self.assertEqual(tiers, ["C", "Luck 100"])
+        self.assertEqual(tiers, ["A"])
 
     def test_item_absent_from_chests_has_no_luck_chests(self):
         with patched_gamedata():
@@ -210,39 +222,89 @@ class TestItemChestSources(unittest.TestCase):
             self.assertNotIn("luck_chests", entry)
 
 
+def make_consts():
+    """A stub of reTB's quest_consts with the shape the extractor reads."""
+    return SimpleNamespace(
+        LTC_SPECIAL_TIERS={
+            # Bahamut Recoded, keyed 0-based with reTB's raw tier names; the
+            # table omits "C" -> that chest is empty on the stage.
+            "2000-3": {
+                "A": ['C1500', 'I12'],
+                "D": ['I134', 'M632', 'I50'],
+                "Luck80": ['I134', 'M632', 'O311'],
+                "Luck100": ['I134', 'M632', 'O275', 'O311'],
+            },
+        },
+        DEFAULT_POOL=extract_luck_chests.LtcStagePool(items=[2, 4], coins=500),
+        LTC_EXCLUDED_CHAPTERS={700, 1000, 1001, 1200},
+        WIN_POOLS=(
+            ("items",), ("items",),
+            ("items", "companions", "monsters"),
+            ("companions", "monsters", "items"),
+            ("companions", "monsters", "items"),
+            ("companions", "monsters", "items"),
+        ),
+        CODE_PREFIX={"items": "I", "companions": "O", "monsters": "M"},
+        TIER_NAMES=("A", "B", "C", "D", "Luck80", "Luck100"),
+        CHEST_CURVE=((20.0, 40, 100.0), (10.0, 85, 100.0), (5.0, 100, 50.0), (2.5, 100, 25.0)),
+    )
+
+
 class TestPipelineAssembly(unittest.TestCase):
-    def test_supplement_overrides_donor_and_invalid_stages_drop(self):
-        donor = {
-            (2000, 4): {"D": ('I999',)},       # must be overridden by the supplement
-            (2001, 1): {"A": ('C250',)},       # donor stage kept as-is
-            (9999, 1): {"A": ('C50',)},        # chapter BattleData lacks -> dropped
-            (2000, 9): {"A": ('C50',)},        # section beyond the chapter -> dropped
+    def test_build_document_converts_retb_sources(self):
+        consts = make_consts()
+        pools = {
+            # 0-based key -> section 3; category pool with a D/Luck80-gated premium.
+            "2000-2": {"items": [9, 10], "companions": [8], "monsters": [],
+                       "coins": 500, "restricted": {"50": [3, 4]}},
+            # Overridden by the special table for the same stage.
+            "2000-3": {"items": [1]},
+            # Section 5 does not exist in BattleData -> dropped loudly.
+            "2000-4": {"items": [1]},
         }
         battle = {"chapters": [
             {"chapterNo": 2000, "sections": [1, 2, 3, 4]},
-            {"chapterNo": 2001, "sections": [1, 2, 3, 4]},
+            {"chapterNo": 5000, "sections": [1, 2]},   # no pool -> DEFAULT_POOL
+            {"chapterNo": 7000, "sections": [1]},      # 700 remaps to 7000 -> excluded
+            {"chapterNo": 1001, "sections": [1]},      # explicitly excluded
         ]}
-        document = extract_luck_chests.build_document(donor, frozenset({3000}), battle)
+        excluded = extract_luck_chests.mapped_exclusions(consts.LTC_EXCLUDED_CHAPTERS)
+        document = extract_luck_chests.build_document(
+            pools, consts, battle, consts.DEFAULT_POOL, excluded)
 
-        self.assertEqual(
-            document["stages"]["2000"]["4"]["tiers"]["D"],
-            ['I134', 'I50', 'I112', 'I81'],
-        )
-        self.assertEqual(document["stages"]["2001"]["1"]["tiers"]["A"], ['C250'])
-        self.assertNotIn("9999", document["stages"])
-        self.assertNotIn("9", document["stages"]["2000"])
-        self.assertEqual(document["no_chest_chapters"], [3000])
-        tier_keys = [t["key"] for t in document["tiers"]]
-        self.assertEqual(tier_keys, ["A", "B", "C", "D", "Luck 80", "Luck 100"])
+        self.assertEqual(sorted(document["stages"]), ["2000", "5000"])
+        self.assertNotIn("7000", document["stages"])
+        self.assertNotIn("1001", document["stages"])
+        # 0-based -> 1-based; specials override pools.
+        s3 = document["stages"]["2000"]["3"]["tiers"]
+        self.assertEqual(s3["A"], ['I9', 'I10'])
+        self.assertEqual(s3["C"], ['I9', 'I10', 'O8'])  # WIN_POOLS C: items+companions+monsters
+        # D/Luck tiers include the items category too, plus the restricted
+        # item 50 gated to tiers D + Luck80.
+        self.assertEqual(s3["D"], ['O8', 'I9', 'I10', 'I50'])
+        self.assertEqual(s3["Luck 80"], ['O8', 'I9', 'I10', 'I50'])
+        self.assertEqual(s3["Luck 100"], ['O8', 'I9', 'I10'])  # no restricted gate at tier 5
+        # Special table: exact lists, omitted tier = empty chest, raw names normalized.
+        s4 = document["stages"]["2000"]["4"]["tiers"]
+        self.assertEqual(s4["A"], ['C1500', 'I12'])
+        self.assertEqual(s4["C"], [])
+        self.assertEqual(s4["Luck 80"], ['I134', 'M632', 'O311'])
+        self.assertEqual(s4["Luck 100"], ['I134', 'M632', 'O275', 'O311'])
+        # DEFAULT_POOL fallback fills pool-less stages.
+        self.assertEqual(document["stages"]["5000"]["2"]["tiers"]["A"], ['I2', 'I4'])
+        # Tier metadata keeps reTB's 0-100 Luck anchors (regression: no /10).
+        tier_a = next(t for t in document["tiers"] if t["key"] == "A")
+        self.assertEqual(tier_a["guaranteed_at_luck"], 40.0)
+        self.assertEqual(tier_a["base_chance"], 20.0)
+        # no_chest_chapters trimmed to chapters BattleData actually has.
+        self.assertEqual(document["no_chest_chapters"], [1001, 7000])
 
-    def test_supplement_tables_are_valid_wire_codes(self):
-        from luck_chests_supplement import SUPPLEMENT_CHEST_POOLS
-        tier_keys = [t["key"] for t in extract_luck_chests.CHEST_TIERS]
-        for stage, tiers in SUPPLEMENT_CHEST_POOLS.items():
-            for tier, codes in tiers.items():
-                self.assertIn(tier, tier_keys, f"{stage} tier {tier}")
-                for code in codes:
-                    self.assertRegex(code, r'^[CIOM]\d+$', f"{stage} {tier} code {code}")
+    def test_mapped_exclusions_remap_retb_chapter_ids(self):
+        excluded = extract_luck_chests.mapped_exclusions({700, 701, 1000, 1200, 3002})
+        self.assertIn(7000, excluded)      # Orbling Cavern map points -> 7000
+        self.assertNotIn(700, excluded)
+        self.assertIn(3002, excluded)
+        self.assertIn(2005, extract_luck_chests.RETB_NOT_SERVED_CHAPTERS)
 
 
 if __name__ == "__main__":
