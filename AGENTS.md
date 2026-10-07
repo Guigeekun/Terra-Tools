@@ -35,6 +35,26 @@ Then work inside the new directory:
 
 ## Finishing a task
 
+Before opening the PR, run the frontend regression suite from your worktree:
+
+```sh
+scripts/run-e2e.sh
+```
+
+The Playwright smoke suite (`frontend/e2e/`) drives the real UI against real
+served data: every tab, hash-router deep links (modals via `?char=` /
+`?enemy=`, search via `?q=`, chapter selection), and back-button history. It
+needs a backend on `127.0.0.1:5001` — the script starts this worktree's
+compose stack when none is running — and tests the vite dev server, so it
+always exercises the current branch's source. `E2E_BASE_URL=http://127.0.0.1:5001
+scripts/run-e2e.sh` tests the built dist served by the stack instead — rebuild
+that instance first (`npm run build` in `frontend/`, or an image rebuild), or
+its failures describe a stale bundle, not your branch.
+Gotcha: if a vite dev server from another worktree is already on 5173, it
+gets reused and serves the wrong branch's source — stop it first.
+
+When the suite is green:
+
 ```sh
 git push -u origin feat/<topic>
 gh pr create --base main
