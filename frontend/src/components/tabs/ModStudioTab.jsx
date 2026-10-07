@@ -17,41 +17,66 @@ const TERRAMOD_URL = 'https://github.com/iaydios/TerraMod';
 
 // Editable SkillType fields, in display order. Values start at the template's
 // (greyed in the input); touching one writes it into the spec's `set` diff.
+// Titles are player-facing hover help — assume game knowledge, not internals.
 const SKILL_SET_FIELDS = [
   { key: 'condition', label: 'Trigger position', type: 'select', options: 'conditions',
-    title: 'SkillEmitCondition — where the unit must stand / what must hold for the skill to activate' },
+    title: 'When/where the skill can activate. "Any position" fires anywhere in a pincer; "Pincer Initiator only" fires only when this unit starts the pincer; the counter variants respond to this unit being pincered.' },
   { key: 'kind', label: 'Kind', type: 'select', options: 'kinds',
-    title: 'SkillKind — attack, heal, counter, tap skill (Hop Break), ...' },
+    title: 'What the skill does mechanically: Attack, Heal, Counter, Status Attack, and so on. Kind 20 (Hop Break) is a tap skill the player triggers manually.' },
   { key: 'emitRatio', label: 'Activation', type: 'int',
-    title: 'Proc chance in %. For tap skills (kind 20) this is the number of charges instead.' },
-  { key: 'power', label: 'Power', type: 'float', step: 0.1, title: 'Damage multiplier' },
-  { key: 'spower', label: 'Status power', type: 'float', step: 0.1 },
-  { key: 'attrib', label: 'Element', type: 'select', options: 'skillAttribs' },
-  { key: 'weap', label: 'Weapon', type: 'select', options: 'weapons' },
-  { key: 'range', label: 'Range', type: 'int', title: 'Area range' },
-  { key: 'sx', label: 'Area X', type: 'int' },
-  { key: 'sy', label: 'Area Y', type: 'int' },
-  { key: 'status', label: 'Status effect', type: 'int' },
-  { key: 'successRate', label: 'Success %', type: 'int' },
-  { key: 'life', label: 'Turns', type: 'int', title: 'Status duration in turns' },
-  { key: 'effID', label: 'Effect ID', type: 'int', title: 'Visual effect, from EffectSet' },
-  { key: 'blowOff', label: 'Knock-back', type: 'int' },
+    title: 'Chance to activate, in %. Tap skills (kind 20) instead use this as their number of charges per battle.' },
+  { key: 'power', label: 'Power', type: 'float', step: 0.1,
+    title: 'Damage multiplier. 1.0 = a normal pincer hit, 2.0 = double damage.' },
+  { key: 'spower', label: 'Status power', type: 'float', step: 0.1,
+    title: 'Potency of an inflicted status effect (used by status skills). Copy the template value unless you know the scale.' },
+  { key: 'attrib', label: 'Element', type: 'select', options: 'skillAttribs',
+    title: 'Element of the skill\'s damage or healing — drives elemental weaknesses/resistances.' },
+  { key: 'weap', label: 'Weapon', type: 'select', options: 'weapons',
+    title: 'Weapon type associated with the skill (sword, spear, bow, staff).' },
+  { key: 'range', label: 'Reach', type: 'int',
+    title: 'How many tiles away the skill can reach.' },
+  { key: 'sx', label: 'Area X', type: 'int',
+    title: 'Width of the area the skill covers around its target.' },
+  { key: 'sy', label: 'Area Y', type: 'int',
+    title: 'Height of the area the skill covers around its target.' },
+  { key: 'status', label: 'Status effect', type: 'int',
+    title: 'Which status effect to inflict (paralysis, sleep, poison…). Easiest: copy the value from a similar existing skill.' },
+  { key: 'successRate', label: 'Success %', type: 'int',
+    title: 'Chance that the status/effect lands. The special value 4242 enables the random_power native patch (synced random damage) instead.' },
+  { key: 'life', label: 'Turns', type: 'int',
+    title: 'How long the effect lasts, in turns.' },
+  { key: 'effID', label: 'Effect ID', type: 'int',
+    title: 'Which visual effect plays when the skill fires (from the game\'s EffectSet). Keep the template\'s value unless you know the IDs.' },
+  { key: 'blowOff', label: 'Knock-back', type: 'int',
+    title: 'How many tiles the target is pushed away.' },
 ];
 
 // Editable job fields (everything else lands in the raw JSON escape hatch).
 const JOB_FIELD_EDITORS = [
-  { key: 'Species', label: 'Species', type: 'select', options: 'species' },
-  { key: 'Gender', label: 'Gender', type: 'int', title: 'Copy from the template unless you mean to change it' },
-  { key: 'Attrib', label: 'Element', type: 'select', options: 'elements' },
-  { key: 'SkillAttrib', label: 'Skill element', type: 'select', options: 'skillAttribs' },
-  { key: 'RANGE', label: 'Move range', type: 'int' },
-  { key: 'HPcoeff', label: 'HP curve', type: 'float', step: 0.1 },
-  { key: 'ATKcoeff', label: 'ATK curve', type: 'float', step: 0.1 },
-  { key: 'DEFcoeff', label: 'DEF curve', type: 'float', step: 0.1 },
-  { key: 'SATKcoeff', label: 'SATK curve', type: 'float', step: 0.1 },
-  { key: 'SDEFcoeff', label: 'SDEF curve', type: 'float', step: 0.1 },
-  { key: 'EXPcoeff', label: 'EXP curve', type: 'float', step: 0.1 },
-  { key: 'EXPmax', label: 'EXP to Lv99', type: 'int' },
+  { key: 'Species', label: 'Species', type: 'select', options: 'species',
+    title: 'Playable species: Human, Lizardfolk, Beastfolk or Stonefolk. Some skills and companions care about it.' },
+  { key: 'Gender', label: 'Gender', type: 'int',
+    title: '0 or 1. Gender-specific skills check this value — keep the template\'s unless you mean to change it.' },
+  { key: 'Attrib', label: 'Element', type: 'select', options: 'elements',
+    title: 'The unit\'s own element, shown on the character and used by elemental interactions.' },
+  { key: 'SkillAttrib', label: 'Skill element', type: 'select', options: 'skillAttribs',
+    title: 'Default element of the job\'s skills.' },
+  { key: 'RANGE', label: 'Move range', type: 'int',
+    title: 'How many tiles the unit can move per turn on the battle board.' },
+  { key: 'HPcoeff', label: 'HP curve', type: 'float', step: 0.1,
+    title: 'How fast HP grows with level: 1.0 is the standard curve, higher values ramp up more at high levels.' },
+  { key: 'ATKcoeff', label: 'ATK curve', type: 'float', step: 0.1,
+    title: 'How fast ATK grows with level: 1.0 is the standard curve, higher values ramp up more at high levels.' },
+  { key: 'DEFcoeff', label: 'DEF curve', type: 'float', step: 0.1,
+    title: 'How fast DEF grows with level: 1.0 is the standard curve, higher values ramp up more at high levels.' },
+  { key: 'SATKcoeff', label: 'SATK curve', type: 'float', step: 0.1,
+    title: 'How fast SATK (magic attack) grows with level.' },
+  { key: 'SDEFcoeff', label: 'SDEF curve', type: 'float', step: 0.1,
+    title: 'How fast SDEF (magic defense) grows with level.' },
+  { key: 'EXPcoeff', label: 'EXP curve', type: 'float', step: 0.1,
+    title: 'Shape of the EXP curve — higher means steeper growth requirements late. Λ recodes use about 2.1.' },
+  { key: 'EXPmax', label: 'EXP to Lv99', type: 'int',
+    title: 'Total EXP needed from level 1 to the cap. Λ recodes typically use 9,000,000.' },
 ];
 
 // Dropdown option tables (built once).
@@ -789,11 +814,11 @@ function BuddyPicker({ buddies, lang, onPick }) {
   );
 }
 
-function MultilingualInput({ label, value, onChange, multiline, rows = 4, required }) {
+function MultilingualInput({ label, value, onChange, multiline, rows = 4, required, title }) {
   const [activeLang, setActiveLang] = useState('en');
   const current = value?.[activeLang] || '';
   return (
-    <div className="ms-multilang">
+    <div className="ms-multilang" title={title}>
       <div className="ms-multilang-head">
         <span className="ms-field-label">
           {label} {required && <em title="English is required — TerraMod fills the other languages from it">*</em>}
@@ -902,12 +927,12 @@ function SkillEditor({ skill, template, lang, onChange, onEnableNative, onRemove
       </div>
 
       <div className="mod-grid-2">
-        <label className="ms-numfield">
+        <label className="ms-numfield" title="Internal name used to reference this skill in job skill lists (as @key). Never shown in-game — pick anything unique, letters/digits/underscore only.">
           <span>Key <em title="Referenced as @key in job skill lists">*</em></span>
           <input type="text" value={skill.key} placeholder="my_skill"
             onChange={e => onChange({ key: e.target.value.replace(/[^A-Za-z0-9_]/g, '') })} />
         </label>
-        <MultilingualInput label="Name" value={skill.name}
+        <MultilingualInput label="Name" value={skill.name} title="The skill name shown in the game's skill list. English is required; other languages fall back to it."
           onChange={v => onChange({ name: v })} required />
       </div>
 
@@ -937,8 +962,10 @@ function SkillEditor({ skill, template, lang, onChange, onEnableNative, onRemove
         </label>
       </div>
 
-      <MultilingualInput label="Description" value={skill.desc} onChange={v => onChange({ desc: v })} />
+      <MultilingualInput label="Description" value={skill.desc} title="The skill description text shown in-game (the flavour text under the name)."
+        onChange={v => onChange({ desc: v })} />
       <MultilingualInput label="Range text" value={skill.range} onChange={v => onChange({ range: v })}
+        title="Short text shown after the skill name in the skill list (area summary). Often empty for plain attacks."
         hint="Shown in the skill list (often empty for attacks)" />
     </div>
   );
@@ -963,19 +990,23 @@ function CharacterEditor({ character, catalogs, lang, nextIds, draft, charName, 
 
       <div className="mod-grid-4">
         <NumField label="Character ID" value={c.chrId} min={1}
-          onChange={v => onChangeCharacter({ chrId: v })} title={`Next free: ${nextIds.chrId}`} />
+          onChange={v => onChangeCharacter({ chrId: v })}
+          title={`Unique number identifying this character in the game database. Must be unused — the next free value is ${nextIds.chrId}.`} />
         <NumField label="Rarity" value={c.rarity} min={2} max={8}
-          onChange={v => onChangeCharacter({ rarity: v })} title="2 D · 3 C · 4 B · 5 A · 6 S · 7 SS · 8 Z" />
+          onChange={v => onChangeCharacter({ rarity: v })}
+          title="Character class shown in-game: 2 D · 3 C · 4 B · 5 A · 6 S · 7 SS · 8 Z." />
         <NumField label="Generation" value={c.generation} min={1} max={3}
-          onChange={v => onChangeCharacter({ generation: v })} />
-        <label className="mod-checkbox" title="Marks the character as a Λ form in the UI">
+          onChange={v => onChangeCharacter({ generation: v })}
+          title="Release era of the character (1 = original roster, 2 = recode era, 3 = late additions). Keep the template's value unless you know better." />
+        <label className="mod-checkbox" title="Λ (Lambda) is the upgraded recode form: shows the Λ badge next to the name. Keep it checked when cloning a Λ template.">
           <input type="checkbox" checked={Boolean(c.isLambda)}
             onChange={e => onChangeCharacter({ isLambda: e.target.checked })} />
           <span>Λ form</span>
         </label>
       </div>
 
-      <MultilingualInput label="Name" value={c.name} onChange={v => onChangeCharacter({ name: v })} required />
+      <MultilingualInput label="Name" value={c.name} title="Character name shown everywhere in-game. English is required; other languages fall back to it."
+        onChange={v => onChangeCharacter({ name: v })} required />
 
       {c.jobs.map((job, idx) => (
         <JobEditor key={job._uid} job={job} index={idx} character={c}
@@ -997,7 +1028,8 @@ function CharacterEditor({ character, catalogs, lang, nextIds, draft, charName, 
       </div>
 
       {/* DNA recode */}
-      <div className={`mod-recode-box${c.recode.enabled ? ' enabled' : ''}`}>
+      <div className={`mod-recode-box${c.recode.enabled ? ' enabled' : ''}`}
+        title="A DNA recode lets an existing character be transformed into this one in-game, like Ma'curi into Ma'curi Λ. The source keeps its levels and equipment.">
         <label className="mod-checkbox">
           <input type="checkbox" checked={Boolean(c.recode.enabled)}
             onChange={e => onChangeCharacter({ recode: { ...c.recode, enabled: e.target.checked } })} />
@@ -1009,7 +1041,8 @@ function CharacterEditor({ character, catalogs, lang, nextIds, draft, charName, 
               <RecodeSourceField c={c} catalogs={catalogs} lang={lang} charName={charName}
                 onChange={onChangeCharacter} />
               <NumField label="Coins" value={c.recode.coins} min={0}
-                onChange={v => onChangeCharacter({ recode: { ...c.recode, coins: v ?? 0 } })} />
+                onChange={v => onChangeCharacter({ recode: { ...c.recode, coins: v ?? 0 } })}
+                title="Coin cost to perform the recode in-game — 20,000 is the usual price." />
             </div>
             <p className="mod-section-hint">Exactly 3 items and 2 companion materials — the game's recode ritual.</p>
             {c.recode.items.map((it, i) => (
@@ -1065,7 +1098,7 @@ function RecodeSourceField({ c, catalogs, lang, charName, onChange }) {
   }, [catalogs.characters, q, lang, c.chrId]);
   return (
     <div className="ms-numfield ms-recode-source">
-      <span>Recode source</span>
+      <span title="The character that gets transformed into this one in-game. It must not already have a DNA recode.">Recode source</span>
       {c.recode.fromChrId ? (
         <div className="ms-picked-row">
           <span>{charName(c.recode.fromChrId)}</span>
@@ -1122,7 +1155,7 @@ function RecodeItemRow({ index, row, catalogs, lang, itemName, onChange }) {
   }, [catalogs.items, q, lang]);
   return (
     <div className="mod-recode-row">
-      <span className="mod-recode-row-label">Item {index + 1}</span>
+      <span className="mod-recode-row-label" title="One of the three items the recode requires (like the items jobs need to unlock).">Item {index + 1}</span>
       <div className="ms-recode-source">
         {row.itemId ? (
           <div className="ms-picked-row">
@@ -1151,7 +1184,7 @@ function RecodeItemRow({ index, row, catalogs, lang, itemName, onChange }) {
           </div>
         )}
       </div>
-      <label className="ms-numfield">
+      <label className="ms-numfield" title="How many of this item the recode costs (max 255 — the game stores the count in a single byte).">
         <span>Count</span>
         <input type="number" min={1} max={255} value={row.count ?? ''}
           onChange={e => onChange({ ...row, count: e.target.value === '' ? null : Number(e.target.value) })} />
@@ -1184,7 +1217,7 @@ function RecodeMonRow({ index, row, catalogs, lang, charName, onChange }) {
   }, [catalogs.characters, q, lang]);
   return (
     <div className="mod-recode-row">
-      <span className="mod-recode-row-label">Material {index + 1}</span>
+      <span className="mod-recode-row-label" title="A character consumed as material for the recode (like feeding Ma'curi companions to the ritual).">Material {index + 1}</span>
       <div className="ms-recode-source">
         {row.chrId ? (
           <div className="ms-picked-row">
@@ -1213,7 +1246,7 @@ function RecodeMonRow({ index, row, catalogs, lang, charName, onChange }) {
           </div>
         )}
       </div>
-      <label className="ms-numfield">
+      <label className="ms-numfield" title="The level this material character must be to perform the recode.">
         <span>Level</span>
         <input type="number" min={1} max={99} value={row.level ?? ''}
           onChange={e => onChange({ ...row, level: e.target.value === '' ? null : Number(e.target.value) })} />
@@ -1283,14 +1316,16 @@ function JobEditor({ job, index, lang, skillName, jobById, onChange, onProbeImag
       </div>
 
       <div className="mod-grid-4">
-        <NumField label="Job ID" value={job.jobId} min={1} onChange={v => onChange({ jobId: v })} />
+        <NumField label="Job ID" value={job.jobId} min={1} onChange={v => onChange({ jobId: v })}
+          title="Unique number for this job (a job = one stat block + skill kit, like Job 1/2/3). Must be unused across the whole game." />
         <NumField label="Image ID" value={job.imageId} min={1} placeholder="e.g. 3001"
           onChange={v => { onChange({ imageId: v }); onProbeImage(v); }}
-          title="Selects img_<id> (piece), illust_<id> and profile_<id> — leave empty to reuse the template's art" />
+          title="The art set for this job: the battle piece, the illustration and the profile picture all use this one number. A free ID shows the template art as a dashed preview — you supply the new art separately." />
         <div className="ms-image-preview">
           <JobImagePreview job={job} template={template} />
         </div>
         <MultilingualInput label="Job name" value={job.name} onChange={v => onChange({ name: v })}
+          title="Name of this job (shown on the job tabs). Defaults to the character name when left empty."
           hint="Defaults to the character name" />
       </div>
 
@@ -1322,25 +1357,28 @@ function JobEditor({ job, index, lang, skillName, jobById, onChange, onProbeImag
       </div>
 
       {/* Stats */}
-      <div className="ms-fields-grid ms-stats-grid">
+      <div className="ms-fields-grid ms-stats-grid" title="Stat at level 1 (min) and at the level cap (max). The curve fields above shape the growth between the two.">
         {JOB_STATS.map(s => (
           <div key={s} className="ms-stat-pair">
-            <span className="ms-field-label">{s}</span>
+            <span className="ms-field-label" title={`Stat at level 1 (min) and at the level cap (max).${s === 'SATK' ? ' SATK = magic attack.' : s === 'SDEF' ? ' SDEF = magic defense.' : ''}`}>{s}</span>
             <div className="ms-stat-inputs">
               <NumField label="min" value={job.stats?.[s]?.min}
-                onChange={v => onChange({ stats: { ...job.stats, [s]: { ...job.stats[s], min: v ?? 0 } } })} />
+                onChange={v => onChange({ stats: { ...job.stats, [s]: { ...job.stats[s], min: v ?? 0 } } })}
+                title={`${s} at level 1.`} />
               <NumField label="max" value={job.stats?.[s]?.max}
-                onChange={v => onChange({ stats: { ...job.stats, [s]: { ...job.stats[s], max: v ?? 0 } } })} />
+                onChange={v => onChange({ stats: { ...job.stats, [s]: { ...job.stats[s], max: v ?? 0 } } })}
+                title={`${s} at the level cap (99).`} />
             </div>
           </div>
         ))}
       </div>
-      <p className="mod-section-hint">
+      <p className="mod-section-hint" title="The formula the game uses to interpolate the stat between min (level 1) and max (level 99).">
         Level curve: <code>stat(L) = min + (max−min) · ((L−1)/98)^coeff</code> — the curve fields above shape it.
       </p>
 
       {/* Skill slots */}
-      <div className="mod-slots">
+      <div className="mod-slots"
+        title="The job's skill kit. 'Keep template skill' clones the original; 'New skill' references a skill defined in this mod by its key; 'Existing skill ID' points at any game skill.">
         <span className="ms-field-label">Skill kit ({tplSkills.length} slots — must match the template job)</span>
         {(job.skillSlots || []).map((slot, i) => (
           <div key={i} className="mod-slot-row">
@@ -1382,7 +1420,7 @@ function JobEditor({ job, index, lang, skillName, jobById, onChange, onProbeImag
             )}
           </div>
         ))}
-        <div className="mod-slot-levels">
+        <div className="mod-slot-levels" title="The level at which each skill slot unlocks (slot order matches the list above). A common spread is 1 / 30 / 50 / 80.">
           <span className="ms-field-label">Unlock levels</span>
           {(job.skillLevels || []).map((lv, i) => (
             <input key={i} type="number" min={1} max={99} value={lv ?? ''}
@@ -1395,9 +1433,10 @@ function JobEditor({ job, index, lang, skillName, jobById, onChange, onProbeImag
         </div>
       </div>
 
-      <MultilingualInput label="Profile story" value={job.profile} onChange={v => onChange({ profile: v })} multiline rows={6} />
+      <MultilingualInput label="Profile story" value={job.profile} title="The character story shown on the profile screen. English is required; other languages fall back to it."
+        onChange={v => onChange({ profile: v })} multiline rows={6} />
 
-      <details className="mod-raw-fields">
+      <details className="mod-raw-fields" title="Advanced escape hatch: any other job field from the game database, merged into the spec as-is. Must be valid JSON.">
         <summary>Extra job fields (JSON, advanced)</summary>
         <textarea
           value={job._extraFieldsText ?? (Object.keys(job.extraFields || {}).length ? JSON.stringify(job.extraFields, null, 2) : '')}
@@ -1443,21 +1482,28 @@ function BuddyEditor({ buddy, catalogs, lang, nextIds, charName, buddyName, skil
 
       <div className="mod-grid-4">
         <NumField label="Companion ID" value={b.buddyId} min={1}
-          onChange={v => onChange({ buddyId: v })} title={`Next free: ${nextIds.buddyId}`} />
+          onChange={v => onChange({ buddyId: v })}
+          title={`Unique number identifying this companion in the game database. Must be unused — the next free value is ${nextIds.buddyId}.`} />
         <NumField label="Rarity" value={b.rarity} min={1} max={8} onChange={v => onChange({ rarity: v })}
-          title="1–8; the letter shown in-game derives from this (Z rarity = 8)" />
-        <NumField label="Max level" value={b.maxLevel} min={1} onChange={v => onChange({ maxLevel: v })} />
-        <NumField label="Required level" value={b.requiredLevel} min={1} onChange={v => onChange({ requiredLevel: v })} />
+          title="Companion class; 8 = Z (the letter shown in-game derives from this). Exclusive story companions are often Z." />
+        <NumField label="Max level" value={b.maxLevel} min={1} onChange={v => onChange({ maxLevel: v })}
+          title="The companion's own level cap (companions level separately from characters). Level-1 exclusives are a thing — see the Mech Arm example." />
+        <NumField label="Required level" value={b.requiredLevel} min={1} onChange={v => onChange({ requiredLevel: v })}
+          title="Player rank needed before this companion can be equipped." />
       </div>
 
-      <MultilingualInput label="Name" value={b.name} onChange={v => onChange({ name: v })} required />
-      <MultilingualInput label="Description" value={b.desc} onChange={v => onChange({ desc: v })} multiline rows={3} />
+      <MultilingualInput label="Name" value={b.name} title="Companion name shown in-game. English is required; other languages fall back to it."
+        onChange={v => onChange({ name: v })} required />
+      <MultilingualInput label="Description" value={b.desc} title="Flavour text shown on the companion's detail screen."
+        onChange={v => onChange({ desc: v })} multiline rows={3} />
 
-      <div className="ms-fields-grid ms-stats-grid">
+      <div className="ms-fields-grid ms-stats-grid" title="Flat bonuses while the companion is equipped. BOOST raises Skill Boost. Each value is emitted as both min and max — companions are flat-stat.">
         {BUDDY_STATS.map(s => (
           <NumField key={s} label={s} value={b.stats?.[s]}
             onChange={v => onChange({ stats: { ...b.stats, [s]: v ?? 10 } })}
-            title="Emitted as both min and max — companions are flat-stat" />
+            title={s === 'BOOST'
+              ? 'Skill Boost % granted while equipped.'
+              : `${s} bonus while equipped.`} />
         ))}
       </div>
 
@@ -1465,8 +1511,8 @@ function BuddyEditor({ buddy, catalogs, lang, nextIds, charName, buddyName, skil
         <ExclusiveChrField b={b} catalogs={catalogs} lang={lang} charName={charName} onChange={onChange} />
         <NumField label="Image ID" value={b.imageId} min={1} placeholder="e.g. 521"
           onChange={v => { onChange({ imageId: v }); onProbeImage(v); }}
-          title="Selects buddy_<id>a/b and bimg_<id>" />
-        <label className="mod-checkbox" title="Whether the companion can drop from enemies">
+          title="The companion's art set: buddy_<id>a (large), buddy_<id>b (small) and bimg_<id> (thumbnail) all use this number. You supply the art files separately." />
+        <label className="mod-checkbox" title="Whether the companion can drop from enemies. Exclusive story companions usually cannot.">
           <input type="checkbox" checked={b.canDrop === 1}
             onChange={e => onChange({ canDrop: e.target.checked ? 1 : 0 })} />
           <span>Can drop</span>
@@ -1477,7 +1523,7 @@ function BuddyEditor({ buddy, catalogs, lang, nextIds, charName, buddyName, skil
       )}
 
       {/* Skill */}
-      <div className="mod-slot-row mod-buddy-skill">
+      <div className="mod-slot-row mod-buddy-skill" title="The skill this companion grants while equipped. 'Keep template skill' clones the original; 'New skill' references a skill defined in this mod; 'Existing skill ID' points at any game skill.">
         <span className="ms-field-label">Skill</span>
         <select value={b.skillMode} onChange={e => onChange({ skillMode: e.target.value })}>
           <option value="keep">Keep template skill</option>
@@ -1497,7 +1543,7 @@ function BuddyEditor({ buddy, catalogs, lang, nextIds, charName, buddyName, skil
         )}
       </div>
 
-      <details className="mod-raw-fields">
+      <details className="mod-raw-fields" title="Advanced escape hatch: any other companion field from the game database, merged into the spec as-is. Must be valid JSON.">
         <summary>Extra companion fields (JSON, advanced)</summary>
         <textarea
           value={b._extraFieldsText ?? (Object.keys(b.extraFields || {}).length ? JSON.stringify(b.extraFields, null, 2) : '')}
@@ -1679,7 +1725,7 @@ function ImagesTable({ draft, onChangeJob, onChangeBuddy }) {
               </span>
             )}
             {r.dims.map((d, i) => (
-              <span key={i} className="ms-dims">
+              <span key={i} className="ms-dims" title="Pixel size of the art file the game expects — prefilled from the template art; fill manually if the probe came up empty.">
                 <span className="ms-field-label">{r.dimLabels[i]}</span>
                 {d?.w ? (
                   <span className="ms-dims-value">{d.w}×{d.h}</span>
