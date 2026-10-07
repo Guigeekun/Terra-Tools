@@ -26,6 +26,7 @@ export default function DashboardTab() {
     { key: 'stages', label: 'Chapters & Stages', count: stageCount, icon: 'fa-map-location-dot', bg: 'stage-bg' },
     { key: 'audio', label: 'Audio Tracks', count: `${bgmCount} BGM / ${seCount} SE`, icon: 'fa-music', bg: 'audio-bg' },
     { key: 'saveEditor', label: 'PLG ⇄ ReTB', count: 'Save Editor', icon: 'fa-arrow-right-arrow-left', bg: 'save-bg' },
+    { key: 'modStudio', label: 'Mod Studio', count: 'Author TerraMod mods', icon: 'fa-puzzle-piece', bg: 'skill-bg' },
     { key: 'docs', label: 'Community Docs', count: 'Guides & FAQs', icon: 'fa-book', bg: 'docs-bg' },
   ];
 

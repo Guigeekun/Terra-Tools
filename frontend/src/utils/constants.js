@@ -99,7 +99,8 @@ export const isTapSkill = (skill) => skill?.kind === TAP_SKILL_KIND;
 export const SKILL_EMIT_CONDITION_NONE = 0;
 export const SKILL_EMIT_CONDITION_SANDWICH = 1;
 
-const SKILL_EMIT_CONDITIONS = {
+// Exported for the Mod Studio's trigger-position editor.
+export const SKILL_EMIT_CONDITIONS = {
   0: {
     label: 'Any position',
     className: 'pos-any',
@@ -228,6 +229,7 @@ export const TAB_META = {
   stages:      { title: 'Chapters & Stages', desc: 'Select chapters to view sections, recommended levels, enemy detail and drops.', icon: 'fa-map-location-dot', label: 'Chapters & Stages' },
   audio:         { title: 'Audio Asset Player', desc: 'Stream background music and sound effects directly extracted from the game files.', icon: 'fa-music', label: 'Audio Player' },
   saveEditor: { title: 'Savefile Editor', desc: 'Edit savefiles — characters, companions, items and more — and export them in their own format or convert between Project Liminal Gate and ReTB.', icon: 'fa-arrow-right-arrow-left', label: 'Save Editor' },
+  modStudio: { title: 'Mod Studio', desc: 'Author TerraMod mod files — clone characters, DNA recodes, skills and companions from the game data, then download the JSON spec to build with TerraMod.', icon: 'fa-puzzle-piece', label: 'Mod Studio' },
   docs: { title: 'Community Docs', desc: 'Tagged guides and references for ReTB and Project Liminal Gate — one place for what used to live in Discord pins and repo readmes.', icon: 'fa-book', label: 'Docs' }
 };
 

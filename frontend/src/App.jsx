@@ -18,6 +18,7 @@ import BestiaryTab from './components/tabs/BestiaryTab';
 import StagesTab from './components/tabs/StagesTab';
 import AudioTab from './components/tabs/AudioTab';
 import SaveConverterTab from './components/tabs/SaveConverterTab';
+import ModStudioTab from './components/tabs/ModStudioTab';
 import DocsTab from './components/tabs/DocsTab';
 
 import CharacterModal from './components/modals/CharacterModal';
@@ -212,6 +213,7 @@ function AppContent() {
             )}
             {activeTab === 'audio' && <AudioTab />}
             {activeTab === 'saveEditor' && <SaveConverterTab />}
+            {activeTab === 'modStudio' && <ModStudioTab />}
             {activeTab === 'docs' && <DocsTab />}
           </div>
         </main>
