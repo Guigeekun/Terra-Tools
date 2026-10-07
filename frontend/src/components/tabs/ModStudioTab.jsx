@@ -86,9 +86,21 @@ function probeImage(url) {
 }
 
 const gameAssetUrl = (path) => (path ? `/api/assets/image?path=${encodeURIComponent(path)}` : null);
-const pieceUrl = (id) => gameAssetUrl(`user-data/extracted-gamedata/Pieces/img_${id}.png`);
-const illustUrl = (id) => gameAssetUrl(`user-data/extracted-gamedata/Illust/illust_${id}.png`);
-const buddyThumbUrl = (id) => gameAssetUrl(`user-data/extracted-gamedata/BuddyThumbs/bimg_${id}.png`);
+
+// Image filenames on disk carry an md5 prefix (<md5>img_2124.png), so an
+// arbitrary image ID can't be turned into a URL client-side — the backend
+// resolves IDs against its extracted-asset index. Null = no such art.
+async function resolveAsset(category, imageId, prefix) {
+  if (!imageId) return null;
+  try {
+    const res = await fetch(`/api/assets/resolve?category=${category}&image_id=${imageId}&prefix=${prefix}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.path || null;
+  } catch {
+    return null;
+  }
+}
 
 export default function ModStudioTab() {
   const { data: gameData, lang, loadCategory } = useGameData();
@@ -240,14 +252,66 @@ export default function ModStudioTab() {
     updateBuddy(b._uid, { imageDims });
   };
 
-  // Probing a candidate image ID flags collisions with existing game art.
+  // Probing a candidate image ID resolves it against the backend's asset
+  // index: taken = art already exists for it (collision), and the resolved
+  // paths feed the live preview. The write is guarded on the ID still being
+  // current — probes resolve out of order while typing.
   const probeJobImageId = async (chrUid, jobUid, imageId) => {
-    const taken = imageId ? await probeImage(pieceUrl(imageId)) : null;
-    updateJob(chrUid, jobUid, { imageTaken: Boolean(taken) });
+    if (!imageId) {
+      setDraft(d => ({
+        ...d,
+        characters: d.characters.map(c => (c._uid !== chrUid ? c : {
+          ...c,
+          jobs: c.jobs.map(j => (j._uid === jobUid && !j.imageId)
+            ? { ...j, imageTaken: false, imageFiles: null }
+            : j),
+        })),
+      }));
+      return;
+    }
+    const [piece, illust] = await Promise.all([
+      resolveAsset('Pieces', imageId, 'img'),
+      resolveAsset('Illust', imageId, 'illust'),
+    ]);
+    const [pieceDims, illustDims] = await Promise.all([
+      piece ? probeImage(gameAssetUrl(piece)) : null,
+      illust ? probeImage(gameAssetUrl(illust)) : null,
+    ]);
+    setDraft(d => ({
+      ...d,
+      characters: d.characters.map(c => (c._uid !== chrUid ? c : {
+        ...c,
+        jobs: c.jobs.map(j => {
+          if (j._uid !== jobUid || j.imageId !== imageId) return j;
+          const imageDims = { ...j.imageDims };
+          if (!imageDims.piece && pieceDims) imageDims.piece = pieceDims;
+          if (!imageDims.illust && illustDims) imageDims.illust = illustDims;
+          return { ...j, imageTaken: Boolean(piece), imageFiles: { piece, illust }, imageDims };
+        }),
+      })),
+    }));
   };
   const probeBuddyImageId = async (uid, imageId) => {
-    const taken = imageId ? await probeImage(buddyThumbUrl(imageId)) : null;
-    updateBuddy(uid, { imageTaken: Boolean(taken) });
+    if (!imageId) {
+      setDraft(d => ({
+        ...d,
+        buddies: d.buddies.map(b => (b._uid === uid && !b.imageId
+          ? { ...b, imageTaken: false }
+          : b)),
+      }));
+      return;
+    }
+    const thumb = await resolveAsset('BuddyThumbs', imageId, 'img');
+    const thumbDims = thumb ? await probeImage(gameAssetUrl(thumb)) : null;
+    setDraft(d => ({
+      ...d,
+      buddies: d.buddies.map(b => {
+        if (b._uid !== uid || b.imageId !== imageId) return b;
+        const imageDims = { ...b.imageDims };
+        if (!imageDims.thumb && thumbDims) imageDims.thumb = thumbDims;
+        return { ...b, imageTaken: Boolean(thumb), imageDims };
+      }),
+    }));
   };
 
   const handleImportFile = (file) => {
@@ -1149,6 +1213,36 @@ function RecodeMonRow({ index, row, catalogs, lang, charName, onChange }) {
   );
 }
 
+// Job art preview: shows the typed image ID's art when it already exists in
+// the game (paths resolved by the backend); otherwise the template art as a
+// dashed placeholder — a free ID is the goal, the mod ships its own art.
+function JobImagePreview({ job, template }) {
+  const newPiece = job.imageTaken ? job.imageFiles?.piece : null;
+  const newIllust = job.imageTaken ? job.imageFiles?.illust : null;
+  const pieceSrc = newPiece ? gameAssetUrl(newPiece) : gameAssetUrl(template?.piece_file);
+  const illustSrc = newIllust ? gameAssetUrl(newIllust) : gameAssetUrl(template?.illust_file);
+  const title = !job.imageId
+    ? 'Template art — no new image ID set'
+    : newPiece || newIllust
+      ? `Existing game art for image ID ${job.imageId}`
+      : `Image ID ${job.imageId} is free — the mod ships new art here (template art shown)`;
+  const placeholder = (newPiece || newIllust) ? '' : ' ms-art-placeholder';
+  return (
+    <>
+      {pieceSrc && (
+        <img src={pieceSrc} alt="" title={title} className={placeholder.trim()}
+          onError={e => { e.currentTarget.style.visibility = 'hidden'; }}
+          onLoad={e => { e.currentTarget.style.visibility = 'visible'; }} />
+      )}
+      {illustSrc && (
+        <img className={`ms-illust${placeholder}`} src={illustSrc} alt="" title={title}
+          onError={e => { e.currentTarget.style.visibility = 'hidden'; }}
+          onLoad={e => { e.currentTarget.style.visibility = 'visible'; }} />
+      )}
+    </>
+  );
+}
+
 function AddJobControl({ templateJobs, lang, onAdd }) {
   if (!templateJobs.length) return null;
   return (
@@ -1185,18 +1279,7 @@ function JobEditor({ job, index, lang, skillName, jobById, onChange, onProbeImag
           onChange={v => { onChange({ imageId: v }); onProbeImage(v); }}
           title="Selects img_<id> (piece), illust_<id> and profile_<id> — leave empty to reuse the template's art" />
         <div className="ms-image-preview">
-          {job.imageId ? (
-            <>
-              <img src={pieceUrl(job.imageId)} alt=""
-                onError={e => { e.currentTarget.style.display = 'none'; }}
-                onLoad={e => { e.currentTarget.style.display = ''; }} />
-              <img className="ms-illust" src={illustUrl(job.imageId)} alt=""
-                onError={e => { e.currentTarget.style.display = 'none'; }}
-                onLoad={e => { e.currentTarget.style.display = ''; }} />
-            </>
-          ) : template?.piece_file ? (
-            <img src={gameAssetUrl(template.piece_file)} alt="" title="Template art (no new image ID set)" />
-          ) : null}
+          <JobImagePreview job={job} template={template} />
         </div>
         <MultilingualInput label="Job name" value={job.name} onChange={v => onChange({ name: v })}
           hint="Defaults to the character name" />

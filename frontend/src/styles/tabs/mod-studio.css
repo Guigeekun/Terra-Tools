@@ -455,6 +455,11 @@ textarea.ms-input { resize: vertical; line-height: 1.5; }
 
 .ms-image-preview img.ms-illust { width: 70px; height: 44px; object-fit: cover; }
 
+.ms-image-preview img.ms-art-placeholder {
+  border-style: dashed;
+  opacity: 0.55;
+}
+
 .mod-inline-warning {
   margin: 0;
   display: flex;
