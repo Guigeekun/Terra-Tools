@@ -1,4 +1,4 @@
-// Pure logic for authoring TerraMod mod files (https://github.com/Guigeekun/TerraMod).
+// Pure logic for authoring TerraMod mod files (https://github.com/iaydios/TerraMod).
 // A mod file is the JSON spec consumed by `terra_mod.py build --mod mods/` —
 // new skills, companions and characters cloned from game entries. The studio
 // keeps a rich draft state, then builds the spec (emitting only diffs against

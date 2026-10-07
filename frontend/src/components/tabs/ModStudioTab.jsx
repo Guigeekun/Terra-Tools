@@ -13,7 +13,7 @@ import {
   LANGS, JOB_STATS, BUDDY_STATS,
 } from '../../utils/modSpec';
 
-const TERRAMOD_URL = 'https://github.com/Guigeekun/TerraMod';
+const TERRAMOD_URL = 'https://github.com/iaydios/TerraMod';
 
 // Editable SkillType fields, in display order. Values start at the template's
 // (greyed in the input); touching one writes it into the spec's `set` diff.
