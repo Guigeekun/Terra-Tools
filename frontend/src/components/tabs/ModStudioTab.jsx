@@ -448,8 +448,19 @@ export default function ModStudioTab() {
           <button type="button" className="secondary-btn" onClick={handleCopySpec} disabled={!hasEntities}>
             <i className="fa-regular fa-copy"></i> Copy JSON
           </button>
-          <button type="button" className="download-btn" onClick={handleDownloadSpec} disabled={!hasEntities}>
-            <i className="fa-solid fa-download"></i> Download {specFileName}
+          <button
+            type="button"
+            className="download-btn"
+            onClick={handleDownloadSpec}
+            disabled={!hasEntities || errors.length > 0}
+            title={errors.length
+              ? `Fix the ${errors.length} error${errors.length > 1 ? 's' : ''} listed above to enable the download`
+              : undefined}
+          >
+            <i className={`fa-solid ${errors.length ? 'fa-triangle-exclamation' : 'fa-download'}`}></i>
+            {errors.length
+              ? `Fix ${errors.length} error${errors.length > 1 ? 's' : ''} to download`
+              : `Download ${specFileName}`}
           </button>
         </div>
       </div>
