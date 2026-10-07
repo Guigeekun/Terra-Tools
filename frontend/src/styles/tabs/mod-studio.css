@@ -1,0 +1,685 @@
+/* ==========================================================================
+   Mod Studio — author TerraMod mod files
+   Reuses the global component library (item-picker, secondary-btn,
+   download-btn, toast-notice, json-viewer-card, save-converter-hero).
+   ========================================================================== */
+
+.mod-studio-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Toolbar: file name + actions */
+.mod-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px 20px;
+}
+
+.mod-file-name {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 240px;
+}
+
+.mod-file-name span {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.mod-file-name input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+.mod-file-name input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.mod-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Validation summary */
+.mod-validation {
+  border-radius: 16px;
+  padding: 14px 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.mod-validation-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.mod-validation.has-errors { border-color: rgba(239, 68, 68, 0.4); }
+.mod-validation.has-errors .mod-validation-title { color: #f87171; }
+
+.mod-validation.has-warnings { border-color: rgba(251, 191, 36, 0.35); }
+.mod-validation.has-warnings .mod-validation-title { color: #fbbf24; }
+
+.mod-validation.is-ok { border-color: rgba(74, 222, 128, 0.3); }
+.mod-validation.is-ok .mod-validation-title { color: #4ade80; }
+
+.mod-validation-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mod-issue { font-size: 0.9rem; color: var(--text-secondary); padding-left: 20px; position: relative; }
+.mod-issue::before { content: '•'; position: absolute; left: 6px; }
+.mod-issue.error { color: #fca5a5; }
+.mod-issue.warning { color: #fcd34d; }
+.mod-issue strong { color: var(--text-primary); font-weight: 600; }
+
+.mod-skill-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.mod-skill-note i { color: var(--accent-blue); }
+
+/* Sections */
+.mod-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  /* visible so the picker dropdowns (position: absolute) can escape the card */
+  overflow: visible;
+}
+
+.mod-section-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  border-radius: 16px;
+  padding: 14px 20px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.mod-section-head:hover { background: rgba(255, 255, 255, 0.03); }
+
+.mod-section-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.mod-section-head h3 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+}
+
+.mod-section-count {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  padding: 2px 10px;
+  color: var(--text-secondary);
+}
+
+.mod-section-chev { margin-left: auto; color: var(--text-muted); font-size: 0.85rem; }
+
+.mod-section-body {
+  padding: 4px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mod-section-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Entity cards (skill / character / companion editors) */
+.mod-entity-card {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.mod-entity-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mod-entity-head h4 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  flex-wrap: wrap;
+}
+
+.mod-entity-tpl {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.ms-remove-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.ms-remove-btn:hover { color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+
+/* Field grids */
+.mod-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.mod-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: start; }
+
+.ms-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.ms-numfield {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ms-numfield span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.ms-numfield em { color: #f87171; font-style: normal; cursor: help; }
+
+.ms-numfield input,
+.ms-numfield select,
+.ms-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.ms-numfield input:focus,
+.ms-numfield select:focus,
+.ms-input:focus { outline: none; border-color: var(--accent-blue); }
+
+.ms-numfield select { cursor: pointer; }
+.ms-numfield select option { background: var(--bg-dark); }
+
+/* Template-backed fields (show template value until overridden) */
+.ms-tpl-field { position: relative; }
+
+.ms-tpl-field .ms-numfield input,
+.ms-tpl-field .ms-numfield select { padding-right: 30px; }
+
+.ms-field-clear {
+  position: absolute;
+  right: 6px;
+  top: 24px;
+  background: none;
+  border: none;
+  color: var(--accent-blue);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 4px;
+}
+
+.ms-picked-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.ms-picked-row .ms-field-clear { position: static; }
+
+/* Multilingual inputs */
+.ms-multilang { display: flex; flex-direction: column; gap: 6px; }
+
+.ms-multilang-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ms-field-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.ms-field-label em { color: #f87171; font-style: normal; }
+
+.ms-lang-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.ms-lang-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  padding: 3px 7px;
+  cursor: pointer;
+}
+
+.ms-lang-chip.filled { color: var(--text-primary); border-color: rgba(56, 189, 248, 0.4); }
+.ms-lang-chip.active { background: rgba(56, 189, 248, 0.15); color: var(--accent-blue); border-color: var(--accent-blue); }
+
+textarea.ms-input { resize: vertical; line-height: 1.5; }
+
+/* Stats grid */
+.ms-stats-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+
+.ms-stat-pair {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ms-stat-inputs { display: flex; gap: 8px; }
+
+/* Skill slots */
+.mod-slots {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mod-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mod-slot-index {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  min-width: 38px;
+}
+
+.mod-slot-row select,
+.mod-slot-row input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 7px 10px;
+  font-size: 0.88rem;
+}
+
+.mod-slot-row input[type='number'] { width: 90px; }
+.mod-slot-row input[type='text'] { width: 180px; }
+.mod-slot-at { color: var(--accent-blue); font-weight: 600; }
+
+.mod-slot-value { font-size: 0.85rem; color: var(--text-secondary); }
+
+.mod-slot-levels {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mod-slot-levels input {
+  width: 70px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 7px 10px;
+}
+
+/* Job card */
+.mod-job-card {
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mod-job-card .mod-entity-head h5 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+
+.mod-add-row { display: flex; }
+
+.mod-add-job {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+/* Image preview inside the job editor */
+.ms-image-preview {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  min-height: 40px;
+}
+
+.ms-image-preview img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 2px;
+}
+
+.ms-image-preview img.ms-illust { width: 70px; height: 44px; object-fit: cover; }
+
+.ms-image-preview img.ms-art-placeholder {
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.mod-inline-warning {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #fbbf24;
+  font-size: 0.85rem;
+}
+
+/* Recode / server rule boxes */
+.mod-recode-box {
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mod-recode-box.enabled { border-style: solid; border-color: rgba(56, 189, 248, 0.35); }
+
+.mod-recode-box h5 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+
+.mod-recode-box > .mod-checkbox { margin: 0; }
+
+.mod-recode-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 100px;
+  gap: 10px;
+  align-items: start;
+}
+
+.mod-recode-row-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding-top: 24px;
+}
+
+.ms-recode-source { position: relative; min-width: 0; }
+.ms-recode-source .ms-inline-results {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: 100%;
+  /* opaque: --bg-card is 60% alpha and inputs would bleed through the overlay */
+  background: #141a2e;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow-premium);
+}
+
+.mod-recode-summary {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+/* Checkboxes */
+.mod-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  padding: 8px 0;
+}
+
+.mod-checkbox input { accent-color: var(--accent-blue); cursor: pointer; }
+.mod-checkbox.checked span { color: var(--text-primary); }
+.mod-checkbox code { font-size: 0.8rem; }
+
+/* Raw extra fields */
+.mod-raw-fields summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.mod-raw-fields textarea {
+  width: 100%;
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.82rem;
+  padding: 10px;
+  resize: vertical;
+}
+
+/* Advanced section */
+.mod-native-row { display: flex; gap: 24px; flex-wrap: wrap; }
+
+.mod-assetver {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.mod-assetver input {
+  width: 90px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 8px 10px;
+}
+
+/* Downloads */
+.mod-download-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mod-download-hint { font-size: 0.82rem; color: var(--text-muted); }
+
+/* Images table */
+.mod-images-table {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mod-image-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.mod-image-names {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 260px;
+}
+
+.mod-image-kind {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  color: var(--text-secondary);
+}
+
+.mod-image-id { font-weight: 600; color: var(--text-primary); font-size: 0.88rem; }
+
+.mod-image-names code { font-size: 0.78rem; color: var(--text-muted); }
+
+.mod-image-row .ms-numfield { width: 110px; }
+
+.ms-dims { display: flex; align-items: center; gap: 6px; }
+
+.ms-dims-value { font-size: 0.85rem; color: var(--text-secondary); }
+
+.ms-dims-edit { display: flex; align-items: center; gap: 4px; }
+
+.ms-dims-edit input {
+  width: 60px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  padding: 5px 7px;
+  font-size: 0.82rem;
+}
+
+/* Help box */
+.mod-help-box {
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.06);
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+
+.mod-help-box h4 {
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.mod-help-box ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+.mod-help-box li { font-size: 0.88rem; color: var(--text-secondary); }
+
+.mod-picker { margin-bottom: 4px; }
+
+/* A blocked download: greyed out, clearly not clickable */
+.download-btn:disabled {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.download-btn:disabled:hover {
+  background: rgba(255, 255, 255, 0.06);
+}

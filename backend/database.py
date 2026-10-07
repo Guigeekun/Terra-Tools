@@ -325,20 +325,38 @@ def build_asset_indices():
         directory = os.path.join(EXTRACTED_DIR, category)
         if os.path.exists(directory):
             try:
-                for f in os.listdir(directory):
-                    if f.endswith(".png"):
-                        full_path = f"{EXTRACTED_DIR}/{category}/{f}".replace("\\", "/")
-                        name_no_ext = f[:-4]
-                        if "_" in name_no_ext:
-                            prefix_part, num_part = name_no_ext.rsplit("_", 1)
-                            prefix = "illust" if prefix_part.endswith("illust") else "img"
-                            try:
-                                num = int(num_part)
-                                ASSET_INDEX[(category, prefix, num)] = full_path
-                            except ValueError:
-                                pass
+                for f in sorted(os.listdir(directory)):
+                    if not f.endswith(".png"):
+                        continue
+                    full_path = f"{EXTRACTED_DIR}/{category}/{f}".replace("\\", "/")
+                    parsed = parse_asset_name(f[:-4])
+                    if not parsed:
+                        continue
+                    prefix, num, suffix = parsed
+                    existing = ASSET_INDEX.get((category, prefix, num))
+                    if existing is None or suffix < existing[0]:
+                        ASSET_INDEX[(category, prefix, num)] = (suffix, full_path)
             except Exception as e:
                 print(f"Error indexing {category}: {e}")
+    # Flatten: callers want the path, the suffix was only for variant picking.
+    ASSET_INDEX = {key: value[1] for key, value in ASSET_INDEX.items()}
+
+
+def parse_asset_name(name_no_ext: str):
+    """Split an extracted asset file stem into (prefix, numeric_id, suffix).
+
+    Stems look like '<md5 hex>img_2124' or '<md5 hex>buddy_513a': the last
+    underscore separates the prefix from the ID, and the ID may carry a
+    trailing variant letter (buddy art a/b). Returns None when the stem does
+    not match that shape."""
+    if "_" not in name_no_ext:
+        return None
+    prefix_part, num_part = name_no_ext.rsplit("_", 1)
+    m = _re.fullmatch(r"(\d+)([a-zA-Z]?)", num_part)
+    if not m:
+        return None
+    prefix = "illust" if prefix_part.endswith("illust") else "img"
+    return prefix, int(m.group(1)), m.group(2)
 
 
 def find_local_asset(category, image_id, prefix="img"):
