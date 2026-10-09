@@ -19,7 +19,7 @@ const DEFAULT_TAB = 'dashboard';
 // Parse the current hash into { tab, params }. Unknown tabs fall back to the
 // dashboard so a stale or hand-edited URL never renders a blank app. The Docs
 // tab keeps owning everything after '#/docs' — this only needs the tab name.
-export function parseHash(hash = window.location.hash) {
+function parseHash(hash = window.location.hash) {
   let h = hash.replace(/^#/, '');
   if (!h.startsWith('/')) h = '/' + h; // tolerate the legacy '#docs' spelling
   const [path, search = ''] = h.split('?');

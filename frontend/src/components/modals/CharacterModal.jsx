@@ -137,7 +137,7 @@ export default function CharacterModal({ character, onClose, onOpenItem, onOpenC
                   {weap && elem && (
                     <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                       <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: weap.color + '44', color: weap.color, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '4px 10px', borderRadius: 8 }}>
-                        {weap.icon ? <img src={weap.icon} alt={weap.name} style={{ width: 14, height: 14, objectFit: 'contain' }} /> : weap.svg ? <span dangerouslySetInnerHTML={{__html: weap.svg}} style={{ display: 'flex', alignItems: 'center' }}></span> : null}
+                        {weap.icon ? <img src={weap.icon} alt={weap.name} style={{ width: 14, height: 14, objectFit: 'contain' }} /> : null}
                         <span style={{ fontWeight: 600 }}>{weap.name}</span>
                       </span>
                       <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: elem.color + '44', color: elem.color, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '4px 10px', borderRadius: 8 }}>

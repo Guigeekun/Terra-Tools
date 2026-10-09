@@ -7,11 +7,11 @@
 // Item inventory shape the game client expects: itemList[slot - 1] holds the
 // count of item `slot` (ids are 1-based, exactly 181 slots, stack cap 999) --
 // mirrors project-liminal-gate save_validation.py and its save editor.
-export const ITEM_SLOTS = 181;
+const ITEM_SLOTS = 181;
 export const ITEM_MAX_STACK = 9999;
 
 // Held items as {id, count} pairs (ids 1-based) for summaries and the UI.
-export function parseHeldItems(itemList) {
+function parseHeldItems(itemList) {
   return (Array.isArray(itemList) ? itemList : [])
     .map((count, index) => ({ id: index + 1, count: Number(count) || 0 }))
     .filter(it => it.count > 0);
@@ -19,7 +19,7 @@ export function parseHeldItems(itemList) {
 
 // Companion entries as {iid, bid, lv} copies for summaries and the UI. iid is
 // the per-copy inventory id the save keys edits by; bid is the species id.
-export function parseBuddyCopies(buddyList) {
+function parseBuddyCopies(buddyList) {
   return (Array.isArray(buddyList) ? buddyList : [])
     .map(e => {
       const iid = Math.floor(Number(e && e.iid));
@@ -112,7 +112,7 @@ function buildLiminalRecord(buddyList, compendium) {
   return record;
 }
 
-export function parseAccountSummaryLiminal(accountId, acc) {
+function parseAccountSummaryLiminal(accountId, acc) {
   const ud = acc.userdata || {};
   const username = acc.username || ud.username || 'Player';
   const chrdata = ud.chrdata || [];
@@ -151,7 +151,7 @@ export function parseAccountSummaryLiminal(accountId, acc) {
   };
 }
 
-export function parseAccountSummaryRetb(retbData) {
+function parseAccountSummaryRetb(retbData) {
   const userid = retbData.userid || (retbData.tables?.users?.rows?.[0]?.[0]) || '';
   const username = retbData.username || 'Player';
   const tables = retbData.tables || {};

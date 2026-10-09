@@ -1,25 +1,16 @@
 import { useEffect } from 'react';
 import { useGameData } from '../contexts/GameDataContext';
 
+// Fire-and-forget preload: every caller just wants the category fetched; the
+// data itself arrives through useGameData.
 export function useLazyCategory(category) {
-  const { data, loadingCategory, loadCategory, lang } = useGameData();
+  const { data, loadCategory } = useGameData();
 
   useEffect(() => {
     if (category && (!data || data[category] === undefined)) {
       loadCategory(category);
     }
   }, [category, data, loadCategory]);
-
-  const isLoaded = Boolean(data && data[category] !== undefined && data[category] !== null);
-  const isLoading = Boolean(loadingCategory[category]) || (!isLoaded && Boolean(category));
-
-  return {
-    categoryData: data ? data[category] : null,
-    isLoaded,
-    isLoading,
-    lang,
-    data
-  };
 }
 
 export function TabSpinner({ message = "Loading data..." }) {

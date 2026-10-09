@@ -180,13 +180,6 @@
     word-break: break-all;
 }
 
-.asset-notice {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 12px;
-    line-height: 1.4;
-}
-
 .stats-row {
     display: flex;
     justify-content: space-between;

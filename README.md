@@ -61,18 +61,13 @@ TerraTools/
 │   ├── Decompiler.exe          # Compiled MoonSharp bytecode dumper
 │   ├── MoonSharp.Interpreter.dll # Official MoonSharp interpreter library
 │   ├── decompile_and_parse_all.py # Automates decompilation and generates StagesLayout.json
-│   ├── parse_stages_layout.py  # VM instruction stack-based parser (test script)
 │   ├── extract_everything.py   # Extracts and decrypts game database from APK
 │   ├── extract_native_stages.py# Extracts native ARM64 stage layouts (Ch 8-42)
 │   ├── extract_native_drops.py # Extracts runtime-configured event boss drops into StageDrops.json
 │   ├── validate_stage_drops.py # Validates StageDrops.json against the game databases
-│   ├── extract_gamedata.py     # Fallback extractor for raw asset files
-│   ├── recompile_everything.py # Recompiles modified assets back into APK
 │   ├── download_user_data.py   # Fetches user-data / gdresources from GitHub releases
 │   ├── create_gdresources_release.py # Packages gdresources + user-data and publishes a release
-│   ├── search_enemy.py         # Utility to search EnemyData.json NameStrings
-│   ├── verify_mapping.py       # Utility to verify metadata enum-to-ID alignment
-│   └── test_hash.py            # .NET String.GetHashCode tester
+│   └── recompile_everything.py # Recompiles modified assets back into APK
 ├── docs/                       # Community docs shown on the Docs tab (server setup guides, ...)
 │   └── reTB/                   # reTB guides (quick setup, patched APK, events & collabs, ...)
 ├── frontend/                   # React + Vite frontend source code
@@ -273,11 +268,9 @@ Then open [http://127.0.0.1:5001](http://127.0.0.1:5001) in your browser.
 Datadog telemetry comes from two agent-free surfaces — no agent container anywhere (the production host is Render, which bills per container and forbids the socket mounts an agent needs):
 
 * **Backend logs**: the deployed image logs one JSON line per request (`LOG_FORMAT=json`, see `RequestLoggingMiddleware`), and production ships them to Datadog via **Render's Datadog log stream**, configured in the Render dashboard (Logs → Log Streams). Local Docker runs just log to stdout.
-* **Frontend RUM**: [`@datadog/browser-rum`](frontend/src/rum.js) reports views, JS errors, resource timing, user actions and long tasks straight from visitors' browsers. Values live in [`frontend/.env.production`](frontend/.env.production) (template: [`frontend/.env.example`](frontend/.env.example)); local dev stays telemetry-free, and a refused Datadog (e.g. an expired trial) never affects the app — `VITE_DD_RUM_ENABLED=false` ships a build without it entirely.
+* **Frontend RUM**: [`@datadog/browser-rum`](frontend/src/rum.js) reports views, JS errors, resource timing, user actions and long tasks straight from visitors' browsers — each hash-router tab is a RUM view, and render errors are caught by an error boundary. Values live in [`frontend/.env.production`](frontend/.env.production) (template: [`frontend/.env.example`](frontend/.env.example)) — committed because the client token is public by design and a gitignored file would never reach Render's Docker build; the gitignored `frontend/.env` is for local overrides only. The SDK initializes in production builds only (`npm run dev` stays telemetry-free), and a refused Datadog (e.g. an expired trial) never affects the app — `VITE_DD_RUM_ENABLED=false` ships a build without it entirely.
 
 Distributed tracing was deliberately left out: without an agent there is no supported ddtrace path, and the OpenTelemetry→OTLP-gateway route can be added later if ever needed.
-
-**Frontend telemetry (RUM)** is agent-free: `@datadog/browser-rum` reports views, JS errors, resource timing, user actions and long tasks straight from visitors' browsers. Each hash-router tab is a RUM view; render errors are caught by an error boundary. Values live in [`frontend/.env.production`](frontend/.env.production) (template: [`frontend/.env.example`](frontend/.env.example)) — committed because the client token is public by design and a gitignored file would never reach Render's Docker build; the gitignored `frontend/.env` is for local overrides only. The SDK initializes in production builds only (`npm run dev` stays telemetry-free) and is fail-safe: a refused Datadog org (e.g. an expired trial) just drops events and never affects the app, while `VITE_DD_RUM_ENABLED=false` ships a build without the SDK entirely.
 
 ### Without Docker (local Python)
 

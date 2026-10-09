@@ -1,4 +1,3 @@
-import glob
 import os
 
 # Base paths
@@ -93,12 +92,3 @@ def find_gdresources_dir(root=LOCAL_INPUT_ROOT):
                 best_rank = rank
 
     return best_path if best_path is not None else LEGACY_LOCAL_INPUT_DIR
-
-
-def get_local_input_dir():
-    """Resolve the active gdresources* asset directory on each call."""
-    return find_gdresources_dir(LOCAL_INPUT_ROOT)
-
-
-# Resolved once at import for backward-compatible imports (app.py, scripts).
-LOCAL_INPUT_DIR = get_local_input_dir()
