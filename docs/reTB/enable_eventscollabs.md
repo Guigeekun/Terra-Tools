@@ -29,4 +29,4 @@ Restart everything
 # ReTBhost
 For reTBhost you'll either need to build your own apk, see [custom-reTB.md](custom-reTB.md#tweak-further-1)
 
-Or use [reTBhost working adult version](custom-reTB.md#android) that includes this and many other tweaks to the game
+Or use [reTBhost grindless V3](custom-reTB.md#android) that includes this and many other tweaks to the game

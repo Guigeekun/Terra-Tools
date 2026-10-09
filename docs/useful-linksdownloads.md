@@ -12,7 +12,7 @@ tags: reTB, Project Liminal Gate
 
 ## Custom reTB
 > See reTB alternative versions for more info
-[ReTBhost working adult edition](https://drive.google.com/file/d/1iAZeYuXFGkLbsX4UoDS55oG6gEeLJmFu/view?usp=drive_link)
+[reTBhost grindless V3](https://drive.google.com/file/d/1ITotm0EoWeQIB1XPZtH9trkkyVhJ9n9z/view?usp=sharing)
 
 # Game & resources
 ## Game apk
