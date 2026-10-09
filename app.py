@@ -9,27 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from backend.database import (
-    gamedata,
-    BG_MAP,
-    BGM_MAP,
-    ASSET_INDEX,
-    load_databases,
-    build_scenario_lookup,
-    build_media_indices,
-    build_asset_indices,
-    find_local_asset,
-    strip_story_markup,
-    resolve_section_title,
-    get_chapter_stories_by_section,
-    get_main_story_section_scenario_index
-)
-from backend.config import (
-    DATA_DIR,
-    EXTRACTED_DIR,
-    LOCAL_INPUT_DIR,
-    STORY_SCENARIO_OFFSET
-)
+from backend.database import load_databases
 from backend.middleware import CacheControlMiddleware, RequestLoggingMiddleware, SelectiveGZipMiddleware
 from backend.routers import (
     characters,

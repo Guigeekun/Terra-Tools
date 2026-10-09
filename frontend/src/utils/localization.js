@@ -1,11 +1,3 @@
-import { speciesTranslations } from './constants';
-
-export function getLocalizedString(stringObj, fallback = '-') {
-  if (!stringObj) return fallback;
-  // lang is passed in or defaults to 'en'
-  return stringObj.__currentLang || stringObj['en'] || stringObj['ja'] || fallback;
-}
-
 // A version that takes lang explicitly (preferred in React)
 export function loc(stringObj, lang = 'en', fallback = '-') {
   if (!stringObj) return fallback;

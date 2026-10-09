@@ -7,7 +7,7 @@ export default function ItemsTab() {
   const [search, setSearch] = useState('');
   const filters = useMemo(() => ({ search }), [search]);
 
-  const { items, total, isInitialLoading, isFetchingNextPage, sentinelRef, lang } = usePaginatedCategory('items', filters, 24);
+  const { items, isInitialLoading, isFetchingNextPage, sentinelRef, lang } = usePaginatedCategory('items', filters, 24);
 
   return (
     <div className="tab-content">

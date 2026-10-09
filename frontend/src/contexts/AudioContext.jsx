@@ -9,7 +9,6 @@ export function AudioProvider({ children }) {
   // False while activeTrack is metadata-only (shown in the player but never
   // downloaded); true once an <audio src> has actually been set for it.
   const [isTrackLoaded, setIsTrackLoaded] = useState(false);
-  const [userPaused, setUserPaused] = useState(false);
   const userPausedRef = useRef(false);
 
   const [currentTime, setCurrentTime] = useState(0);
@@ -50,7 +49,7 @@ export function AudioProvider({ children }) {
   const handlePause = () => setIsPlaying(false);
 
   // Actually set <audio src> and play. Only ever called from a user action:
-  // BGM WAVs are ~20 MB each and egress is billed per GB.
+  // tracks are MP3-served but still billed egress, so nothing auto-downloads.
   const startTrack = useCallback((track, category = 'bgm') => {
     if (!audioRef.current || !track) return;
 
@@ -58,7 +57,6 @@ export function AudioProvider({ children }) {
     const src = track.url || `/api/play/${catLower}/${track.filename}`;
 
     userPausedRef.current = false;
-    setUserPaused(false);
     setIsTrackLoaded(true);
 
     audioRef.current.loop = (catLower === 'bgm');
@@ -90,7 +88,6 @@ export function AudioProvider({ children }) {
     setActiveTrack({ ...track, category: catLower });
     setPlaylistCategory(catLower);
     setIsPlaying(false);
-    setUserPaused(false);
     userPausedRef.current = false;
     setIsTrackLoaded(false);
     setCurrentTime(0);
@@ -107,7 +104,6 @@ export function AudioProvider({ children }) {
     if (isPlaying) {
       // User explicitly paused: remember this so nothing auto-resumes
       userPausedRef.current = true;
-      setUserPaused(true);
       audioRef.current.pause();
       setIsPlaying(false);
     } else if (!isTrackLoaded) {
@@ -116,7 +112,6 @@ export function AudioProvider({ children }) {
     } else {
       // User explicitly resumed
       userPausedRef.current = false;
-      setUserPaused(false);
       audioRef.current.play().then(() => {
         setIsPlaying(true);
       }).catch(e => console.error('Audio play error:', e));
@@ -144,7 +139,6 @@ export function AudioProvider({ children }) {
 
   const stopTrack = useCallback(() => {
     userPausedRef.current = true;
-    setUserPaused(true);
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -174,7 +168,6 @@ export function AudioProvider({ children }) {
         activeTrack,
         playlistCategory,
         isPlaying,
-        userPaused,
         currentTime,
         duration,
         volume,
@@ -191,7 +184,6 @@ export function AudioProvider({ children }) {
         toggleMinimize,
         closeFloatingPlayer,
         openFloatingPlayer,
-        setIsFloatingOpen,
       }}
     >
       {children}

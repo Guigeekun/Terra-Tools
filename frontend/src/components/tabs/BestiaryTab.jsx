@@ -19,7 +19,7 @@ export default function BestiaryTab({ onSelectEnemy, initialSearch = '' }) {
     search, species, element, frame, sort
   }), [search, species, element, frame, sort]);
 
-  const { items: enemies, total, isInitialLoading, isFetchingNextPage, sentinelRef, lang } = usePaginatedCategory('enemies', filters, 35);
+  const { items: enemies, isInitialLoading, isFetchingNextPage, sentinelRef, lang } = usePaginatedCategory('enemies', filters, 35);
 
   return (
     <div className="tab-content">

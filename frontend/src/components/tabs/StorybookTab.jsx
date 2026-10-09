@@ -71,8 +71,8 @@ export default function StorybookTab() {
     return stories[clamped];
   }, [stories, sceneIdx]);
 
-  // BGM is strictly opt-in: scene tracks are never auto-played (each WAV is
-  // ~20 MB of billed egress). The scene's track is queued as metadata only so
+  // BGM is strictly opt-in: scene tracks are never auto-played (each MP3 is
+  // still billed egress). The scene's track is queued as metadata only so
   // the corner player always shows the correct music; audio downloads only
   // when the user presses play.
   const sceneTrack = useMemo(() => {

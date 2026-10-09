@@ -8,7 +8,6 @@ from backend.database import (
     BGM_MAP,
     find_local_asset,
     resolve_section_title,
-    translate_stage_title,
     get_chapter_stories_by_section,
     get_chapter_banner,
     get_section_banner,

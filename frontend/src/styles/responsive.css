@@ -102,10 +102,6 @@
         width: 100%;
     }
 
-    .audio-table-panel {
-        height: 450px;
-    }
-
     /* Storybook adjustments */
     .storybook-container {
         height: calc(100vh - 90px);
@@ -302,16 +298,6 @@
 
     .welcome-decoration-img {
         display: none;
-    }
-
-    /* Grids: Characters, Companions, Items, Skills, Assets */
-    .characters-grid,
-    .buddies-grid,
-    .items-grid,
-    .skills-grid,
-    .assets-grid {
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-        gap: 10px;
     }
 
     .filter-bar {

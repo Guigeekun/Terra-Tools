@@ -100,8 +100,6 @@ export function usePaginatedCategory(category, filters = {}, limit = 20) {
   return {
     items,
     total,
-    page,
-    hasMore,
     isInitialLoading,
     isFetchingNextPage,
     sentinelRef,

@@ -877,7 +877,7 @@ def main() -> int:
         print()
 
         # Step 5: MonoBehaviours (game data)
-        print("[5/9] Extracting and decrypting database objects...")
+        print("[5/10] Extracting and decrypting database objects...")
         extract_monobehaviours(env, output_dir, inverse_table)
         print()
 

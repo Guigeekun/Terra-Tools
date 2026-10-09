@@ -19,7 +19,6 @@ export default function JobBadge({ job }) {
       <span style={{ color: weap.color, display: 'flex', alignItems: 'center', gap: '4px' }}>
         {weap.icon
           ? <img src={weap.icon} alt={weap.name} style={{ width: 14, height: 14, objectFit: 'contain', verticalAlign: 'middle', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
-          : weap.svg ? <span dangerouslySetInnerHTML={{__html: weap.svg}} style={{ display: 'flex', alignItems: 'center' }}></span>
           : null}
         <span style={{ fontWeight: 600 }}>{weap.name}</span>
       </span>

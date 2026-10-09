@@ -1,6 +1,6 @@
 // ── Frontend Stage Title Translation Dictionary ──────────────────────────────
 
-export const EXACT_STAGE_TRANSLATIONS = {
+const EXACT_STAGE_TRANSLATIONS = {
   'メタルZONE': 'Metal ZONE',
   'キング登場': 'King Appears',
   'プリン出現': 'Pudding Zone',
@@ -92,7 +92,7 @@ export const EXACT_STAGE_TRANSLATIONS = {
   '灼熱/月下テスト': 'Scorching / Moonlit Test',
 };
 
-export const STAGE_NAME_MAP = {
+const STAGE_NAME_MAP = {
   'ニードアラ・キノ': 'Needler Kino',
   'クラーケン・キノ': 'Kraken Kino',
   'ウォーグライダー・キノ': 'Wargrider Kino',
@@ -136,7 +136,7 @@ export const STAGE_NAME_MAP = {
   'ルチア': 'Lucia',
 };
 
-export const STAGE_DIFF_MAP = {
+const STAGE_DIFF_MAP = {
   '初級': 'Easy',
   '中級': 'Medium',
   '上級': 'Hard',
@@ -144,7 +144,7 @@ export const STAGE_DIFF_MAP = {
   'ハード': 'Hard',
 };
 
-export const ROMAN_MAP = {
+const ROMAN_MAP = {
   'Ⅰ': ' I', 'Ⅱ': ' II', 'Ⅲ': ' III', 'Ⅳ': ' IV',
   'I': ' I', 'II': ' II', 'III': ' III', 'IV': ' IV'
 };

@@ -976,13 +976,12 @@ function SkillEditor({ skill, template, lang, onChange, onEnableNative, onRemove
       <MultilingualInput label="Description" value={skill.desc} title="The skill description text shown in-game (the flavour text under the name)."
         onChange={v => onChange({ desc: v })} />
       <MultilingualInput label="Range text" value={skill.range} onChange={v => onChange({ range: v })}
-        title="Short text shown after the skill name in the skill list (area summary). Often empty for plain attacks."
-        hint="Shown in the skill list (often empty for attacks)" />
+        title="Short text shown after the skill name in the skill list (area summary). Often empty for plain attacks." />
     </div>
   );
 }
 
-function CharacterEditor({ character, catalogs, lang, nextIds, draft, charName, skillName, itemName, jobById,
+function CharacterEditor({ character, catalogs, lang, nextIds, charName, skillName, itemName, jobById,
   onChangeCharacter, onChangeJob, onProbeJobImage, onRemove }) {
   const c = character;
   const recodeSourceName = c.recode.fromChrId ? charName(c.recode.fromChrId) : null;
@@ -1020,8 +1019,8 @@ function CharacterEditor({ character, catalogs, lang, nextIds, draft, charName, 
         onChange={v => onChangeCharacter({ name: v })} required />
 
       {c.jobs.map((job, idx) => (
-        <JobEditor key={job._uid} job={job} index={idx} character={c}
-          catalogs={catalogs} lang={lang} draft={draft} skillName={skillName} jobById={jobById}
+        <JobEditor key={job._uid} job={job} index={idx}
+          catalogs={catalogs} lang={lang} skillName={skillName} jobById={jobById}
           onChange={patch => onChangeJob(job._uid, patch)}
           onProbeImage={imageId => onProbeJobImage(job._uid, imageId)}
           onRemove={() => {
@@ -1336,8 +1335,7 @@ function JobEditor({ job, index, lang, skillName, jobById, onChange, onProbeImag
           <JobImagePreview job={job} template={template} />
         </div>
         <MultilingualInput label="Job name" value={job.name} onChange={v => onChange({ name: v })}
-          title="Name of this job (shown on the job tabs). Defaults to the character name when left empty."
-          hint="Defaults to the character name" />
+          title="Name of this job (shown on the job tabs). Defaults to the character name when left empty." />
       </div>
 
       {job.imageTaken && (

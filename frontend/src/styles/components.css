@@ -77,12 +77,6 @@
     gap: 24px;
 }
 
-.grid-layout-small {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 20px;
-}
-
 /* Card Components */
 /* Cards are <a> deep links (middle-click opens them in a new tab); strip the
    browser's link styling so they render like the divs they replaced. */

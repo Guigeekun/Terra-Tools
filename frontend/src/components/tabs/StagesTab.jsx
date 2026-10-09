@@ -19,7 +19,7 @@ export default function StagesTab({ onSelectItem, onSelectBuddy, initialChapter 
 
   const filters = useMemo(() => ({ search }), [search]);
 
-  const { items: stages, total, isInitialLoading, isFetchingNextPage, sentinelRef, lang, data } = usePaginatedCategory('stages', filters, 20);
+  const { items: stages, isInitialLoading, isFetchingNextPage, sentinelRef, lang, data } = usePaginatedCategory('stages', filters, 20);
   const strings = data?.strings;
 
   // The URL is the single source of truth for the selected chapter: deep

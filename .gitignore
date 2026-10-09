@@ -21,7 +21,7 @@ __pycache__/
 config.json
 .zcode/
 
-# Secrets: compose reads the Datadog API key (and other overrides) from .env
+# Secrets and local overrides
 .env
 
 # Per-worktree compose overrides (shifted port + container name)

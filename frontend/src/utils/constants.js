@@ -85,7 +85,7 @@ export const skillKindLabels = {
 // SkillKind 20 ("Hop Break") skills are tap-activated: the player taps the unit
 // before it moves. Their `emitRatio` holds the number of charges (uses per
 // battle), not a proc percentage.
-export const TAP_SKILL_KIND = 20;
+const TAP_SKILL_KIND = 20;
 
 export const isTapSkill = (skill) => skill?.kind === TAP_SKILL_KIND;
 
@@ -97,7 +97,6 @@ export const isTapSkill = (skill) => skill?.kind === TAP_SKILL_KIND;
 // Why Ragnarok works up close but Grand Ragnarok also fires from the chain:
 // Ragnarok's skill is Sandwich (1), Grand Ragnarok's is None (0).
 export const SKILL_EMIT_CONDITION_NONE = 0;
-export const SKILL_EMIT_CONDITION_SANDWICH = 1;
 
 // Exported for the Mod Studio's trigger-position editor.
 export const SKILL_EMIT_CONDITIONS = {

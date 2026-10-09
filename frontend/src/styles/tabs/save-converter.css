@@ -43,34 +43,6 @@
   line-height: 1.4;
 }
 
-.sample-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.sample-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 8px 14px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: var(--transition-smooth);
-}
-
-.sample-btn:hover {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
-  transform: translateY(-2px);
-}
-
 /* Dropzone */
 .save-dropzone {
   border: 2px dashed var(--border-color);
@@ -537,26 +509,6 @@
   flex-wrap: wrap;
 }
 
-.convert-btn {
-  background: linear-gradient(135deg, #38bdf8, #818cf8);
-  color: #0f172a;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 14px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
-  transition: var(--transition-smooth);
-}
-
-.convert-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
-}
 
 .download-btn {
   background: linear-gradient(135deg, #22c55e, #16a34a);

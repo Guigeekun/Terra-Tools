@@ -13,16 +13,14 @@ export const LANGS = ['en', 'ja', 'fr', 'de', 'es', 'zh_tw'];
 // pointing a job there freezes the character page. TerraMod pads those slots
 // and assigns new IDs after the band automatically, so the studio never picks
 // skill IDs: new skills are referenced by their spec `key` instead.
-export const RESERVED_SKILL_ID_BASE = 3843;
-export const RESERVED_SKILL_ID_COUNT = 10;
 
 // TerraMod's opt-in native patch: a skill with successRate == 4242 gets its
 // damage multiplied by a synced random factor.
-export const RANDOM_POWER_SENTINEL = 4242;
+const RANDOM_POWER_SENTINEL = 4242;
 
 // Every new image must be registered in the client's asset index with a cache
 // version; new files have no cached copy, so any version works.
-export const DEFAULT_ASSET_VER = 131;
+const DEFAULT_ASSET_VER = 131;
 
 // Stat names of a job, in display order.
 export const JOB_STATS = ['HP', 'ATK', 'DEF', 'SATK', 'SDEF'];
@@ -34,7 +32,7 @@ export const BUDDY_STATS = ['ATK', 'DEF', 'SATK', 'SDEF', 'BOOST'];
 const DRAFT_VERSION = 1;
 
 let uidCounter = 0;
-export const nextUid = () => `e${Date.now().toString(36)}${(uidCounter++).toString(36)}`;
+const nextUid = () => `e${Date.now().toString(36)}${(uidCounter++).toString(36)}`;
 
 export function emptyDraft() {
   return {
@@ -183,7 +181,7 @@ export function nextFreeIds(characters = [], buddies = []) {
 
 // Character catalog entries that are recode sources already have an active
 // `recode` payload (placeholders are filtered serve-time).
-export function isRecodedSource(characters, chrId) {
+function isRecodedSource(characters, chrId) {
   const src = characters.find(c => c?.ID === chrId);
   return Boolean(src?.recode?.length);
 }

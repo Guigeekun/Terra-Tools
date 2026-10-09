@@ -21,7 +21,7 @@ export default function CharactersTab({ onSelectCharacter, initialSearch = '' })
     search, species, rarity, weapon, element
   }), [search, species, rarity, weapon, element]);
 
-  const { items: characters, total, isInitialLoading, isFetchingNextPage, sentinelRef, lang } = usePaginatedCategory('characters', filters, 35);
+  const { items: characters, isInitialLoading, isFetchingNextPage, sentinelRef, lang } = usePaginatedCategory('characters', filters, 35);
 
   return (
     <div className="tab-content">
