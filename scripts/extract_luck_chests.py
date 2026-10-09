@@ -33,7 +33,11 @@ Conversion to the served schema: sections renumbered 1-based, tier names
 ``Luck80`` -> ``Luck 80``, the ``L<count>`` reward code (Animata Core x count,
 reTB's ShowLuck finding) passed through for the backend to resolve, and every
 non-excluded stage that has no pool serves reTB's ``DEFAULT_POOL`` — which is
-why the toolbox now shows chests wherever reTB players see them.
+why the toolbox now shows chests wherever reTB players see them. Sections that
+offer no gameplay are skipped before any of that: the client ships placeholder
+sections (chapter 20 is one 20-battle stage followed by nine empty slots) and
+story-only sections, reTB's tables still key both, but a chest can only drop
+on a stage that can actually be played.
 """
 
 from __future__ import annotations
@@ -211,18 +215,51 @@ def _tier_key(name: str) -> str:
     return name.replace("Luck80", "Luck 80").replace("Luck100", "Luck 100")
 
 
+def playable_sections(battle_data: dict, game_data: Path) -> dict[int, frozenset[int]]:
+    """chapterNo -> the section indexes that offer gameplay.
+
+    BattleData carries placeholder sections — battleCnt 0 with no layout,
+    chapter 20's slots 2-10 — and story-only sequences, all of which reTB's
+    tables still key. A section counts as playable when BattleData gives it
+    battles or a StagesLayout that carries wave entries (story items alone
+    render a cutscene, not a stage a chest could drop on).
+    """
+    try:
+        layouts = json.loads(
+            (game_data / "StagesLayout.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        layouts = {}
+
+    playable: dict[int, set[int]] = {}
+    for ch in battle_data.get("chapters", []):
+        ch_no = ch.get("chapterNo", 0)
+        ch_layout = layouts.get(str(ch_no)) or {}
+        for idx, sec in enumerate(ch.get("sections", []), 1):
+            if isinstance(sec, dict) and sec.get("battleCnt", 0) > 0:
+                playable.setdefault(ch_no, set()).add(idx)
+                continue
+            if any(
+                isinstance(item, dict) and item.get("type", "wave") == "wave"
+                for item in ch_layout.get(str(idx)) or []
+            ):
+                playable.setdefault(ch_no, set()).add(idx)
+    return {ch_no: frozenset(secs) for ch_no, secs in playable.items()}
+
+
 def build_document(
     pools: dict[str, dict],
     consts,
     battle_data: dict,
     default_pool: LtcStagePool,
     excluded_chapters: frozenset[int],
+    playable: dict[int, frozenset[int]],
 ) -> dict:
     """Merge reTB's sources and shape the served JSON, validating stages.
 
     Precedence mirrors reTB's luckresult_for: LTC_SPECIAL_TIERS beat the JSON
     pools, which beat DEFAULT_POOL. A pool keyed to a section BattleData does
-    not carry is dropped loudly rather than served.
+    not carry is dropped loudly rather than served; so is a pool keyed to a
+    section that exists but offers no gameplay.
     """
     chapters: dict[int, int] = {}
     for ch in battle_data.get("chapters", []):
@@ -235,7 +272,10 @@ def build_document(
     for chapter_no, section_count in sorted(chapters.items()):
         if chapter_no in excluded_chapters:
             continue
+        playable_secs = playable.get(chapter_no, frozenset())
         for section in range(1, section_count + 1):
+            if section not in playable_secs:
+                continue
             raw_key = f"{chapter_no}-{section - 1}"
             if raw_key in consts.LTC_SPECIAL_TIERS:
                 tiers = expand_special_tiers(consts.LTC_SPECIAL_TIERS[raw_key])
@@ -247,7 +287,8 @@ def build_document(
 
     # Pool/special keys that no longer map onto a real stage: reported, kept
     # out. Chapter-level skips (1100 difficulty levels, Tower variants keyed
-    # beyond a chapter's sections) surface here.
+    # beyond a chapter's sections) surface here, as do pools keyed to the
+    # placeholder sections the client ships but cannot play.
     served = {(int(ch), int(sec)) for ch, secs in stages.items() for sec in secs}
     for raw_key in sorted(set(consts.LTC_SPECIAL_TIERS) | set(pools)):
         try:
@@ -257,8 +298,8 @@ def build_document(
         except ValueError:
             dropped.append(raw_key)
     if dropped:
-        print(f"  WARNING: dropped {len(dropped)} reTB pool(s) with no BattleData stage: "
-              f"{', '.join(dropped)}")
+        print(f"  WARNING: dropped {len(dropped)} reTB pool(s) with no playable "
+              f"BattleData stage: {', '.join(dropped)}")
 
     return {
         "schema": "luck-chests-1",
@@ -291,8 +332,10 @@ def extract_luck_chests(output_dir: Path, donor_root: Path | None = None) -> Pat
     pools = json.loads(pools_path.read_text(encoding="utf-8"))
     consts = load_retb_consts(donor_root)
     excluded = mapped_exclusions(consts.LTC_EXCLUDED_CHAPTERS)
+    playable = playable_sections(battle_data, game_data)
 
-    document = build_document(pools, consts, battle_data, consts.DEFAULT_POOL, excluded)
+    document = build_document(
+        pools, consts, battle_data, consts.DEFAULT_POOL, excluded, playable)
 
     out_path = game_data / "LuckChests.json"
     out_path.write_text(
