@@ -1,6 +1,8 @@
 """Luck Treasure Chests: reTB-source pool assembly (pipeline) and serving (backend)."""
 
+import json
 import sys
+import tempfile
 import unittest
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
@@ -263,14 +265,22 @@ class TestPipelineAssembly(unittest.TestCase):
             "2000-4": {"items": [1]},
         }
         battle = {"chapters": [
-            {"chapterNo": 2000, "sections": [1, 2, 3, 4]},
-            {"chapterNo": 5000, "sections": [1, 2]},   # no pool -> DEFAULT_POOL
-            {"chapterNo": 7000, "sections": [1]},      # 700 remaps to 7000 -> excluded
-            {"chapterNo": 1001, "sections": [1]},      # explicitly excluded
+            # Real BattleData shape: placeholder sections carry battleCnt 0
+            # (chapter 20's empty slots); 5000's section 2 is one of those.
+            {"chapterNo": 2000, "sections": [{"battleCnt": 5}] * 4},
+            {"chapterNo": 5000, "sections": [{"battleCnt": 3}, {"battleCnt": 0}]},
+            {"chapterNo": 7000, "sections": [{"battleCnt": 1}]},      # 700 remaps to 7000 -> excluded
+            {"chapterNo": 1001, "sections": [{"battleCnt": 1}]},      # explicitly excluded
         ]}
+        playable = {
+            2000: frozenset({1, 2, 3, 4}),
+            5000: frozenset({1}),   # section 2 offers no gameplay
+            7000: frozenset({1}),
+            1001: frozenset({1}),
+        }
         excluded = extract_luck_chests.mapped_exclusions(consts.LTC_EXCLUDED_CHAPTERS)
         document = extract_luck_chests.build_document(
-            pools, consts, battle, consts.DEFAULT_POOL, excluded)
+            pools, consts, battle, consts.DEFAULT_POOL, excluded, playable)
 
         self.assertEqual(sorted(document["stages"]), ["2000", "5000"])
         self.assertNotIn("7000", document["stages"])
@@ -290,8 +300,9 @@ class TestPipelineAssembly(unittest.TestCase):
         self.assertEqual(s4["C"], [])
         self.assertEqual(s4["Luck 80"], ['I134', 'M632', 'O311'])
         self.assertEqual(s4["Luck 100"], ['I134', 'M632', 'O275', 'O311'])
-        # DEFAULT_POOL fallback fills pool-less stages.
-        self.assertEqual(document["stages"]["5000"]["2"]["tiers"]["A"], ['I2', 'I4'])
+        # DEFAULT_POOL fallback fills pool-less stages' playable sections only.
+        self.assertEqual(sorted(document["stages"]["5000"]), ["1"])
+        self.assertEqual(document["stages"]["5000"]["1"]["tiers"]["A"], ['I2', 'I4'])
         # Tier metadata keeps reTB's 0-100 Luck anchors (regression: no /10).
         tier_a = next(t for t in document["tiers"] if t["key"] == "A")
         self.assertEqual(tier_a["guaranteed_at_luck"], 40.0)
@@ -305,6 +316,34 @@ class TestPipelineAssembly(unittest.TestCase):
         self.assertNotIn(700, excluded)
         self.assertIn(3002, excluded)
         self.assertIn(2005, extract_luck_chests.RETB_NOT_SERVED_CHAPTERS)
+
+
+class TestPlayableSections(unittest.TestCase):
+    def test_placeholder_and_story_sections_are_not_playable(self):
+        battle = {"chapters": [{"chapterNo": 20, "sections": [
+            {"battleCnt": 20},   # the real stage
+            {"battleCnt": 0},    # empty placeholder slot
+            {"battleCnt": 0},    # story-only: layout carries a cutscene, no waves
+            {"battleCnt": 0},    # playable through a wave-carrying layout
+        ]}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            game_data = Path(tmp)
+            (game_data / "StagesLayout.json").write_text(json.dumps({
+                "20": {
+                    "3": [{"type": "story", "scenarioID": "CH_20_10"}],
+                    "4": [{"type": "wave", "enemies": [{"enemy_var": "E1"}]}],
+                },
+            }), encoding="utf-8")
+            playable = extract_luck_chests.playable_sections(battle, game_data)
+        self.assertEqual(playable, {20: frozenset({1, 4})})
+
+    def test_missing_layout_file_falls_back_to_battle_counts(self):
+        battle = {"chapters": [
+            {"chapterNo": 7, "sections": [{"battleCnt": 4}, {"battleCnt": 0}]},
+        ]}
+        with tempfile.TemporaryDirectory() as tmp:
+            playable = extract_luck_chests.playable_sections(battle, Path(tmp))
+        self.assertEqual(playable, {7: frozenset({1})})
 
 
 class TestDonorDiscovery(unittest.TestCase):
