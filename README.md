@@ -265,10 +265,9 @@ Then open [http://127.0.0.1:5001](http://127.0.0.1:5001) in your browser.
 
 ### Observability (Datadog)
 
-Datadog telemetry comes from two agent-free surfaces — no agent container anywhere (the production host is Render, which bills per container and forbids the socket mounts an agent needs):
+Backend logs are shipped to Datadog agent-free — no agent container anywhere (the production host is Render, which bills per container and forbids the socket mounts an agent needs): the deployed image logs one JSON line per request (`LOG_FORMAT=json`, see `RequestLoggingMiddleware`), and production ships them to Datadog via **Render's Datadog log stream**, configured in the Render dashboard (Logs → Log Streams). Local Docker runs just log to stdout.
 
-* **Backend logs**: the deployed image logs one JSON line per request (`LOG_FORMAT=json`, see `RequestLoggingMiddleware`), and production ships them to Datadog via **Render's Datadog log stream**, configured in the Render dashboard (Logs → Log Streams). Local Docker runs just log to stdout.
-* **Frontend RUM**: [`@datadog/browser-rum`](frontend/src/rum.js) reports views, JS errors, resource timing, user actions and long tasks straight from visitors' browsers — each hash-router tab is a RUM view, and render errors are caught by an error boundary. Values live in [`frontend/.env.production`](frontend/.env.production) (template: [`frontend/.env.example`](frontend/.env.example)) — committed because the client token is public by design and a gitignored file would never reach Render's Docker build; the gitignored `frontend/.env` is for local overrides only. The SDK initializes in production builds only (`npm run dev` stays telemetry-free), and a refused Datadog (e.g. an expired trial) never affects the app — `VITE_DD_RUM_ENABLED=false` ships a build without it entirely.
+Frontend RUM (`@datadog/browser-rum`) was removed in favor of zero telemetry cost — it shipped browser views, errors and resource timing to Datadog until the Datadog plan became too expensive for the project. The retryable error page it came with survives as a plain React boundary (`components/shared/ErrorBoundary.jsx`).
 
 Distributed tracing was deliberately left out: without an agent there is no supported ddtrace path, and the OpenTelemetry→OTLP-gateway route can be added later if ever needed.
 

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { trackRumView } from './rum.js';
 
 // ---------- hash router ----------
 // The app is an SPA served as static files, so routes live in the URL hash —
@@ -61,10 +60,5 @@ export function useHashRoute() {
     window.addEventListener('hashchange', sync);
     return () => window.removeEventListener('hashchange', sync);
   }, []);
-  // Report each tab as a Datadog RUM view; trackRumView no-ops when RUM
-  // is not configured.
-  useEffect(() => {
-    trackRumView(route);
-  }, [route]);
   return route;
 }
