@@ -1,6 +1,5 @@
 // Last-resort error boundary fallback: render errors surface as a retryable
-// page instead of a blank screen, and reach Datadog RUM (via the boundary in
-// main.jsx) with the React component stack.
+// page instead of a blank screen (see the boundary in main.jsx).
 export default function ErrorFallback({ resetError, error }) {
   return (
     <div style={{ margin: '4rem auto', maxWidth: 480, textAlign: 'center' }}>
