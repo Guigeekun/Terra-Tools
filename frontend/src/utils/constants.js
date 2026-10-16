@@ -22,6 +22,13 @@ export const weaponMeta = {
   4: { name: 'None', color: '#9ca3af', icon: '/api/assets/image?path=user-data/extracted-gamedata/ui_icons/icon_other_02.png' }
 };
 
+// SkillData `weap` is an Attrib enum (dump.cs): Magic=0, Sword=1, Spear=2,
+// Arrow=3, None=4. Only the three physical weapons take part in the Circle of
+// Carnage (weapon triangle); Magic (0) means the skill has no weapon at all,
+// so it displays as None just like the unused 4 — never as Staff.
+export const skillWeaponMeta = (weap) =>
+  weap === 1 || weap === 2 || weap === 3 ? weaponMeta[weap] : weaponMeta[4];
+
 export const elementMeta = {
   0:  { name: 'None', color: '#6b7280', svg: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle;"><circle cx="12" cy="12" r="8" stroke-dasharray="2 2"></circle></svg>` },
   1:  { name: 'Fire', color: '#fb923c', icon: '/api/assets/image?path=user-data/extracted-gamedata/element_icons/icon_m_fire.png' },
