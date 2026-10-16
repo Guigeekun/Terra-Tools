@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { loc } from '../../utils/localization';
-import { skillAttribMeta, skillKindLabels, sourceTypeMeta, isTapSkill } from '../../utils/constants';
+import { skillAttribMeta, skillKindLabels, sourceTypeMeta, isTapSkill, skillWeaponMeta } from '../../utils/constants';
 import { TabSpinner } from '../../hooks/useLazyCategory';
 import { usePaginatedCategory } from '../../hooks/usePaginatedCategory';
 import { usePersistentState } from '../../hooks/usePersistentState';
@@ -217,6 +217,7 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
               <SortHeader label="ID" sortKey="id" sort={sort} onSort={onSort} />
               <SortHeader label="Skill" sortKey="name" sort={sort} onSort={onSort} />
               <th>Element</th>
+              <th title="Weapon type the skill is tied to (sword, spear or bow) — 'None' means no weapon: the skill sits outside the Circle of Carnage (weapon triangle)">Weapon</th>
               <SortHeader label="Trigger" sortKey="trigger" sort={sort} onSort={onSort} />
               <SortHeader label="Power" sortKey="power" sort={sort} onSort={onSort} />
               <th>Area</th>
@@ -225,14 +226,15 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
           </thead>
           <tbody id="skills-table-body">
             {isInitialLoading && skills.length === 0 ? (
-              <tr><td colSpan="7" style={{ textAlign: 'center', padding: 40 }}><TabSpinner message="Loading skills..." /></td></tr>
+              <tr><td colSpan="8" style={{ textAlign: 'center', padding: 40 }}><TabSpinner message="Loading skills..." /></td></tr>
             ) : skills.length === 0 ? (
-              <tr><td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No skills matched the selected filters.</td></tr>
+              <tr><td colSpan="8" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No skills matched the selected filters.</td></tr>
             ) : (
               <>
                 {skills.map((skill) => {
                   const attrib = skillAttribMeta[skill.attrib] || { name: 'None', color: '#6b7280' };
                   const kindLabel = skillKindLabels[skill.kind];
+                  const weap = skillWeaponMeta(skill.weap);
                   return (
                     <tr key={skill.ID}>
                       <td><code>{skill.ID}</code></td>
@@ -254,6 +256,18 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
                               : <span dangerouslySetInnerHTML={{ __html: attrib.svg }} />
                           ) : null}
                           {attrib.name}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className="badge element-badge"
+                          title={weap.name === 'None'
+                            ? 'No weapon — this skill sits outside the Circle of Carnage (weapon triangle)'
+                            : `Weapon: ${weap.name} — takes part in the Circle of Carnage (weapon triangle)`}
+                          style={{ color: weap.color, borderColor: `${weap.color}44`, backgroundColor: `${weap.color}14` }}
+                        >
+                          {weap.icon && <img src={weap.icon} alt="" width="14" height="14" style={{ verticalAlign: 'middle' }} />}
+                          {weap.name}
                         </span>
                       </td>
                       <td>
@@ -284,7 +298,7 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
                   );
                 })}
                 <tr ref={sentinelRef}>
-                  <td colSpan="7" style={{ height: 30, border: 'none', textAlign: 'center' }}>
+                  <td colSpan="8" style={{ height: 30, border: 'none', textAlign: 'center' }}>
                     {isFetchingNextPage && <div className="loading-spinner" style={{ width: 20, height: 20, margin: '0 auto', borderTopColor: 'var(--accent-blue)' }} />}
                   </td>
                 </tr>
