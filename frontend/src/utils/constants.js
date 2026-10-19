@@ -228,6 +228,7 @@ export const TAB_META = {
   dashboard:   { title: 'Dashboard Overview', desc: 'High-level statistics and category index of the exported game data.', icon: 'fa-chart-pie', label: 'Dashboard' },
   storybook:   { title: 'Interactive Storybook', desc: 'Experience the full Terra Battle narrative with background art, soundtracks, and chapter timeline.', icon: 'fa-book-open-reader', label: 'Storybook' },
   characters:  { title: 'Characters Database', desc: 'Browse character stats, unlock jobs, active skills, and local art assets.', icon: 'fa-users', label: 'Characters' },
+  compare:     { title: 'Character Comparison', desc: 'Build two loadouts — job, slotted skills from other jobs (pre-Λ included for recodes) and a companion — then diff their stats and cumulated skill power.', icon: 'fa-scale-balanced', label: 'Compare' },
   buddies:     { title: 'Companions (Buddies)', desc: 'Explore the companion stats, description profiles, and thumbnails.', icon: 'fa-paw', label: 'Companions' },
   skills:      { title: 'Skills Catalog', desc: 'List of active skills, status triggers, powers, and area calculations.', icon: 'fa-wand-magic-sparkles', label: 'Skills' },
   items:       { title: 'Items Inventory', desc: 'Browse equipment, job evolve materials, tokens, and materials.', icon: 'fa-gem', label: 'Items' },
@@ -244,4 +245,4 @@ export const TAB_KEYS = Object.keys(TAB_META);
 // Tabs stacked under the collapsible "Database" section of the sidebar, in
 // sidebar order. Keys stay flat in TAB_KEYS: URLs, the header and the router
 // are group-agnostic — this only shapes the sidebar.
-export const DATABASE_TAB_KEYS = ['characters', 'buddies', 'skills', 'items', 'bestiary', 'stages'];
+export const DATABASE_TAB_KEYS = ['characters', 'compare', 'buddies', 'skills', 'items', 'bestiary', 'stages'];

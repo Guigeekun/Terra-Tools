@@ -16,6 +16,12 @@
         grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
         gap: 16px;
     }
+
+    /* Compare: stack the two loadout panels and kit lists */
+    .compare-grid,
+    .compare-kit-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Tablets & Mobile Screens (<= 900px): Collapsible Drawer Sidebar */
