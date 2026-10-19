@@ -41,11 +41,15 @@ export function buddyBonuses(buddy) {
 }
 
 // A companion can only be equipped when its exclusivity and level gates pass.
-// Species lives on the job entries, not the character info.
-export function buddyAvailability(buddy, char, job) {
+// Species lives on the job entries, not the character info. Recoded
+// characters inherit the companion exclusivity of their pre-recode form
+// (game behavior): a companion locked to Bahl can be equipped by Bahl Λ —
+// but not the other way around, so the ancestor is a one-way extra owner.
+export function buddyAvailability(buddy, char, job, recodeSourceId = 0) {
   if (!buddy) return { ok: true };
   const blockers = [];
-  if ((buddy.exclusiveChrID || 0) > 0 && buddy.exclusiveChrID !== char?.ID) {
+  const allowedOwners = new Set([char?.ID, recodeSourceId].filter(id => id > 0));
+  if ((buddy.exclusiveChrID || 0) > 0 && !allowedOwners.has(buddy.exclusiveChrID)) {
     blockers.push({ kind: 'exclusive', chrID: buddy.exclusiveChrID });
   }
   const species = job?.Species;
@@ -246,7 +250,7 @@ export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, 
   const fixed = job ? jobFixedSkills(job) : [];
   const slots = job ? resolveSlotSkills(char, ancestor, job, slotIds) : [];
 
-  const availability = buddyAvailability(buddy, char, job);
+  const availability = buddyAvailability(buddy, char, job, char?.ancestorChrID || 0);
   const levelGateOk = !buddy || level >= (buddy.RequiredLevel || 1);
   const bonuses = buddy && availability.ok && levelGateOk ? buddyBonuses(buddy) : null;
 

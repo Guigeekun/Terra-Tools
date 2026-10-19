@@ -170,6 +170,43 @@ function check(label, actual, expected) {
   check('magic estimate adds w·power×MATK', +lichSide.damage.magic.toFixed(4), +(0.9 * lichStats.MATK.total).toFixed(4));
   check('magic expected total', +lichSide.damage.expected.toFixed(4),
     +(lichStats.ATK.total + 0.9 * lichStats.MATK.total).toFixed(4));
+  // --- companion exclusivity across recodes ----------------------------------
+  // "Bahl ΟⅢ" (buddy 294) is exclusive to Bahl (ID 1); Bahl Λ (ID 920) is
+  // Bahl's recode (ancestorChrID 1). In game the recoded form may equip the
+  // pre-recode form's exclusive companions — one-way, never the reverse.
+  const bahlLambda = enriched(infosById[920]);
+  const bahl3 = buddies.find(b => b.NameString?.en === 'Bahl ΟⅢ');
+  check('Bahl ΟⅢ exists and is Bahl-exclusive', { id: bahl3?.ID, exclusive: bahl3?.exclusiveChrID }, { id: 294, exclusive: 1 });
+  const lambdaWithBahlBuddy = computeSide({
+    char: bahlLambda, ancestor: bahl, skills, jobIndex: 0, slotIds: [],
+    buddy: { ...bahl3, skill: 0, RequiredLevel: 1 }, level: 90,
+  });
+  check('recode source companions are equippable by the lambda form', lambdaWithBahlBuddy.buddy != null, true);
+  const bahlWithBahlBuddy = computeSide({
+    char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [],
+    buddy: { ...bahl3, skill: 0, RequiredLevel: 1 }, level: 90,
+  });
+  check('the exclusive owner itself can still equip it', bahlWithBahlBuddy.buddy != null, true);
+  // One-way inheritance: a companion exclusive to a Λ character stays
+  // locked for that Λ character's pre-recode form. Only Λ characters with a
+  // real ancestor qualify (the Kino Λ / 8-Bit Λ families are standalone,
+  // ancestorChrID 0 — no pre-recode form exists to test).
+  const lambdaExclusive = buddies.find(b => {
+    const owner = infosById[b.exclusiveChrID || 0];
+    return owner && owner.isLambda && owner.ID !== 920 && infosById[owner.ancestorChrID || 0];
+  });
+  const lambdaOwner = infosById[lambdaExclusive.exclusiveChrID];
+  const preRecode = enriched(infosById[lambdaOwner.ancestorChrID]);
+  const preRecodeSide = computeSide({
+    char: preRecode, ancestor: null, skills, jobIndex: 0, slotIds: [],
+    buddy: { ...lambdaExclusive, skill: 0, RequiredLevel: 1 }, level: 90,
+  });
+  check('lambda-exclusives stay locked for the pre-recode form', preRecodeSide.buddy, null);
+  const lambdaWithForeignLambdaBuddy = computeSide({
+    char: bahlLambda, ancestor: bahl, skills, jobIndex: 0, slotIds: [],
+    buddy: { ...lambdaExclusive, skill: 0, RequiredLevel: 1 }, level: 90,
+  });
+  check('lambda-exclusives of other characters stay locked', lambdaWithForeignLambdaBuddy.buddy, null);
 }
 
 if (failures) {

@@ -321,7 +321,13 @@ export default function CompareSide({
               </button>
               {buddyMatches.map(b => {
                 const blockedBy = [];
-                if ((b.exclusiveChrID || 0) > 0 && b.exclusiveChrID !== char?.ID) {
+                // Recoded characters can equip companions exclusive to their
+                // pre-recode form (game rule) — the ancestorChrID is an
+                // allowed owner alongside the character itself.
+                const allowedOwners = new Set(
+                  [char?.ID, char?.ancestorChrID].filter(id => id > 0),
+                );
+                if ((b.exclusiveChrID || 0) > 0 && !allowedOwners.has(b.exclusiveChrID)) {
                   const owner = rosterChars?.find(c => c.ID === b.exclusiveChrID);
                   blockedBy.push(owner ? `Exclusive to ${loc(owner.name, lang)}` : `Exclusive to #${b.exclusiveChrID}`);
                 }

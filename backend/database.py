@@ -1,6 +1,7 @@
 import os
 import re as _re
 import json
+import threading
 from backend.config import DATA_DIR, EXTRACTED_DIR, STORY_SCENARIO_OFFSET
 
 # Cached Databases
@@ -12,14 +13,20 @@ CHAPTER_BANNER_MAP: dict[int, str] = {}
 SECTION_BANNER_MAP: dict[tuple[int, int], str] = {}
 ASSET_INDEX: dict = {}
 
+# The lazy asset-index builds run on request threads (see find_local_asset);
+# without a lock, two concurrent first requests interleave the in-place
+# clear + fill + flatten and corrupt the index. Builds write local dicts and
+# publish them by atomic rebind under this lock.
+_INDEX_LOCK = threading.Lock()
+
 
 def build_media_indices():
     """Build fast lookup tables for background images, BGM track files, and stage banners."""
     global BG_MAP, BGM_MAP, CHAPTER_BANNER_MAP, SECTION_BANNER_MAP
-    BG_MAP.clear()
-    BGM_MAP.clear()
-    CHAPTER_BANNER_MAP.clear()
-    SECTION_BANNER_MAP.clear()
+    bg_map: dict[int, str] = {}
+    bgm_map: dict[int, str] = {}
+    chapter_banner_map: dict[int, str] = {}
+    section_banner_map: dict[tuple[int, int], str] = {}
 
     bg_dir = os.path.join(EXTRACTED_DIR, "BG")
     if os.path.exists(bg_dir):
@@ -27,7 +34,7 @@ def build_media_indices():
             if f.endswith(".png"):
                 m = _re.search(r"stage_back_(\d+)\.png", f, _re.IGNORECASE)
                 if m:
-                    BG_MAP[int(m.group(1))] = f"{EXTRACTED_DIR}/BG/{f}".replace("\\", "/")
+                    bg_map[int(m.group(1))] = f"{EXTRACTED_DIR}/BG/{f}".replace("\\", "/")
 
     bgm_dir = os.path.join(EXTRACTED_DIR, "BGM")
     if os.path.exists(bgm_dir):
@@ -38,7 +45,7 @@ def build_media_indices():
                 m = _re.search(r"bgm_?(\d+)", f, _re.IGNORECASE)
                 if m:
                     candidates.setdefault(int(m.group(1)), f)
-        BGM_MAP.update(candidates)
+        bgm_map.update(candidates)
 
     banner_dir = os.path.join(EXTRACTED_DIR, "Banner")
     if os.path.exists(banner_dir):
@@ -52,15 +59,20 @@ def build_media_indices():
                 m_sec = _re.match(r"^(?:sp|mp)(\d+)-(\d+)(?:_.*)?$", base)
                 if m_sec:
                     cno, sno = int(m_sec.group(1)), int(m_sec.group(2))
-                    SECTION_BANNER_MAP[(cno, sno)] = img_url
+                    section_banner_map[(cno, sno)] = img_url
                     continue
 
                 # Match chapter banners: sp{ch}, mp{ch}
                 m_ch = _re.match(r"^(?:sp|mp)(\d+)(?:_.*)?$", base)
                 if m_ch:
                     cno = int(m_ch.group(1))
-                    CHAPTER_BANNER_MAP[cno] = img_url
+                    chapter_banner_map[cno] = img_url
                     continue
+
+    BG_MAP = bg_map
+    BGM_MAP = bgm_map
+    CHAPTER_BANNER_MAP = chapter_banner_map
+    SECTION_BANNER_MAP = section_banner_map
 
 
 def get_chapter_banner(chapter_no: int | str) -> str | None:
@@ -319,27 +331,35 @@ def load_databases():
 def build_asset_indices():
     """Build in-memory fast index for character pieces, illustrations, buddy thumbs/images."""
     global ASSET_INDEX
-    ASSET_INDEX = {}
-    categories = ["Pieces", "Illust", "BuddyThumbs", "BuddyImages"]
-    for category in categories:
-        directory = os.path.join(EXTRACTED_DIR, category)
-        if os.path.exists(directory):
-            try:
-                for f in sorted(os.listdir(directory)):
-                    if not f.endswith(".png"):
-                        continue
-                    full_path = f"{EXTRACTED_DIR}/{category}/{f}".replace("\\", "/")
-                    parsed = parse_asset_name(f[:-4])
-                    if not parsed:
-                        continue
-                    prefix, num, suffix = parsed
-                    existing = ASSET_INDEX.get((category, prefix, num))
-                    if existing is None or suffix < existing[0]:
-                        ASSET_INDEX[(category, prefix, num)] = (suffix, full_path)
-            except Exception as e:
-                print(f"Error indexing {category}: {e}")
-    # Flatten: callers want the path, the suffix was only for variant picking.
-    ASSET_INDEX = {key: value[1] for key, value in ASSET_INDEX.items()}
+    # find_local_asset triggers this from request threads; a concurrent first
+    # hit must not interleave with the in-place fill/flatten of another build
+    # (that collapsed paths to their 2nd character and raised IndexError).
+    # Build locally, publish by atomic rebind, and bail if another thread
+    # already published a complete index while we were waiting on the lock.
+    with _INDEX_LOCK:
+        if ASSET_INDEX:
+            return
+        index: dict = {}
+        categories = ["Pieces", "Illust", "BuddyThumbs", "BuddyImages"]
+        for category in categories:
+            directory = os.path.join(EXTRACTED_DIR, category)
+            if os.path.exists(directory):
+                try:
+                    for f in sorted(os.listdir(directory)):
+                        if not f.endswith(".png"):
+                            continue
+                        full_path = f"{EXTRACTED_DIR}/{category}/{f}".replace("\\", "/")
+                        parsed = parse_asset_name(f[:-4])
+                        if not parsed:
+                            continue
+                        prefix, num, suffix = parsed
+                        existing = index.get((category, prefix, num))
+                        if existing is None or suffix < existing[0]:
+                            index[(category, prefix, num)] = (suffix, full_path)
+                except Exception as e:
+                    print(f"Error indexing {category}: {e}")
+        # Flatten: callers want the path, the suffix was only for variant picking.
+        ASSET_INDEX = {key: value[1] for key, value in index.items()}
 
 
 def parse_asset_name(name_no_ext: str):
