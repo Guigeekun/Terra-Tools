@@ -222,6 +222,41 @@ export function procBuffMultipliers(activeSkills, stacks) {
   return mult;
 }
 
+// ---- damage-magnitude buffs -------------------------------------------------
+// Kind-4 skills on StatusType.ModifyDamage (20) with spower > 1 — "Physical
+// Attack x1.5", "Physical Damage x1.2", "Buff Up" x2. The game can never hold
+// two of these at once: status 20 is absent from StatusManager.CanMultiApply's
+// whitelist (libil2cpp disassembly), so a second application only refreshes
+// the running buff's turns and power instead of adding a second modifier. A
+// re-proc therefore keeps one ×N alive, never compounds it — modeled here as
+// active-once: with stacks ≥ 1 the strongest in-kit skill multiplies the
+// physical side (pincers included). Status 20 never boosts magic (no magical
+// ×N skill exists), and the elemental variants (Fire Attack x1.5, attrib 1-4)
+// cannot map onto the element-neutral estimate, so both stay out; the
+// defensive halves (spower < 1) reduce damage taken, not dealt.
+export function damageBuffMultiplier(activeSkills) {
+  let best = 0;
+  for (const e of activeSkills) {
+    if (!e.skill || e.locked) continue;
+    if (e.skill.kind !== 4 || (e.skill.status || 0) !== 20) continue;
+    if ((e.skill.attrib || 0) !== 0) continue;
+    if ((e.skill.emitRatio || 0) <= 0) continue;
+    const p = e.skill.spower || 0;
+    if (p > best) best = p;
+  }
+  return best > 1 ? best : 0;
+}
+
+// "×1.5 phys" chip label for the kit list.
+export function damageBuffLabel(skill) {
+  if (skill?.kind !== 4 || (skill.status || 0) !== 20) return null;
+  if ((skill.attrib || 0) !== 0 || (skill.emitRatio || 0) <= 0) return null;
+  if (!(skill.spower > 1)) return null;
+  return `×${fmtSpower(skill.spower)} phys/proc`;
+}
+
+const fmtSpower = (v) => (Number(v) % 1 === 0 ? Number(v) : Number(v).toFixed(2).replace(/0$/, ''));
+
 // ---- buffless damage estimate ----------------------------------------------
 // Model (documented in the UI tooltip). Skill `power` values are additive hit
 // multipliers on top of the unit's own pincer — Megasword (×1.0) adds one
@@ -231,14 +266,16 @@ export function procBuffMultipliers(activeSkills, stacks) {
 // "& Arrows" hybrids and the "imbued" strikes — add one more, MATK-scaled hit
 // of the same element: pincer = ATK × (1 + Σ w·power_phys),
 // magic = Σ w·(power_mag + spower) × MATK, w = emitRatio/100 (equips/0 → 1).
-// Excluded: procable buffs (kind 4 — "buffless"), counters (kind 2/12),
+// Excluded: procable stat buffs (kind 4 — "buffless"), counters (kind 2/12),
 // flat-damage skills (kind 7 — not stat-scaled), heals; status-carrying
 // attacks (Poison Arrows) use spower for potency, not a hit, so their spower
-// is ignored. Neutral element, no chain/level-gap scaling — relative number,
+// is ignored. Damage-magnitude buffs ("Physical Attack x1.5") multiply the
+// physical side once when stacks ≥ 1 — see damageBuffMultiplier. Neutral
+// element, no chain/level-gap scaling — relative number,
 // identical scale for both sides.
 const NON_STAT_DAMAGE_KINDS = new Set([2, 7, 12]);
 
-export function damageEstimate(activeSkills, stats) {
+export function damageEstimate(activeSkills, stats, stacks = 0) {
   let physHitsExp = 0, physHitsMax = 0, magHitsExp = 0, magHitsMax = 0, nPhys = 0, nMag = 0;
   for (const e of activeSkills) {
     if (!e.skill || e.locked) continue;
@@ -265,17 +302,21 @@ export function damageEstimate(activeSkills, stats) {
   }
   const atk = stats.ATK.total;
   const matk = stats.MATK.total;
+  // One physical-side multiplier while the damage buff is up — ×N never
+  // stacks (ModifyDamage is not multi-applyable in the game).
+  const physMult = stacks > 0 ? (damageBuffMultiplier(activeSkills) || 1) : 1;
   return {
-    pincer: atk * (1 + physHitsExp),
+    pincer: atk * (1 + physHitsExp) * physMult,
     magic: magHitsExp * matk,
-    expected: atk * (1 + physHitsExp) + magHitsExp * matk,
-    burst: atk * (1 + physHitsMax) + magHitsMax * matk,
-    pincerExp: atk * (1 + physHitsExp),
-    pincerMax: atk * (1 + physHitsMax),
+    expected: atk * (1 + physHitsExp) * physMult + magHitsExp * matk,
+    burst: atk * (1 + physHitsMax) * physMult + magHitsMax * matk,
+    pincerExp: atk * (1 + physHitsExp) * physMult,
+    pincerMax: atk * (1 + physHitsMax) * physMult,
     magicExp: magHitsExp * matk,
     magicMax: magHitsMax * matk,
-    pincerMultExp: 1 + physHitsExp,
-    pincerMultMax: 1 + physHitsMax,
+    pincerMultExp: (1 + physHitsExp) * physMult,
+    pincerMultMax: (1 + physHitsMax) * physMult,
+    dmgBuff: physMult !== 1 ? physMult : 0,
     nPhys, nMag,
   };
 }
@@ -352,6 +393,7 @@ export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, 
     availability, levelGateOk,
     stats, power,
     stackableBuffs: stackableBuffSkills(activeSkills),
-    damage: damageEstimate(activeSkills, stats),
+    damage: damageEstimate(activeSkills, stats, stacks),
+    dmgBuff: stacks > 0 ? damageBuffMultiplier(activeSkills) : 0,
   };
 }

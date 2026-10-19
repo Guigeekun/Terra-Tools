@@ -1,6 +1,6 @@
 import { loc } from '../../utils/localization';
 import { rarityShortLabels, skillAttribMeta, triggerText } from '../../utils/constants';
-import { POWER_FAMILIES, EQUIP_STAT_STATUS, equipBoostLabel } from '../../utils/compareCalc';
+import { POWER_FAMILIES, EQUIP_STAT_STATUS, equipBoostLabel, damageBuffLabel } from '../../utils/compareCalc';
 import SkillIcon from '../shared/SkillIcon';
 import EmitConditionBadge from '../shared/EmitConditionBadge';
 
@@ -73,7 +73,9 @@ export default function ComparisonResult({ left, right, lang, level, stacks = 0,
           title={
             'Stat buffs: always-on equips count fully; each stackable proc buff\n' +
             '(e.g. the Skullsplitter companion\'s "Attack +10%", 30%) is assumed to\n' +
-            `have proc'd ${stacks} time(s) — ${stacks} × its magnitude per skill, all skills stacked.`
+            `have proc'd ${stacks} time(s) — ${stacks} × its magnitude per skill, all skills stacked.\n` +
+            'Damage buffs ("Physical Attack x1.5") leave stats untouched — they\n' +
+            'multiply the damage estimate below once while up.'
           }
         >
           <i className="fa-solid fa-chart-simple"></i> Stats
@@ -169,14 +171,17 @@ export default function ComparisonResult({ left, right, lang, level, stacks = 0,
         <h5
           title={
             (stacks > 0
-              ? `Damage estimate with ${stacks} proc(s) of each stackable stat buff folded into the stats:\n`
+              ? `Damage estimate with ${stacks} proc(s) of each stackable stat buff folded into the stats,\n` +
+                'and the strongest "Physical Attack x1.5"-style damage buff up (×N counts once — the game\n' +
+                'never holds two copies of the same buff, a re-proc only refreshes its turns):\n'
               : 'Buffless estimate of the damage this kit deals in one pincer it initiates:\n') +
             'Every damage skill adds its own hit on top of the unit\'s base pincer:\n' +
             'pincer = ATK × (1 + Σ trigger-weighted power of physical skills)\n' +
             'magic  = Σ trigger-weighted (power + spower) × MATK for magical skills\n' +
             '         plus the spower half of dual-hit skills ("& Arrows" hybrids, "imbued" strikes)\n' +
             'Trigger weight = emitRatio/100; equips count at full weight.\n' +
-            'Excluded: counters, flat-damage skills, heals; damage-magnitude buffs ("Physical Damage ×1.5") stay out.\n' +
+            'Excluded: counters, flat-damage skills, heals; elemental damage buffs (Fire Attack x1.5)\n' +
+            'stay out too — the estimate is element-neutral.\n' +
             'Neutral element, single pincer, no chain or level-gap scaling — a relative number on the same scale for both sides.'
           }
         >
@@ -280,10 +285,11 @@ function KitList({ side, label, lang, onOpenSkill }) {
           const skill = e.skill;
           const equipLabel = skill ? equipBoostLabel(skill) : null;
           const buffLabel = skill ? stackBuffLabel(skill) : null;
+          const dmgBuffLabel = skill ? damageBuffLabel(skill) : null;
           const power = skill?.power > 0
             ? `×${Number(skill.power.toFixed(2))}`
-            : equipLabel || buffLabel;
-          const chipKind = skill?.power > 0 ? '' : equipLabel ? ' equip' : buffLabel ? ' buff' : '';
+            : equipLabel || buffLabel || dmgBuffLabel;
+          const chipKind = skill?.power > 0 ? '' : equipLabel ? ' equip' : buffLabel || dmgBuffLabel ? ' buff' : '';
           const originLabel = e.origin === 'job' ? 'Job' : e.origin === 'buddy' ? 'Companion' : 'Slot';
           return (
             <li

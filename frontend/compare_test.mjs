@@ -7,6 +7,7 @@ import {
   statAtLevel, buddyStatAtLevel, buddyBonuses,
   buildSkillPool, resolveSlotSkills, jobFixedSkills,
   jobStatsAtLevel, computeSide, powerFamilyOf, equipBoostLabel,
+  damageBuffMultiplier, damageBuffLabel,
 } from './src/utils/compareCalc.js';
 
 const GAME = process.env.GAME_DATA_DIR || 'G:/Terra/Terra-Tools/user-data/extracted-gamedata/game_data';
@@ -269,6 +270,48 @@ function check(label, actual, expected) {
     threeStacks.damage.expected > noStacks.damage.expected, true);
   check('non-stat proc skills do not stack',
     threeStacks.stats.HP.buffs, 0);
+
+  // --- damage-magnitude buffs ("Physical Attack x1.5") ------------------------
+  // Skill 985 "Physical Damage x1.5" (kind 4, status 20 ModifyDamage, 30% proc,
+  // spower 1.5) is Bahl's job 7 fixed at master 65. In the game this status is
+  // NOT multi-applyable (StatusManager.CanMultiApply whitelist in the
+  // libil2cpp disassembly): a second application only refreshes the running
+  // buff, so one x1.5 can never become x2.25 — the estimate must multiply the
+  // physical side ONCE whatever the assumed proc count, and only while
+  // stacks > 0 (the "buff is up" assumption).
+  check('skill 985 is the Physical Damage x1.5 proc', {
+    kind: skills[984].kind, status: skills[984].status, spower: skills[984].spower,
+    emit: skills[984].emitRatio, attrib: skills[984].attrib,
+  }, { kind: 4, status: 20, spower: 1.5, emit: 30, attrib: 0 });
+  const bahlJ7Base = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 1, slotIds: [], buddy: null, level: 90, stacks: 0 });
+  check('stacks=0 keeps the damage buffless', bahlJ7Base.damage.dmgBuff, 0);
+  // Job 7's only damage skill is Megasword x1.0 @50% -> 1 + 0.5 = 1.5.
+  check('stacks=0 pincer multiplier is pure hits', bahlJ7Base.damage.pincerMultExp, 1.5);
+  const bahlJ7One = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 1, slotIds: [], buddy: null, level: 90, stacks: 1 });
+  check('x1.5 counted once with any proc assumed', bahlJ7One.damage.dmgBuff, 1.5);
+  check('buff multiplies the pincer side', bahlJ7One.damage.pincerMultExp, 2.25);
+  const bahlJ7Five = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 1, slotIds: [], buddy: null, level: 90, stacks: 5 });
+  check('5 procs still one x1.5 — never x2.25 (1.5 hits × 1.5 buff)', bahlJ7Five.damage.pincerMultExp, 2.25);
+  check('damage buff leaves magic untouched', bahlJ7Five.damage.magicExp, bahlJ7Base.damage.magicExp);
+  const bahlJ7Locked = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 1, slotIds: [], buddy: null, level: 60, stacks: 5 });
+  check('locked x1.5 (master 65) stays out', { buff: bahlJ7Locked.damage.dmgBuff, mult: bahlJ7Locked.damage.pincerMultExp }, { buff: 0, mult: 1.5 });
+
+  // Family edges, on bare skill lists: elemental variants (Fire Attack x1.5,
+  // attrib 1) can't map onto the element-neutral estimate, defensive halves
+  // (spower < 1) cut damage taken, and the strongest of several sources wins
+  // (the game overwrites the running buff's power instead of stacking).
+  const fireX15 = skills[975];
+  const halfPhys = skills[241];
+  const physX12 = skills[171];
+  check('Fire Attack x1.5 is elemental', { status: fireX15.status, attrib: fireX15.attrib }, { status: 20, attrib: 1 });
+  check('elemental damage buff stays out', damageBuffMultiplier([{ skill: fireX15, locked: false }]), 0);
+  check('defensive half-damage stays out', damageBuffMultiplier([{ skill: halfPhys, locked: false }]), 0);
+  check('strongest source wins', damageBuffMultiplier([
+    { skill: physX12, locked: false }, { skill: skills[984], locked: false },
+  ]), 1.5);
+  check('locked sources stay out', damageBuffMultiplier([{ skill: skills[984], locked: true }]), 0);
+  check('x1.5 kit chip label', damageBuffLabel(skills[984]), '×1.5 phys/proc');
+  check('x1.2 kit chip label', damageBuffLabel(physX12), '×1.2 phys/proc');
 }
 
 if (failures) {

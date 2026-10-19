@@ -151,7 +151,20 @@ export default function CompareTab({ params, onParams, onOpenSkill }) {
           />
           <span className="compare-level-val">{level}</span>
         </div>
-        <div className="compare-stacks" title="Assumed proc count of every stackable stat buff in each kit (e.g. the Skullsplitter companion's 'Attack +10%', 30%). Each of those skills is assumed to have proc'd this many times; 0 keeps the estimate buffless.">
+        <button className="compare-swap-btn" title="Swap left and right" onClick={swapSides}>
+          <i className="fa-solid fa-right-left"></i> Swap sides
+        </button>
+      </div>
+
+      <div className="compare-grid">
+        <CompareSide {...sideProps('left', left, 'Left', 'left')} />
+        <CompareSide {...sideProps('right', right, 'Right', 'right')} />
+      </div>
+
+      {/* Buff stacks live between the loadout config and the numbers it feeds:
+          the results are where the dial gets tuned. */}
+      <div className="compare-stacks-row">
+        <div className="compare-stacks" title="Assumed proc count of every proc buff in each kit. Stat buffs ('Attack +10%, 30%') are multiplied by it — a deliberate assumption, the game refreshes an active buff instead of stacking a second copy. Damage buffs ('Physical Attack x1.5') cannot stack at all in-game, so each counts once while any proc is assumed: 0 keeps the estimate buffless.">
           <i className="fa-solid fa-layer-group"></i>
           <label htmlFor="compare-stacks">Buff stacks</label>
           <select
@@ -166,14 +179,6 @@ export default function CompareTab({ params, onParams, onOpenSkill }) {
             ))}
           </select>
         </div>
-        <button className="compare-swap-btn" title="Swap left and right" onClick={swapSides}>
-          <i className="fa-solid fa-right-left"></i> Swap sides
-        </button>
-      </div>
-
-      <div className="compare-grid">
-        <CompareSide {...sideProps('left', left, 'Left', 'left')} />
-        <CompareSide {...sideProps('right', right, 'Right', 'right')} />
       </div>
 
       <ComparisonResult
