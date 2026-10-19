@@ -147,17 +147,22 @@ function check(label, actual, expected) {
   // --- buffless damage estimate ----------------------------------------------
   // Bahl job 1 fixed: Counterattack x1.5 (kind 2 counter — excluded),
   // Attack +10% (kind 4 proc — power 0), Gigasword x2 (40% phys),
-  // Counterattack x2 (kind 2 — excluded). Slot Gigasword-like 1055 is
-  // already fixed, so expected pincer = ATK × (1 + 0.4×(2−1)).
+  // Counterattack x2 (kind 2 — excluded). Skill power is an ADDITIVE hit
+  // multiplier on top of the unit's own pincer (Megasword ×1.0 must add one
+  // pincer's worth): pincer = ATK × (1 + Σ w·power) = 1 + 0.4×2.
   const gigasword = 1055;
   check('Gigasword is physical x2 at 40%', {
     weap: skills[gigasword - 1].weap, power: skills[gigasword - 1].power, emit: skills[gigasword - 1].emitRatio,
   }, { weap: 1, power: 2.0, emit: 40 });
   const dmg = side.damage;
-  check('buffless expected damage', +dmg.expected.toFixed(4), +(expected.ATK * (1 + 0.4)).toFixed(4));
-  check('all-proc ceiling doubles the pincer', +dmg.burst.toFixed(4), +(expected.ATK * 2).toFixed(4));
+  check('buffless expected damage', +dmg.expected.toFixed(4), +(expected.ATK * (1 + 0.8)).toFixed(4));
+  check('all-proc ceiling', +dmg.burst.toFixed(4), +(expected.ATK * 3).toFixed(4));
   check('counters and proc buffs stay out of the pincer multiplier',
-    { multExp: dmg.pincerMultExp, multMax: dmg.pincerMultMax }, { multExp: 1.4, multMax: 2 });
+    { multExp: dmg.pincerMultExp, multMax: dmg.pincerMultMax }, { multExp: 1.8, multMax: 3 });
+
+  // Megasword ×1.0 (50%, Bahl job 2) gains real weight under the additive rule.
+  const bahlJob2 = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 1, slotIds: [], buddy: null, level: 90 });
+  check('Megasword ×1 adds its hit', bahlJob2.damage.pincerMultExp, 1.5);
 
   // Magic: Lich Λ lambda job (748) carries Dark Matter x3 (30%, weap 0).
   const lich = enriched(infosById[621]);
@@ -170,6 +175,40 @@ function check(label, actual, expected) {
   check('magic estimate adds w·power×MATK', +lichSide.damage.magic.toFixed(4), +(0.9 * lichStats.MATK.total).toFixed(4));
   check('magic expected total', +lichSide.damage.expected.toFixed(4),
     +(lichStats.ATK.total + 0.9 * lichStats.MATK.total).toFixed(4));
+
+  // --- hybrid dual-hit skills (Lio) -------------------------------------------
+  // Lio's "& Arrows" skills carry the magic half in spower (power == spower,
+  // status 0): Moonlight & Arrows ×0.8 @80% + ×0.8 @30% in job 1 -> arrow hits
+  // 0.64+0.24 = 0.88×ATK plus lunar hits 0.88×MATK. Counters (kind 2) stay
+  // excluded, the equip adds nothing.
+  const lio = enriched(infosById[1245]);
+  const lioSide = computeSide({ char: lio, ancestor: null, skills, jobIndex: 0, slotIds: [], buddy: null, level: 90 });
+  const lioStats = lioSide.stats;
+  check('Lio pincer multiplier sums the hybrid arrow hits', +lioSide.damage.pincerMultExp.toFixed(4), 1.88);
+  check('Lio magic half comes from spower', +lioSide.damage.magic.toFixed(4), +(0.88 * lioStats.MATK.total).toFixed(4));
+  check('Lio expected combines both halves', +lioSide.damage.expected.toFixed(4),
+    +(lioStats.ATK.total * 1.88 + lioStats.MATK.total * 0.88).toFixed(4));
+  check('power table splits phys/mag for hybrids', {
+    phys: +lioSide.power.lunar.phys.toFixed(4),
+    mag: +lioSide.power.lunar.mag.toFixed(4),
+    total: +lioSide.power.lunar.total.toFixed(4),
+    count: lioSide.power.lunar.count,
+  // The two "& Arrows" hybrids (phys 1.6 + their spower 1.6 mag) plus the
+  // magic Moonlight Counter ×1.5 — counters count in the power table (they
+  // only leave the damage estimate).
+  }, { phys: 1.6, mag: 3.1, total: 4.7, count: 3 });
+
+  // Imbued strikes (status 0, spower < power) also carry a partial magic hit:
+  // Thunder Strike ×1.0 with spower 0.5. Status-carrying attacks (Poison
+  // Arrows, status 1) use spower for potency — never a magic hit.
+  const thunderStrike = skills[1239];
+  check('Thunder Strike is an imbued spear attack', {
+    weap: thunderStrike.weap, power: thunderStrike.power, spower: thunderStrike.spower, status: thunderStrike.status,
+  }, { weap: 2, power: 1.0, spower: 0.5, status: 0 });
+  const poisonArrows = skills[106];
+  check('Poison Arrows keeps its spower out of the magic pool', {
+    status: poisonArrows.status, spower: poisonArrows.spower,
+  }, { status: 1, spower: 1.0 });
   // --- companion exclusivity across recodes ----------------------------------
   // "Bahl ΟⅢ" (buddy 294) is exclusive to Bahl (ID 1); Bahl Λ (ID 920) is
   // Bahl's recode (ancestorChrID 1). In game the recoded form may equip the

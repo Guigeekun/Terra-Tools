@@ -115,37 +115,53 @@ export default function ComparisonResult({ left, right, lang, level, stacks = 0,
 
       {/* --- cumulated skill power --- */}
       {powerRows.length > 0 && (
-        <div className="compare-table-box">
-          <h5><i className="fa-solid fa-burst"></i> Cumulated skill power <span className="compare-hint">Σ power of the active kit, by element</span></h5>
-          <table className="compare-table">
-            <thead>
-              <tr>
-                <th>Element</th>
-                <th className="compare-col-side">{sideHeader(left, lang)}</th>
-                <th className="compare-col-side">{sideHeader(right, lang)}</th>
-                <th>Right − Left</th>
-              </tr>
-            </thead>
-            <tbody>
-              {powerRows.map(key => {
-                const meta = POWER_FAMILIES[key];
-                const color = skillAttribMeta[meta.attrib]?.color || '#6b7280';
-                const l = left?.power?.[key] || { total: 0, count: 0 };
-                const r = right?.power?.[key] || { total: 0, count: 0 };
-                return (
-                  <tr key={key}>
-                    <td className="compare-stat-label">
-                      <span className="compare-family-chip" style={{ background: `${color}22`, borderColor: `${color}55`, color }}>{meta.label}</span>
-                    </td>
-                    <SideCell value={fmtPower(l.total)} alt={l.count ? `${l.count} skill${l.count === 1 ? '' : 's'}` : null} />
-                    <SideCell value={fmtPower(r.total)} alt={r.count ? `${r.count} skill${r.count === 1 ? '' : 's'}` : null} />
-                    <td><Diff right={r.total} left={l.total} /></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      <div className="compare-table-box">
+        <h5
+          title={
+            'Σ hit multipliers of the active kit, per element. Physical skills (weap) and\n' +
+            'magical skills (weap 0) accumulate separately; dual-hit skills (the "& Arrows"\n' +
+            'hybrids and "imbued" strikes) contribute their spower as a second, magical hit\n' +
+            'of the same element — shown in the phys/mag split under each value.'
+          }
+        >
+          <i className="fa-solid fa-burst"></i> Cumulated skill power
+          <span className="compare-hint">Σ hit multipliers of the active kit, by element — phys/mag split under each value</span>
+        </h5>
+        <table className="compare-table">
+          <thead>
+            <tr>
+              <th>Element</th>
+              <th className="compare-col-side">{sideHeader(left, lang)}</th>
+              <th className="compare-col-side">{sideHeader(right, lang)}</th>
+              <th>Right − Left</th>
+            </tr>
+          </thead>
+          <tbody>
+            {powerRows.map(key => {
+              const meta = POWER_FAMILIES[key];
+              const color = skillAttribMeta[meta.attrib]?.color || '#6b7280';
+              const l = left?.power?.[key] || { total: 0, count: 0, phys: 0, mag: 0 };
+              const r = right?.power?.[key] || { total: 0, count: 0, phys: 0, mag: 0 };
+              const alt = (f) => {
+                if (!f.count) return null;
+                if (f.phys > 0 && f.mag > 0) return `phys ${fmtPower(f.phys)} · mag ${fmtPower(f.mag)}`;
+                if (f.phys > 0) return `${f.count} skill${f.count === 1 ? '' : 's'} · physical`;
+                return `${f.count} skill${f.count === 1 ? '' : 's'} · magic`;
+              };
+              return (
+                <tr key={key}>
+                  <td className="compare-stat-label">
+                    <span className="compare-family-chip" style={{ background: `${color}22`, borderColor: `${color}55`, color }}>{meta.label}</span>
+                  </td>
+                  <SideCell value={fmtPower(l.total)} alt={alt(l)} />
+                  <SideCell value={fmtPower(r.total)} alt={alt(r)} />
+                  <td><Diff right={r.total} left={l.total} /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       )}
 
       {/* --- damage estimate --- */}
@@ -155,8 +171,10 @@ export default function ComparisonResult({ left, right, lang, level, stacks = 0,
             (stacks > 0
               ? `Damage estimate with ${stacks} proc(s) of each stackable stat buff folded into the stats:\n`
               : 'Buffless estimate of the damage this kit deals in one pincer it initiates:\n') +
-            'pincer = ATK × (1 + Σ trigger-weighted (power − 1) of physical skills)\n' +
-            'magic  = Σ trigger-weighted power × MATK (each magical skill is one separate hit)\n' +
+            'Every damage skill adds its own hit on top of the unit\'s base pincer:\n' +
+            'pincer = ATK × (1 + Σ trigger-weighted power of physical skills)\n' +
+            'magic  = Σ trigger-weighted (power + spower) × MATK for magical skills\n' +
+            '         plus the spower half of dual-hit skills ("& Arrows" hybrids, "imbued" strikes)\n' +
             'Trigger weight = emitRatio/100; equips count at full weight.\n' +
             'Excluded: counters, flat-damage skills, heals; damage-magnitude buffs ("Physical Damage ×1.5") stay out.\n' +
             'Neutral element, single pincer, no chain or level-gap scaling — a relative number on the same scale for both sides.'
@@ -188,8 +206,8 @@ export default function ComparisonResult({ left, right, lang, level, stacks = 0,
                 if (!d) return null;
                 if (d.nPhys === 0 && d.nMag === 0) return 'no damage skills';
                 const bits = [`pincer ×${Number(isBurst ? d.pincerMultMax : d.pincerMultExp).toFixed(2)}`];
-                const magicPart = isBurst ? d.magicMax : d.magicExp;
-                if (d.nMag > 0) bits.push(`magic +${Math.round(magicPart).toLocaleString()}`);
+                const magicPart = Math.round(isBurst ? d.magicMax : d.magicExp);
+                if (magicPart > 0) bits.push(`magic +${magicPart.toLocaleString()}`);
                 return bits.join(' · ');
               };
               return (

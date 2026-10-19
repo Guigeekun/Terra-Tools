@@ -223,17 +223,23 @@ export function procBuffMultipliers(activeSkills, stacks) {
 }
 
 // ---- buffless damage estimate ----------------------------------------------
-// Model (documented in the UI tooltip):
-//   pincer  = ATK_total × (1 + Σ_physical w·(power − 1))
-//   magic   = Σ_magical w·power × MATK_total        (each blame skill = one hit)
-// with w the trigger weight (emitRatio/100; equips and untapped 0 → 1).
+// Model (documented in the UI tooltip). Skill `power` values are additive hit
+// multipliers on top of the unit's own pincer — Megasword (×1.0) adds one
+// pincer's worth of damage, which a "×1.0 multiplier" reading could not
+// express. Physical skills (weap 1-3) hit with ATK; magical skills (weap 0)
+// hit with MATK. Skills carrying a second power (`spower`, status 0) — the
+// "& Arrows" hybrids and the "imbued" strikes — add one more, MATK-scaled hit
+// of the same element: pincer = ATK × (1 + Σ w·power_phys),
+// magic = Σ w·(power_mag + spower) × MATK, w = emitRatio/100 (equips/0 → 1).
 // Excluded: procable buffs (kind 4 — "buffless"), counters (kind 2/12),
-// flat-damage skills (kind 7 — not stat-scaled), heals. Neutral element, no
-// chain/level-gap scaling — a relative number, identical scale for both sides.
+// flat-damage skills (kind 7 — not stat-scaled), heals; status-carrying
+// attacks (Poison Arrows) use spower for potency, not a hit, so their spower
+// is ignored. Neutral element, no chain/level-gap scaling — relative number,
+// identical scale for both sides.
 const NON_STAT_DAMAGE_KINDS = new Set([2, 7, 12]);
 
 export function damageEstimate(activeSkills, stats) {
-  let physExcessExp = 0, physExcessMax = 0, magPowerExp = 0, magPowerMax = 0, nPhys = 0, nMag = 0;
+  let physHitsExp = 0, physHitsMax = 0, magHitsExp = 0, magHitsMax = 0, nPhys = 0, nMag = 0;
   for (const e of activeSkills) {
     if (!e.skill || e.locked) continue;
     const p = e.skill.power || 0;
@@ -242,29 +248,34 @@ export function damageEstimate(activeSkills, stats) {
     if (NON_STAT_DAMAGE_KINDS.has(e.skill.kind)) continue;
     const magical = (e.skill.weap || 0) === 0;
     const w = (e.skill.emitRatio || 0) > 0 ? e.skill.emitRatio / 100 : 1;
+    const spower = !e.skill.status && (e.skill.spower || 0) > 0 ? e.skill.spower : 0;
     if (magical) {
-      magPowerExp += w * p;
-      magPowerMax += p;
+      magHitsExp += w * (p + spower);
+      magHitsMax += p + spower;
       nMag += 1;
     } else {
-      physExcessExp += w * (p - 1);
-      physExcessMax += (p - 1);
+      physHitsExp += w * p;
+      physHitsMax += p;
+      if (spower > 0) {
+        magHitsExp += w * spower;
+        magHitsMax += spower;
+      }
       nPhys += 1;
     }
   }
   const atk = stats.ATK.total;
   const matk = stats.MATK.total;
   return {
-    pincer: atk * (1 + physExcessExp),
-    magic: magPowerExp * matk,
-    expected: atk * (1 + physExcessExp) + magPowerExp * matk,
-    burst: atk * (1 + physExcessMax) + magPowerMax * matk,
-    pincerExp: atk * (1 + physExcessExp),
-    pincerMax: atk * (1 + physExcessMax),
-    magicExp: magPowerExp * matk,
-    magicMax: magPowerMax * matk,
-    pincerMultExp: 1 + physExcessExp,
-    pincerMultMax: 1 + physExcessMax,
+    pincer: atk * (1 + physHitsExp),
+    magic: magHitsExp * matk,
+    expected: atk * (1 + physHitsExp) + magHitsExp * matk,
+    burst: atk * (1 + physHitsMax) + magHitsMax * matk,
+    pincerExp: atk * (1 + physHitsExp),
+    pincerMax: atk * (1 + physHitsMax),
+    magicExp: magHitsExp * matk,
+    magicMax: magHitsMax * matk,
+    pincerMultExp: 1 + physHitsExp,
+    pincerMultMax: 1 + physHitsMax,
     nPhys, nMag,
   };
 }
@@ -314,14 +325,23 @@ export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, 
 
   const power = {};
   for (const [key, meta] of Object.entries(POWER_FAMILIES)) {
-    power[key] = { label: meta.label, total: 0, count: 0 };
+    power[key] = { label: meta.label, total: 0, count: 0, phys: 0, mag: 0 };
   }
   for (const e of activeSkills) {
     if (!e.skill || e.locked) continue;
     const p = e.skill.power || 0;
     if (p <= 0) continue;
     const fam = power[powerFamilyOf(e.skill)];
+    const physical = (e.skill.weap || 0) !== 0;
+    if (physical) fam.phys += p; else fam.mag += p;
     fam.total += p;
+    // Dual-hit skills ("& Arrows", "imbued" strikes) carry a second,
+    // MATK-scaled hit of the same element in spower (status 0 — status
+    // skills use spower for potency instead).
+    if (!e.skill.status && (e.skill.spower || 0) > 0) {
+      fam.mag += e.skill.spower;
+      fam.total += e.skill.spower;
+    }
     fam.count += 1;
   }
 
