@@ -56,11 +56,14 @@ function sourceTitle(sources) {
     .join('\n');
 }
 
-function SourceChip({ source, onOpenSource }) {
+function SourceChip({ source, onOpenSource, onOpenEnemy }) {
   const meta = sourceTypeMeta[source.type];
-  // Characters and companions have a dedicated tab to browse; enemies don't
-  const targetTab = source.type === 'character' ? 'characters' : source.type === 'buddy' ? 'buddies' : null;
-  const clickable = targetTab && onOpenSource;
+  // Characters and companions browse their tab via a pre-filled search; an
+  // enemy jumps straight to its variant group's modal in the bestiary (the
+  // anchor href is a real deep link, so middle-click works there too).
+  const browsableTab = source.type === 'character' ? 'characters' : source.type === 'buddy' ? 'buddies' : null;
+  const canBrowse = browsableTab && onOpenSource;
+  const canOpenEnemy = source.type === 'enemy' && source.first_id != null && onOpenEnemy;
 
   const content = (
     <>
@@ -84,13 +87,26 @@ function SourceChip({ source, onOpenSource }) {
     </>
   );
 
-  if (clickable) {
+  if (canOpenEnemy) {
+    return (
+      <a
+        href={`#/bestiary?enemy=${source.first_id}`}
+        className="source-chip clickable"
+        style={{ '--chip-color': meta.color }}
+        title={`${sourceTitle([source])} — click to open in the Bestiary`}
+        onClick={(e) => { e.preventDefault(); onOpenEnemy(source); }}
+      >
+        {content}
+      </a>
+    );
+  }
+  if (canBrowse) {
     return (
       <span
         className="source-chip clickable"
         style={{ '--chip-color': meta.color }}
         title={`${sourceTitle([source])} — click to browse in ${meta.label}s tab`}
-        onClick={() => onOpenSource(targetTab, source.name)}
+        onClick={() => onOpenSource(browsableTab, source.name)}
       >
         {content}
       </span>
@@ -103,7 +119,7 @@ function SourceChip({ source, onOpenSource }) {
   );
 }
 
-function SourcesCell({ sources, onOpenSource }) {
+function SourcesCell({ sources, onOpenSource, onOpenEnemy }) {
   // Hidden sources stay one click away: the "+N more" chip expands in place so
   // every chip remains a real, clickable link (a hover popover can't guarantee that).
   const [expanded, setExpanded] = useState(false);
@@ -115,7 +131,9 @@ function SourcesCell({ sources, onOpenSource }) {
   const shown = expanded ? sources : sources.slice(0, SHOWN);
   return (
     <div className={`source-chips${expanded ? ' expanded' : ''}`} title={sourceTitle(sources)}>
-      {shown.map((s, i) => <SourceChip key={i} source={s} onOpenSource={onOpenSource} />)}
+      {shown.map((s, i) => (
+        <SourceChip key={i} source={s} onOpenSource={onOpenSource} onOpenEnemy={onOpenEnemy} />
+      ))}
       {extra > 0 && (
         <span
           className="source-chip chip-more clickable"
@@ -134,7 +152,7 @@ function SourcesCell({ sources, onOpenSource }) {
   );
 }
 
-export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
+export default function SkillsTab({ onOpenSource, onOpenEnemy, initialSearch = '' }) {
   // Search stays session-local so skill-jump/source-chip navigation (initialSearch)
   // always wins; the other filter/sort state persists in localStorage across sessions.
   // The URL is the exception: back/forward through '?q=' entries re-applies the search.
@@ -292,7 +310,7 @@ export default function SkillsTab({ onOpenSource, initialSearch = '' }) {
                         <span className="badge area-badge">{loc(skill.rangePrefixString, lang, 'Self')}{skill.range > 1 ? ` · ${skill.range}` : ''}</span>
                       </td>
                       <td className="sources-cell">
-                        <SourcesCell sources={skill.sources} onOpenSource={onOpenSource} />
+                        <SourcesCell sources={skill.sources} onOpenSource={onOpenSource} onOpenEnemy={onOpenEnemy} />
                       </td>
                     </tr>
                   );
