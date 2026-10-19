@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { loc } from '../../utils/localization';
 import { rarityShortLabels, weaponMeta, elementMeta, triggerText } from '../../utils/constants';
-import { buildSkillPool, jobFixedSkills, resolveSlotSkills } from '../../utils/compareCalc';
+import { buildSkillPool, jobFixedSkills, resolveSlotSkills, equipBoostLabel } from '../../utils/compareCalc';
 import SkillIcon from '../shared/SkillIcon';
 import EmitConditionBadge from '../shared/EmitConditionBadge';
 
@@ -364,6 +364,7 @@ function SkillRow({ entry, skills, level, lang, onOpenSkill }) {
   }
   const locked = level < entry.masterLevel;
   const power = skill.power > 0 ? Number(skill.power.toFixed(2)) : null;
+  const equipLabel = equipBoostLabel(skill);
   return (
     <li
       className={`compare-skill-row ${locked ? 'locked' : ''}`}
@@ -381,6 +382,7 @@ function SkillRow({ entry, skills, level, lang, onOpenSkill }) {
         </span>
       </div>
       {power != null && <span className="compare-power-chip">×{power}</span>}
+      {power == null && equipLabel && <span className="compare-power-chip equip">{equipLabel}</span>}
     </li>
   );
 }

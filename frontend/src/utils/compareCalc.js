@@ -2,18 +2,17 @@
 // cumulated skill power. No React, no fetches — everything is derived from
 // the served game data shapes so it can be unit-tested standalone.
 //
-// Stat growth (documented in TerraMod's internals notes for TB 5.5.7/reTB):
-//   stat(L) = min + (max - min) * ((L - 1) / 98) ** coeff
-// Jobs scale over levels 1..99; companions reuse the same curve over
+// Stat growth (reTB): stat(L) = min + (max - min) * ((L - 1) / 89) ** coeff
+// Jobs scale over levels 1..90; companions reuse the same curve over
 // 1..MaxLevel with their single Coeff.
 
-export const JOB_MAX_LEVEL = 99;
+export const JOB_MAX_LEVEL = 90;
 
 export function statAtLevel(min, max, coeff, level) {
   const lo = min || 0;
   const span = (max || 0) - lo;
   if (span === 0 || level <= 1) return Math.round(lo);
-  const t = Math.min((level - 1) / 98, 1);
+  const t = Math.min((level - 1) / (JOB_MAX_LEVEL - 1), 1);
   return Math.round(lo + span * Math.pow(t, coeff ?? 1));
 }
 
@@ -168,6 +167,79 @@ export function powerFamilyOf(skill) {
   return FAMILY_BY_ATTRIB[skill?.attrib] || 'none';
 }
 
+// ---- equip stat boosts -----------------------------------------------------
+// True equips are SkillKind 5 with emitRatio 0; the boost magnitude lives in
+// `spower` (10 = +10%) and `status` names the stat (from the served data:
+// 5=ATK, 6=DEF, 7=MATK, 8=MDEF, 16=HP). The kind-4 twins of these skills
+// ("Attack +10%", 30% trigger) are procable buffs — deliberately excluded.
+export const EQUIP_STAT_STATUS = { 16: 'HP', 5: 'ATK', 6: 'DEF', 7: 'MATK', 8: 'MDEF' };
+
+export function equipBoostLabel(skill) {
+  if (skill?.kind !== 5 || (skill.emitRatio || 0) !== 0) return null;
+  const stat = EQUIP_STAT_STATUS[skill.status];
+  if (!stat || !(skill.spower > 0)) return null;
+  const pct = Number(skill.spower) % 1 === 0 ? Number(skill.spower) : Number(skill.spower.toFixed(1));
+  return `+${pct}% ${stat}`;
+}
+
+export function equipStatMultipliers(activeSkills) {
+  const mult = { HP: 0, ATK: 0, DEF: 0, MATK: 0, MDEF: 0 };
+  for (const e of activeSkills) {
+    if (!e.skill || e.locked) continue;
+    const label = equipBoostLabel(e.skill);
+    if (!label) continue;
+    mult[EQUIP_STAT_STATUS[e.skill.status]] += (e.skill.spower || 0) / 100;
+  }
+  return mult;
+}
+
+// ---- buffless damage estimate ----------------------------------------------
+// Model (documented in the UI tooltip):
+//   pincer  = ATK_total × (1 + Σ_physical w·(power − 1))
+//   magic   = Σ_magical w·power × MATK_total        (each blame skill = one hit)
+// with w the trigger weight (emitRatio/100; equips and untapped 0 → 1).
+// Excluded: procable buffs (kind 4 — "buffless"), counters (kind 2/12),
+// flat-damage skills (kind 7 — not stat-scaled), heals. Neutral element, no
+// chain/level-gap scaling — a relative number, identical scale for both sides.
+const NON_STAT_DAMAGE_KINDS = new Set([2, 7, 12]);
+
+export function damageEstimate(activeSkills, stats) {
+  let physExcessExp = 0, physExcessMax = 0, magPowerExp = 0, magPowerMax = 0, nPhys = 0, nMag = 0;
+  for (const e of activeSkills) {
+    if (!e.skill || e.locked) continue;
+    const p = e.skill.power || 0;
+    if (p <= 0) continue;
+    if (powerFamilyOf(e.skill) === 'heal') continue;
+    if (NON_STAT_DAMAGE_KINDS.has(e.skill.kind)) continue;
+    const magical = (e.skill.weap || 0) === 0;
+    const w = (e.skill.emitRatio || 0) > 0 ? e.skill.emitRatio / 100 : 1;
+    if (magical) {
+      magPowerExp += w * p;
+      magPowerMax += p;
+      nMag += 1;
+    } else {
+      physExcessExp += w * (p - 1);
+      physExcessMax += (p - 1);
+      nPhys += 1;
+    }
+  }
+  const atk = stats.ATK.total;
+  const matk = stats.MATK.total;
+  return {
+    pincer: atk * (1 + physExcessExp),
+    magic: magPowerExp * matk,
+    expected: atk * (1 + physExcessExp) + magPowerExp * matk,
+    burst: atk * (1 + physExcessMax) + magPowerMax * matk,
+    pincerExp: atk * (1 + physExcessExp),
+    pincerMax: atk * (1 + physExcessMax),
+    magicExp: magPowerExp * matk,
+    magicMax: magPowerMax * matk,
+    pincerMultExp: 1 + physExcessExp,
+    pincerMultMax: 1 + physExcessMax,
+    nPhys, nMag,
+  };
+}
+
 export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, level }) {
   const jobs = char?.JobsInfo || [];
   const job = jobs[jobIndex] || jobs[0] || null;
@@ -177,15 +249,6 @@ export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, 
   const availability = buddyAvailability(buddy, char, job);
   const levelGateOk = !buddy || level >= (buddy.RequiredLevel || 1);
   const bonuses = buddy && availability.ok && levelGateOk ? buddyBonuses(buddy) : null;
-
-  const jobStats = job ? jobStatsAtLevel(job, level) : { HP: 0, ATK: 0, DEF: 0, MATK: 0, MDEF: 0 };
-  const stats = {};
-  for (const [key] of STAT_ROWS) {
-    const jobVal = jobStats[key];
-    const buddyVal = bonuses?.[key] || 0;
-    stats[key] = { job: jobVal, buddy: buddyVal, total: jobVal + buddyVal };
-  }
-  stats.boost = { job: 0, buddy: bonuses?.boost || 0, total: bonuses?.boost || 0 };
 
   // Full active kit: the job's fixed skills, the slotted picks, then the
   // companion's skill. Locked entries stay visible (dimmed) but are excluded
@@ -199,6 +262,23 @@ export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, 
     const skill = skills[e.skillId - 1] || null;
     return { ...e, skill, locked: level < e.masterLevel };
   });
+
+  const equipMult = equipStatMultipliers(activeSkills);
+
+  const jobStats = job ? jobStatsAtLevel(job, level) : { HP: 0, ATK: 0, DEF: 0, MATK: 0, MDEF: 0 };
+  const stats = {};
+  for (const [key] of STAT_ROWS) {
+    const jobVal = jobStats[key];
+    const buddyVal = bonuses?.[key] || 0;
+    const mult = 1 + (equipMult[key] || 0);
+    stats[key] = {
+      job: jobVal,
+      buddy: buddyVal,
+      equip: equipMult[key] || 0,
+      total: Math.round((jobVal + buddyVal) * mult),
+    };
+  }
+  stats.boost = { job: 0, buddy: bonuses?.boost || 0, equip: 0, total: bonuses?.boost || 0 };
 
   const power = {};
   for (const [key, meta] of Object.entries(POWER_FAMILIES)) {
@@ -219,5 +299,6 @@ export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, 
     buddy: buddy && availability.ok && levelGateOk ? buddy : null,
     availability, levelGateOk,
     stats, power,
+    damage: damageEstimate(activeSkills, stats),
   };
 }

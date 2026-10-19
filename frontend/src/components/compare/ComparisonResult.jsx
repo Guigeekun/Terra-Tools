@@ -1,6 +1,6 @@
 import { loc } from '../../utils/localization';
 import { rarityShortLabels, skillAttribMeta, triggerText } from '../../utils/constants';
-import { POWER_FAMILIES } from '../../utils/compareCalc';
+import { POWER_FAMILIES, equipBoostLabel } from '../../utils/compareCalc';
 import SkillIcon from '../shared/SkillIcon';
 import EmitConditionBadge from '../shared/EmitConditionBadge';
 
@@ -70,12 +70,13 @@ export default function ComparisonResult({ left, right, lang, level, onOpenSkill
           </thead>
           <tbody>
             {STAT_LABELS.map(([key, label]) => {
-              const l = left?.stats?.[key] || { total: 0, job: 0, buddy: 0 };
-              const r = right?.stats?.[key] || { total: 0, job: 0, buddy: 0 };
+              const l = left?.stats?.[key] || { total: 0, job: 0, buddy: 0, equip: 0 };
+              const r = right?.stats?.[key] || { total: 0, job: 0, buddy: 0, equip: 0 };
               const alt = (s) => {
                 const parts = [];
                 if (s.job) parts.push(`job ${s.job}`);
                 if (s.buddy) parts.push(`+${s.buddy} companion`);
+                if (s.equip > 0) parts.push(`equip +${Math.round(s.equip * 100)}%`);
                 return parts.join(' · ');
               };
               return (
@@ -125,6 +126,61 @@ export default function ComparisonResult({ left, right, lang, level, onOpenSkill
           </table>
         </div>
       )}
+
+      {/* --- buffless damage estimate --- */}
+      <div className="compare-table-box">
+        <h5
+          title={
+            'Buffless estimate of the damage this kit deals in one pincer it initiates:\n' +
+            'pincer = ATK × (1 + Σ trigger-weighted (power − 1) of physical skills)\n' +
+            'magic  = Σ trigger-weighted power × MATK (each magical skill is one separate hit)\n' +
+            'Trigger weight = emitRatio/100; equips count at full weight.\n' +
+            'Excluded (buffless): procable buffs, counters, flat-damage skills, heals.\n' +
+            'Neutral element, single pincer, no chain or level-gap scaling — a relative number on the same scale for both sides.'
+          }
+        >
+          <i className="fa-solid fa-burst"></i> Estimated damage (buffless)
+          <span className="compare-hint">expected &amp; all-proc ceiling — hover for the model</span>
+        </h5>
+        <table className="compare-table">
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th className="compare-col-side">{sideHeader(left, lang)}</th>
+              <th className="compare-col-side">{sideHeader(right, lang)}</th>
+              <th>Right − Left</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ['expected', 'Expected per pincer'],
+              ['burst', 'All skills proc (ceiling)'],
+            ].map(([key, label]) => {
+              const isBurst = key === 'burst';
+              const l = left?.damage || null;
+              const r = right?.damage || null;
+              const lv = l ? Math.round(l[key]) : 0;
+              const rv = r ? Math.round(r[key]) : 0;
+              const alt = (d) => {
+                if (!d) return null;
+                if (d.nPhys === 0 && d.nMag === 0) return 'no damage skills';
+                const bits = [`pincer ×${Number(isBurst ? d.pincerMultMax : d.pincerMultExp).toFixed(2)}`];
+                const magicPart = isBurst ? d.magicMax : d.magicExp;
+                if (d.nMag > 0) bits.push(`magic +${Math.round(magicPart).toLocaleString()}`);
+                return bits.join(' · ');
+              };
+              return (
+                <tr key={key}>
+                  <td className="compare-stat-label">{label}</td>
+                  <SideCell value={lv.toLocaleString()} alt={alt(l)} />
+                  <SideCell value={rv.toLocaleString()} alt={alt(r)} />
+                  <td><Diff right={rv} left={lv} /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {/* --- full kit breakdown --- */}
       <div className="compare-kit-grid">
@@ -181,7 +237,10 @@ function KitList({ side, label, lang, onOpenSkill }) {
       <ul className="compare-skill-list">
         {kit.map((e, i) => {
           const skill = e.skill;
-          const power = skill?.power > 0 ? `×${Number(skill.power.toFixed(2))}` : null;
+          const equipLabel = skill ? equipBoostLabel(skill) : null;
+          const power = skill?.power > 0
+            ? `×${Number(skill.power.toFixed(2))}`
+            : equipLabel;
           const originLabel = e.origin === 'job' ? 'Job' : e.origin === 'buddy' ? 'Companion' : 'Slot';
           return (
             <li
@@ -200,7 +259,7 @@ function KitList({ side, label, lang, onOpenSkill }) {
                   <EmitConditionBadge skill={skill} />
                 </span>
               </div>
-              {power && <span className="compare-power-chip">{power}</span>}
+              {power && <span className={`compare-power-chip${equipLabel && !(skill?.power > 0) ? ' equip' : ''}`}>{power}</span>}
             </li>
           );
         })}

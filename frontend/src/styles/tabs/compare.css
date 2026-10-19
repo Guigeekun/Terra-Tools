@@ -470,6 +470,13 @@
     white-space: nowrap;
 }
 
+/* Equip passive boosts (+10% ATK …) — green to read as "always on" */
+.compare-power-chip.equip {
+    color: var(--accent-green);
+    background: rgba(34, 197, 94, 0.08);
+    border-color: rgba(34, 197, 94, 0.25);
+}
+
 .compare-origin-tag {
     font-size: 10px;
     font-weight: 700;

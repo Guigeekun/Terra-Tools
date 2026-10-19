@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import {
   statAtLevel, buddyStatAtLevel, buddyBonuses,
   buildSkillPool, resolveSlotSkills, jobFixedSkills,
-  jobStatsAtLevel, computeSide, powerFamilyOf,
+  jobStatsAtLevel, computeSide, powerFamilyOf, equipBoostLabel,
 } from './src/utils/compareCalc.js';
 
 const GAME = process.env.GAME_DATA_DIR || 'G:/Terra/Terra-Tools/user-data/extracted-gamedata/game_data';
@@ -30,14 +30,14 @@ function check(label, actual, expected) {
   }
 }
 
-// --- growth curve: stat(L) = min + (max-min) * ((L-1)/98) ** coeff ----------
+// --- growth curve: stat(L) = min + (max-min) * ((L-1)/89) ** coeff ----------
 {
   const job = jobsById[1]; // Bahl job 1: HP 321..3210, coeff 0.95
   check('curve at Lv1 is min', statAtLevel(job.HPmin, job.HPmax, job.HPcoeff, 1), 321);
-  check('curve at Lv99 is max', statAtLevel(job.HPmin, job.HPmax, job.HPcoeff, 99), 3210);
-  check('curve beyond Lv99 clamps', statAtLevel(job.HPmin, job.HPmax, job.HPcoeff, 150), 3210);
-  const linear = statAtLevel(100, 200, 1, 50); // (49/98)**1 = 0.5 -> 150
-  check('curve midpoint with coeff 1', linear, 150);
+  check('curve at Lv90 (max level) is max', statAtLevel(job.HPmin, job.HPmax, job.HPcoeff, 90), 3210);
+  check('curve beyond Lv90 clamps', statAtLevel(job.HPmin, job.HPmax, job.HPcoeff, 99), 3210);
+  // (46-1)/89 = 45/89 ≈ 0.5056 -> 100 + 100*0.5056 ≈ 150.56 -> 151
+  check('curve midpoint with coeff 1', statAtLevel(100, 200, 1, 46), 151);
 }
 
 // --- buddy curve -------------------------------------------------------------
@@ -93,8 +93,8 @@ function check(label, actual, expected) {
 {
   const bahl = enriched(infosById[1]);
   const job1 = bahl.JobsInfo[0];
-  const side = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [], buddy: null, level: 99 });
-  const expected = jobStatsAtLevel(job1, 99);
+  const side = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [], buddy: null, level: 90 });
+  const expected = jobStatsAtLevel(job1, 90);
   check('side stats match job stats without companion', side.stats.ATK.total, expected.ATK);
   check('side has four fixed skills', side.fixed.length, job1.skills.length);
   check('power sums skip zero-power skills', Object.values(side.power).every(f => f.count === 0 || f.total > 0), true);
@@ -102,9 +102,9 @@ function check(label, actual, expected) {
   const withBuddy = computeSide({
     char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [],
     buddy: { ...buddies.find(b => b.ID === 1), ATKmax: 7, ATKmin: 0, MaxLevel: 30, Coeff: 1, skill: 11, RequiredLevel: 15 },
-    level: 99,
+    level: 90,
   });
-  check('companion ATK joins the total', withBuddy.stats.ATK, { job: expected.ATK, buddy: 7, total: expected.ATK + 7 });
+  check('companion ATK joins the total', withBuddy.stats.ATK, { job: expected.ATK, buddy: 7, equip: 0, total: expected.ATK + 7 });
   check('companion skill enters the kit', withBuddy.activeSkills.at(-1)?.origin, 'buddy');
 
   const lowLevel = computeSide({
@@ -124,14 +124,52 @@ function check(label, actual, expected) {
   const slottable = buildSkillPool(bahl, null).find(e => !fixedIds.has(e.skillId) && (skills[e.skillId - 1]?.power || 0) > 0);
   const famKey = powerFamilyOf(skills[slottable.skillId - 1]);
   const skillPower = skills[slottable.skillId - 1].power;
-  const baseline = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [], buddy: null, level: 99 });
-  const sideWithSlot = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [slottable.skillId], buddy: null, level: 99 });
+  const baseline = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [], buddy: null, level: 90 });
+  const sideWithSlot = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [slottable.skillId], buddy: null, level: 90 });
   check('slotted skill accumulates into its family',
     {
       delta: +(sideWithSlot.power[famKey].total - baseline.power[famKey].total).toFixed(4),
       count: sideWithSlot.power[famKey].count - baseline.power[famKey].count,
     },
     { delta: skillPower, count: 1 });
+
+  // --- equip stat boosts -----------------------------------------------------
+  // Skill 191 "Attack +10%" (Bahl job 3): kind 5 equip, status 5 (ATK),
+  // spower 10. Skill 212 is its kind-4 PROC twin — must NOT touch stats.
+  check('equip boost label parses', equipBoostLabel(skills[190]), '+10% ATK');
+  check('proc twin has no equip label', equipBoostLabel(skills[211]), null);
+  const withEquip = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [191], buddy: null, level: 90 });
+  check('equipped +10% ATK lands in stats', withEquip.stats.ATK.equip, 0.10);
+  check('equip multiplies the total', withEquip.stats.ATK.total, Math.round((expected.ATK) * 1.10));
+  const withProc = computeSide({ char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [212], buddy: null, level: 90 });
+  check('procable buff does not touch stats', withProc.stats.ATK.equip, 0);
+
+  // --- buffless damage estimate ----------------------------------------------
+  // Bahl job 1 fixed: Counterattack x1.5 (kind 2 counter — excluded),
+  // Attack +10% (kind 4 proc — power 0), Gigasword x2 (40% phys),
+  // Counterattack x2 (kind 2 — excluded). Slot Gigasword-like 1055 is
+  // already fixed, so expected pincer = ATK × (1 + 0.4×(2−1)).
+  const gigasword = 1055;
+  check('Gigasword is physical x2 at 40%', {
+    weap: skills[gigasword - 1].weap, power: skills[gigasword - 1].power, emit: skills[gigasword - 1].emitRatio,
+  }, { weap: 1, power: 2.0, emit: 40 });
+  const dmg = side.damage;
+  check('buffless expected damage', +dmg.expected.toFixed(4), +(expected.ATK * (1 + 0.4)).toFixed(4));
+  check('all-proc ceiling doubles the pincer', +dmg.burst.toFixed(4), +(expected.ATK * 2).toFixed(4));
+  check('counters and proc buffs stay out of the pincer multiplier',
+    { multExp: dmg.pincerMultExp, multMax: dmg.pincerMultMax }, { multExp: 1.4, multMax: 2 });
+
+  // Magic: Lich Λ lambda job (748) carries Dark Matter x3 (30%, weap 0).
+  const lich = enriched(infosById[621]);
+  const lichSide = computeSide({ char: lich, ancestor: null, skills, jobIndex: 2, slotIds: [], buddy: null, level: 90 });
+  const lichStats = lichSide.stats;
+  const darkMatter = skills[1336]; // id 1337
+  check('Dark Matter is magical x3 at 30%', {
+    weap: darkMatter.weap, power: darkMatter.power, emit: darkMatter.emitRatio,
+  }, { weap: 0, power: 3.0, emit: 30 });
+  check('magic estimate adds w·power×MATK', +lichSide.damage.magic.toFixed(4), +(0.9 * lichStats.MATK.total).toFixed(4));
+  check('magic expected total', +lichSide.damage.expected.toFixed(4),
+    +(lichStats.ATK.total + 0.9 * lichStats.MATK.total).toFixed(4));
 }
 
 if (failures) {

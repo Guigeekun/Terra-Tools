@@ -82,7 +82,10 @@ test('character card compare button opens the compare tab preselected', async ({
   await card.locator('.card-compare-btn').click();
   await expect(page).toHaveURL(new RegExp(`#/compare\\?left=${character.ID}`));
   await expect(page.locator('.modal-backdrop')).toHaveCount(0);
-  await expect(page.locator('.compare-side.left')).toContainText(character.NameString.en);
+  // This test fetches the character mid-page while the other workers burst
+  // through the single dev server — the panel can legitimately take a while
+  // to render under that load (the API itself answers in milliseconds).
+  await expect(page.locator('.compare-side.left')).toContainText(character.NameString.en, { timeout: 25_000 });
   expectNoPageErrors(errors);
 });
 
