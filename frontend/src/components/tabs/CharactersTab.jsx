@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { loc } from '../../utils/localization';
+import { navigate, tabHash } from '../../router';
 import { rarityLabels, rarityShortLabels, speciesTranslations, weaponMeta, elementMeta } from '../../utils/constants';
 import JobBadge from '../shared/JobBadge';
 import { TabSpinner } from '../../hooks/useLazyCategory';
@@ -82,6 +83,19 @@ export default function CharactersTab({ onSelectCharacter, initialSearch = '' })
                   onClick={(e) => { e.preventDefault(); onSelectCharacter(char); }}
                 >
                   <span className="card-badge badge-rarity">{rarityShortLabels[char.rarity] || char.rarity}</span>
+                  {/* Compare shortcut: a plain span (buttons are invalid inside
+                      an <a>) that routes to the Compare tab with this
+                      character preselected on the left side. */}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="card-compare-btn"
+                    title="Compare this character"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(tabHash('compare', { left: char.ID })); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(tabHash('compare', { left: char.ID })); } }}
+                  >
+                    <i className="fa-solid fa-scale-balanced"></i>
+                  </span>
                   {char.recode && (
                     <span className="card-badge badge-recode" title="This character can be recoded into its lambda form">
                       <i className="fa-solid fa-arrows-rotate"></i> Λ

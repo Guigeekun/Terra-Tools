@@ -59,3 +59,55 @@ test('clicking a character pushes a modal entry that Back closes', async ({ page
   await expect(page.locator('.modal-backdrop')).toHaveCount(0);
   await expect(page).toHaveURL(/#\/characters$/);
 });
+
+test('compare deep link (?left=) preselects the character', async ({ page, request }) => {
+  const character = await firstListed(request, '/api/characters?page=1&limit=1');
+  const errors = trackPageErrors(page);
+  await gotoTab(page, `#/compare?left=${character.ID}`);
+  const panel = page.locator('.compare-side.left');
+  await expect(panel).toContainText(character.NameString.en);
+  // The preselected side loads its job row without any interaction.
+  await expect(panel.locator('.compare-job-chip').first()).toBeVisible();
+  expectNoPageErrors(errors);
+});
+
+test('character card compare button opens the compare tab preselected', async ({ page, request }) => {
+  const character = await firstListed(request, '/api/characters?page=1&limit=1');
+  const errors = trackPageErrors(page);
+  await gotoTab(page, '#/characters');
+  // The compare shortcut sits on the card the API listed first; clicking it
+  // must not open the character modal (the card's own link target).
+  const card = page.locator('.card-item').first();
+  await expect(card).toContainText(character.NameString.en);
+  await card.locator('.card-compare-btn').click();
+  await expect(page).toHaveURL(new RegExp(`#/compare\\?left=${character.ID}`));
+  await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+  // This test fetches the character mid-page while the other workers burst
+  // through the single dev server — the panel can legitimately take a while
+  // to render under that load (the API itself answers in milliseconds).
+  await expect(page.locator('.compare-side.left')).toContainText(character.NameString.en, { timeout: 25_000 });
+  expectNoPageErrors(errors);
+});
+
+test('compare slot picker fills a slotted skill and the URL records it', async ({ page, request }) => {
+  // A character with at least two jobs always has skills left to slot (its
+  // other jobs' skills) — the first roster entry with jobCount >= 2.
+  const roster = await (await request.get('/api/compare/roster')).json();
+  const character = roster.characters.find(c => c.jobCount >= 2);
+  test.skip(!character, 'no multi-job character in the roster');
+  const errors = trackPageErrors(page);
+  await gotoTab(page, `#/compare?left=${character.ID}`);
+  const panel = page.locator('.compare-side.left');
+  // Job detail must be loaded before the slots section renders.
+  await expect(panel.locator('.compare-job-chip').first()).toBeVisible();
+  const emptySlots = panel.locator('.compare-slot-empty');
+  await emptySlots.first().click();
+  const option = panel.locator('.compare-picker-list .compare-picker-row').first();
+  await expect(option).toBeVisible();
+  const skillName = await option.locator('.compare-picker-name').innerText();
+  await option.click();
+  await expect(panel.locator('.compare-slot.filled')).toHaveCount(1);
+  await expect(panel.locator('.compare-slot.filled').first()).toContainText(skillName);
+  await expect(page).toHaveURL(/leftSkills=\d+/);
+  expectNoPageErrors(errors);
+});

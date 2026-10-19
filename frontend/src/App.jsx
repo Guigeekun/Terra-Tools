@@ -11,6 +11,7 @@ import FloatingAudioPlayer from './components/shared/FloatingAudioPlayer';
 import DashboardTab from './components/tabs/DashboardTab';
 import StorybookTab from './components/tabs/StorybookTab';
 import CharactersTab from './components/tabs/CharactersTab';
+import CompareTab from './components/compare/CompareTab';
 import BuddiesTab from './components/tabs/BuddiesTab';
 import SkillsTab from './components/tabs/SkillsTab';
 import ItemsTab from './components/tabs/ItemsTab';
@@ -197,6 +198,13 @@ function AppContent() {
             {activeTab === 'dashboard' && <DashboardTab />}
             {activeTab === 'storybook' && <StorybookTab />}
             {activeTab === 'characters' && <CharactersTab onSelectCharacter={openCharacter} initialSearch={params.q ?? ''} />}
+            {activeTab === 'compare' && (
+              <CompareTab
+                params={params}
+                onParams={(next, opts) => navigate(tabHash('compare', next), opts)}
+                onOpenSkill={openSkillTab}
+              />
+            )}
             {activeTab === 'buddies' && <BuddiesTab onSelectBuddy={openBuddy} initialSearch={params.q ?? ''} onOpenSkill={openSkillTab} />}
             {activeTab === 'skills' && <SkillsTab onOpenSource={openSourceTab} initialSearch={params.q ?? ''} />}
             {activeTab === 'items' && <ItemsTab />}
