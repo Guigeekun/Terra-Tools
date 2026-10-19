@@ -197,6 +197,31 @@ export function equipStatMultipliers(activeSkills) {
   return mult;
 }
 
+// ---- stackable proc buffs ---------------------------------------------------
+// Kind-4 "Status Apply" skills carrying a stat status with a real trigger
+// ("Attack +10%", 30% — e.g. the Skullsplitter companion): every assumed proc
+// adds the skill's spower% once. The Compare toolbar's buff-stack count N is
+// the player's assumption of how often each of these proc'd; distinct skills
+// each get N stacks and stack additively per stat.
+export function stackableBuffSkills(activeSkills) {
+  return activeSkills.filter(e => {
+    if (!e.skill || e.locked) return false;
+    return e.skill.kind === 4
+      && (e.skill.emitRatio || 0) > 0
+      && Boolean(EQUIP_STAT_STATUS[e.skill.status])
+      && (e.skill.spower || 0) > 0;
+  });
+}
+
+export function procBuffMultipliers(activeSkills, stacks) {
+  const mult = { HP: 0, ATK: 0, DEF: 0, MATK: 0, MDEF: 0 };
+  if (!stacks || stacks <= 0) return mult;
+  for (const e of stackableBuffSkills(activeSkills)) {
+    mult[EQUIP_STAT_STATUS[e.skill.status]] += (e.skill.spower / 100) * stacks;
+  }
+  return mult;
+}
+
 // ---- buffless damage estimate ----------------------------------------------
 // Model (documented in the UI tooltip):
 //   pincer  = ATK_total × (1 + Σ_physical w·(power − 1))
@@ -244,7 +269,7 @@ export function damageEstimate(activeSkills, stats) {
   };
 }
 
-export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, level }) {
+export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, level, stacks = 0 }) {
   const jobs = char?.JobsInfo || [];
   const job = jobs[jobIndex] || jobs[0] || null;
   const fixed = job ? jobFixedSkills(job) : [];
@@ -268,21 +293,24 @@ export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, 
   });
 
   const equipMult = equipStatMultipliers(activeSkills);
+  const buffMult = procBuffMultipliers(activeSkills, stacks);
 
   const jobStats = job ? jobStatsAtLevel(job, level) : { HP: 0, ATK: 0, DEF: 0, MATK: 0, MDEF: 0 };
   const stats = {};
   for (const [key] of STAT_ROWS) {
     const jobVal = jobStats[key];
     const buddyVal = bonuses?.[key] || 0;
-    const mult = 1 + (equipMult[key] || 0);
+    const equip = equipMult[key] || 0;
+    const buffs = buffMult[key] || 0;
     stats[key] = {
       job: jobVal,
       buddy: buddyVal,
-      equip: equipMult[key] || 0,
-      total: Math.round((jobVal + buddyVal) * mult),
+      equip,
+      buffs,
+      total: Math.round((jobVal + buddyVal) * (1 + equip + buffs)),
     };
   }
-  stats.boost = { job: 0, buddy: bonuses?.boost || 0, equip: 0, total: bonuses?.boost || 0 };
+  stats.boost = { job: 0, buddy: bonuses?.boost || 0, equip: 0, buffs: 0, total: bonuses?.boost || 0 };
 
   const power = {};
   for (const [key, meta] of Object.entries(POWER_FAMILIES)) {
@@ -303,6 +331,7 @@ export function computeSide({ char, ancestor, skills, jobIndex, slotIds, buddy, 
     buddy: buddy && availability.ok && levelGateOk ? buddy : null,
     availability, levelGateOk,
     stats, power,
+    stackableBuffs: stackableBuffSkills(activeSkills),
     damage: damageEstimate(activeSkills, stats),
   };
 }

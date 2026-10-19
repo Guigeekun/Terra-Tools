@@ -51,6 +51,37 @@
     text-align: right;
 }
 
+.compare-stacks {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.compare-stacks i {
+    color: var(--accent-amber);
+}
+
+.compare-stacks label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.compare-stacks select {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 13px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.compare-stacks select:hover {
+    border-color: var(--accent-amber);
+}
+
 .compare-swap-btn {
     display: inline-flex;
     align-items: center;
@@ -475,6 +506,13 @@
     color: var(--accent-green);
     background: rgba(34, 197, 94, 0.08);
     border-color: rgba(34, 197, 94, 0.25);
+}
+
+/* Stackable proc buffs (+10% ATK/proc) — amber, "scales with the stacks setting" */
+.compare-power-chip.buff {
+    color: var(--accent-amber);
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.3);
 }
 
 .compare-origin-tag {

@@ -10,7 +10,8 @@ import ComparisonResult from './ComparisonResult';
 //   leftJob / rightJob  index into the character's JobsInfo
 //   leftSkills / rightSkills   comma-separated slotted skill IDs (up to 4)
 //   leftBuddy / rightBuddy     companion ID
-//   level               shared job level for both sides (default 99)
+//   level               shared job level for both sides (default 90)
+//   stacks              assumed proc count of each stackable stat buff (0-10)
 
 const parseIds = (v) =>
   (v || '').split(',').map(x => Number.parseInt(x, 10)).filter(Number.isFinite).slice(0, 4);
@@ -18,6 +19,11 @@ const parseIds = (v) =>
 const parseLevel = (v) => {
   const n = Number.parseInt(v, 10);
   return Number.isFinite(n) ? Math.min(Math.max(n, 1), JOB_MAX_LEVEL) : JOB_MAX_LEVEL;
+};
+
+const parseStacks = (v) => {
+  const n = Number.parseInt(v, 10);
+  return Number.isFinite(n) ? Math.min(Math.max(n, 0), 10) : 0;
 };
 
 export default function CompareTab({ params, onParams, onOpenSkill }) {
@@ -64,6 +70,7 @@ export default function CompareTab({ params, onParams, onOpenSkill }) {
   }, [params.left, params.right, charCache]);
 
   const level = parseLevel(params.level);
+  const stacks = parseStacks(params.stacks);
 
   const setParams = (patch, { replace = false } = {}) =>
     onParams({ ...params, ...patch }, { replace });
@@ -100,6 +107,7 @@ export default function CompareTab({ params, onParams, onOpenSkill }) {
           slotIds: config.slotIds,
           buddy: config.buddy,
           level,
+          stacks,
         })
       : null;
     return { config, computed };
@@ -143,6 +151,21 @@ export default function CompareTab({ params, onParams, onOpenSkill }) {
           />
           <span className="compare-level-val">{level}</span>
         </div>
+        <div className="compare-stacks" title="Assumed proc count of every stackable stat buff in each kit (e.g. the Skullsplitter companion's 'Attack +10%', 30%). Each of those skills is assumed to have proc'd this many times; 0 keeps the estimate buffless.">
+          <i className="fa-solid fa-layer-group"></i>
+          <label htmlFor="compare-stacks">Buff stacks</label>
+          <select
+            id="compare-stacks"
+            value={stacks}
+            onChange={e => setParams({ stacks: e.target.value }, { replace: true })}
+          >
+            {Array.from({ length: 11 }, (_, n) => (
+              <option key={n} value={n}>
+                {n === 0 ? '0 (buffless)' : `${n} proc${n === 1 ? '' : 's'} of each`}
+              </option>
+            ))}
+          </select>
+        </div>
         <button className="compare-swap-btn" title="Swap left and right" onClick={swapSides}>
           <i className="fa-solid fa-right-left"></i> Swap sides
         </button>
@@ -158,6 +181,7 @@ export default function CompareTab({ params, onParams, onOpenSkill }) {
         right={right.computed}
         lang={lang}
         level={level}
+        stacks={stacks}
         onOpenSkill={onOpenSkill}
       />
     </div>

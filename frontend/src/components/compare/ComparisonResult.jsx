@@ -1,8 +1,18 @@
 import { loc } from '../../utils/localization';
 import { rarityShortLabels, skillAttribMeta, triggerText } from '../../utils/constants';
-import { POWER_FAMILIES, equipBoostLabel } from '../../utils/compareCalc';
+import { POWER_FAMILIES, EQUIP_STAT_STATUS, equipBoostLabel } from '../../utils/compareCalc';
 import SkillIcon from '../shared/SkillIcon';
 import EmitConditionBadge from '../shared/EmitConditionBadge';
+
+const fmtPct = (v) => (Number(v) % 1 === 0 ? Number(v) : Number(v).toFixed(1));
+
+// "+10% ATK/proc" for stackable stat buffs (kind 4 with a stat status).
+function stackBuffLabel(skill) {
+  if (skill?.kind !== 4 || (skill.emitRatio || 0) <= 0) return null;
+  const stat = EQUIP_STAT_STATUS[skill.status];
+  if (!stat || !(skill.spower > 0)) return null;
+  return `+${fmtPct(skill.spower)}% ${stat}/proc`;
+}
 
 const STAT_LABELS = [
   ['HP', 'HP'], ['ATK', 'ATK'], ['DEF', 'DEF'], ['MATK', 'MATK'], ['MDEF', 'MDEF'],
@@ -34,7 +44,7 @@ function SideCell({ value, alt }) {
   );
 }
 
-export default function ComparisonResult({ left, right, lang, level, onOpenSkill }) {
+export default function ComparisonResult({ left, right, lang, level, stacks = 0, onOpenSkill }) {
   const configured = left?.char || right?.char;
   if (!configured) {
     return (
@@ -47,6 +57,7 @@ export default function ComparisonResult({ left, right, lang, level, onOpenSkill
 
   const powerRows = familiesOf(left, right);
   const bothPresent = Boolean(left?.char && right?.char);
+  const stacksLabel = stacks > 0 ? `${stacks}× stacked buffs` : 'buffless';
 
   return (
     <div className="compare-results">
@@ -58,7 +69,16 @@ export default function ComparisonResult({ left, right, lang, level, onOpenSkill
 
       {/* --- stat diff --- */}
       <div className="compare-table-box">
-        <h5><i className="fa-solid fa-chart-simple"></i> Stats <span className="compare-hint">Lv {level} · job growth + companion bonuses</span></h5>
+        <h5
+          title={
+            'Stat buffs: always-on equips count fully; each stackable proc buff\n' +
+            '(e.g. the Skullsplitter companion\'s "Attack +10%", 30%) is assumed to\n' +
+            `have proc'd ${stacks} time(s) — ${stacks} × its magnitude per skill, all skills stacked.`
+          }
+        >
+          <i className="fa-solid fa-chart-simple"></i> Stats
+          <span className="compare-hint">Lv {level} · job growth + companion bonuses · {stacksLabel}</span>
+        </h5>
         <table className="compare-table">
           <thead>
             <tr>
@@ -70,13 +90,14 @@ export default function ComparisonResult({ left, right, lang, level, onOpenSkill
           </thead>
           <tbody>
             {STAT_LABELS.map(([key, label]) => {
-              const l = left?.stats?.[key] || { total: 0, job: 0, buddy: 0, equip: 0 };
-              const r = right?.stats?.[key] || { total: 0, job: 0, buddy: 0, equip: 0 };
+              const l = left?.stats?.[key] || { total: 0, job: 0, buddy: 0, equip: 0, buffs: 0 };
+              const r = right?.stats?.[key] || { total: 0, job: 0, buddy: 0, equip: 0, buffs: 0 };
               const alt = (s) => {
                 const parts = [];
                 if (s.job) parts.push(`job ${s.job}`);
                 if (s.buddy) parts.push(`+${s.buddy} companion`);
                 if (s.equip > 0) parts.push(`equip +${Math.round(s.equip * 100)}%`);
+                if (s.buffs > 0) parts.push(`buffs +${Math.round(s.buffs * 100)}%`);
                 return parts.join(' · ');
               };
               return (
@@ -127,19 +148,21 @@ export default function ComparisonResult({ left, right, lang, level, onOpenSkill
         </div>
       )}
 
-      {/* --- buffless damage estimate --- */}
+      {/* --- damage estimate --- */}
       <div className="compare-table-box">
         <h5
           title={
-            'Buffless estimate of the damage this kit deals in one pincer it initiates:\n' +
+            (stacks > 0
+              ? `Damage estimate with ${stacks} proc(s) of each stackable stat buff folded into the stats:\n`
+              : 'Buffless estimate of the damage this kit deals in one pincer it initiates:\n') +
             'pincer = ATK × (1 + Σ trigger-weighted (power − 1) of physical skills)\n' +
             'magic  = Σ trigger-weighted power × MATK (each magical skill is one separate hit)\n' +
             'Trigger weight = emitRatio/100; equips count at full weight.\n' +
-            'Excluded (buffless): procable buffs, counters, flat-damage skills, heals.\n' +
+            'Excluded: counters, flat-damage skills, heals; damage-magnitude buffs ("Physical Damage ×1.5") stay out.\n' +
             'Neutral element, single pincer, no chain or level-gap scaling — a relative number on the same scale for both sides.'
           }
         >
-          <i className="fa-solid fa-burst"></i> Estimated damage (buffless)
+          <i className="fa-solid fa-burst"></i> Estimated damage ({stacksLabel})
           <span className="compare-hint">expected &amp; all-proc ceiling — hover for the model</span>
         </h5>
         <table className="compare-table">
@@ -238,9 +261,11 @@ function KitList({ side, label, lang, onOpenSkill }) {
         {kit.map((e, i) => {
           const skill = e.skill;
           const equipLabel = skill ? equipBoostLabel(skill) : null;
+          const buffLabel = skill ? stackBuffLabel(skill) : null;
           const power = skill?.power > 0
             ? `×${Number(skill.power.toFixed(2))}`
-            : equipLabel;
+            : equipLabel || buffLabel;
+          const chipKind = skill?.power > 0 ? '' : equipLabel ? ' equip' : buffLabel ? ' buff' : '';
           const originLabel = e.origin === 'job' ? 'Job' : e.origin === 'buddy' ? 'Companion' : 'Slot';
           return (
             <li
@@ -259,7 +284,7 @@ function KitList({ side, label, lang, onOpenSkill }) {
                   <EmitConditionBadge skill={skill} />
                 </span>
               </div>
-              {power && <span className={`compare-power-chip${equipLabel && !(skill?.power > 0) ? ' equip' : ''}`}>{power}</span>}
+              {power && <span className={`compare-power-chip${chipKind}`}>{power}</span>}
             </li>
           );
         })}

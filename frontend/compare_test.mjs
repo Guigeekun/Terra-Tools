@@ -104,7 +104,7 @@ function check(label, actual, expected) {
     buddy: { ...buddies.find(b => b.ID === 1), ATKmax: 7, ATKmin: 0, MaxLevel: 30, Coeff: 1, skill: 11, RequiredLevel: 15 },
     level: 90,
   });
-  check('companion ATK joins the total', withBuddy.stats.ATK, { job: expected.ATK, buddy: 7, equip: 0, total: expected.ATK + 7 });
+  check('companion ATK joins the total', withBuddy.stats.ATK, { job: expected.ATK, buddy: 7, equip: 0, buffs: 0, total: expected.ATK + 7 });
   check('companion skill enters the kit', withBuddy.activeSkills.at(-1)?.origin, 'buddy');
 
   const lowLevel = computeSide({
@@ -207,6 +207,29 @@ function check(label, actual, expected) {
     buddy: { ...lambdaExclusive, skill: 0, RequiredLevel: 1 }, level: 90,
   });
   check('lambda-exclusives of other characters stay locked', lambdaWithForeignLambdaBuddy.buddy, null);
+  // --- stackable proc buffs (Skullsplitter) -----------------------------------
+  // Skullsplitter (buddy 72) carries skill 212 "Attack +10%" (kind 4, 30%
+  // proc, spower 10). N stacks = N assumed procs of EACH stackable buff in
+  // the kit; Bahl job 1 has the same skill fixed, so fixed + companion
+  // double up: 2 sources × 10% × N.
+  const skull = buddies.find(b => b.NameString?.en === 'Skullsplitter');
+  check('Skullsplitter carries the Attack +10% proc', { id: skull?.ID, skill: skull?.skill }, { id: 72, skill: 212 });
+  const noStacks = computeSide({
+    char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [],
+    buddy: { ...skull, RequiredLevel: 1 }, level: 90, stacks: 0,
+  });
+  check('stacks=0 stays buffless', noStacks.stats.ATK.buffs, 0);
+  const threeStacks = computeSide({
+    char: bahl, ancestor: null, skills, jobIndex: 0, slotIds: [],
+    buddy: { ...skull, RequiredLevel: 1 }, level: 90, stacks: 3,
+  });
+  check('3 procs of each of the 2 ATK sources = +60%', +threeStacks.stats.ATK.buffs.toFixed(6), 0.6);
+  const baseAtk = noStacks.stats.ATK.total;
+  check('buffed total multiplies job+companion', threeStacks.stats.ATK.total, Math.round(baseAtk / 1.0 * 1.6));
+  check('damage estimate inherits the buffed stats',
+    threeStacks.damage.expected > noStacks.damage.expected, true);
+  check('non-stat proc skills do not stack',
+    threeStacks.stats.HP.buffs, 0);
 }
 
 if (failures) {
