@@ -51,10 +51,21 @@
     text-align: right;
 }
 
+.compare-stacks-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
 .compare-stacks {
     display: flex;
     align-items: center;
     gap: 8px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 8px 14px;
 }
 
 .compare-stacks i {
