@@ -115,6 +115,19 @@ def get_skill_sources_index():
         }
 
     # --- Enemies: aggregate by display name (many IDs share the same foe) ---
+    # The bestiary (routers/enemies.py) groups variants by the same English
+    # name and addresses each group by its lowest EnemyData ID; record that ID
+    # per name so source chips can deep-link to the group's modal (?enemy=).
+    enemy_group_first_id = {}
+    for enemy in gamedata.get("enemies", {}).get("data", []):
+        name = _en(enemy.get("NameString"))
+        enemy_id = enemy.get("ID")
+        if not name or enemy_id is None:
+            continue
+        current = enemy_group_first_id.get(name)
+        if current is None or enemy_id < current:
+            enemy_group_first_id[name] = enemy_id
+
     for enemy in gamedata.get("enemies", {}).get("data", []):
         slots = enemy.get("SkillSlot") or []
         name = _en(enemy.get("NameString"))
@@ -126,7 +139,14 @@ def get_skill_sources_index():
             if not isinstance(skill_id, int) or skill_id <= 0:
                 continue
             entry = bucket(skill_id)["enemy"].setdefault(
-                name, {"type": "enemy", "name": name, "count": 0, "boss": False, "image": None}
+                name, {
+                    "type": "enemy",
+                    "name": name,
+                    "first_id": enemy_group_first_id.get(name),
+                    "count": 0,
+                    "boss": False,
+                    "image": None,
+                }
             )
             entry["count"] += 1
             entry["boss"] = entry["boss"] or is_boss

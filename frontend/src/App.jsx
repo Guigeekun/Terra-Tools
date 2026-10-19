@@ -61,9 +61,13 @@ function AppContent() {
   // topmost modal (and walks chained modals step by step), and a copied URL
   // restores the exact view, modals included.
   const pushedModalRef = useRef(false);
-  const openModal = (extra) => {
+  const openModal = (extra, tab) => {
     pushedModalRef.current = true;
-    navigate(tabHash(activeTab, { ...params, ...extra }));
+    // Cross-tab opens (enemy source chip → bestiary) start from the target
+    // tab's clean param set: carrying this tab's ?q= would pre-filter the
+    // list sitting behind the modal with a query that isn't about it.
+    const base = tab && tab !== activeTab ? {} : params;
+    navigate(tabHash(tab ?? activeTab, { ...base, ...extra }));
   };
   const closeModal = (key) => {
     if (pushedModalRef.current) {
@@ -152,10 +156,13 @@ function AppContent() {
     return () => { cancelled = true; };
   }, [enemyParam]);
 
-  const openEnemy = (group) => {
+  // `tab` opens the modal over another tab (enemy source chips jump to the
+  // bestiary); the push still belongs to this session, so Back and the
+  // modal's close both return to where the click happened.
+  const openEnemy = (group, tab) => {
     const id = typeof group === 'object' ? (group?.first_id ?? group?.enemy_ids?.[0]) : group;
     if (id == null) return;
-    openModal({ enemy: String(id) });
+    openModal({ enemy: String(id) }, tab);
   };
 
   // Occurrence links jump straight to the chapter (and section) in the
@@ -206,7 +213,13 @@ function AppContent() {
               />
             )}
             {activeTab === 'buddies' && <BuddiesTab onSelectBuddy={openBuddy} initialSearch={params.q ?? ''} onOpenSkill={openSkillTab} />}
-            {activeTab === 'skills' && <SkillsTab onOpenSource={openSourceTab} initialSearch={params.q ?? ''} />}
+            {activeTab === 'skills' && (
+              <SkillsTab
+                onOpenSource={openSourceTab}
+                onOpenEnemy={(source) => openEnemy(source, 'bestiary')}
+                initialSearch={params.q ?? ''}
+              />
+            )}
             {activeTab === 'items' && <ItemsTab />}
             {activeTab === 'bestiary' && <BestiaryTab onSelectEnemy={openEnemy} initialSearch={params.q ?? ''} />}
             {activeTab === 'stages' && (

@@ -60,6 +60,34 @@ test('clicking a character pushes a modal entry that Back closes', async ({ page
   await expect(page).toHaveURL(/#\/characters$/);
 });
 
+test('an enemy skill source chip opens its bestiary group; Back returns to skills', async ({ page, request }) => {
+  // A skill whose first source is an enemy: the Sources cell leads with a
+  // bestiary chip (source ordering puts enemies after characters/buddies, so
+  // sources[0] being an enemy means no other chip can precede it).
+  const res = await request.get('/api/skills?page=1&limit=100&source_type=enemy');
+  const { items } = await res.json();
+  const skill = items.find(s => s.sources?.[0]?.type === 'enemy' && s.sources[0].first_id != null);
+  test.skip(!skill, 'no enemy-first skill on the first served page');
+  const group = await (await request.get(`/api/enemies/${skill.sources[0].first_id}`)).json();
+  const errors = trackPageErrors(page);
+  const name = skill.nameString?.en?.trim();
+  await gotoTab(page, `#/skills${name ? `?q=${encodeURIComponent(name)}` : ''}`);
+  // Other rows can match the same query — click the chip inside this skill's row.
+  const row = page.locator(`#skills-table-body tr:has(code:text-is("${skill.ID}"))`);
+  await expect(row).toBeVisible();
+  const chip = row.locator('a.source-chip').first();
+  await chip.click();
+  await expect(page.locator('.modal-backdrop .modal-card')).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`enemy=${skill.sources[0].first_id}`));
+  await expect(page.locator('.modal-backdrop .modal-card h3')).toContainText(group.name.en);
+  // The jump pushed a history entry on top of the skills tab: Back undoes the
+  // whole navigation instead of leaving the user on a bare bestiary.
+  await page.goBack();
+  await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/skills/);
+  expectNoPageErrors(errors);
+});
+
 test('compare deep link (?left=) preselects the character', async ({ page, request }) => {
   const character = await firstListed(request, '/api/characters?page=1&limit=1');
   const errors = trackPageErrors(page);
