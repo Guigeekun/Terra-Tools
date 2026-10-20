@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { TAB_META, TAB_KEYS, DATABASE_TAB_KEYS } from '../../utils/constants';
+import { TAB_META, TAB_KEYS, DATABASE_TAB_KEYS, HIDDEN_TAB_KEYS } from '../../utils/constants';
 import { usePersistentState } from '../../hooks/usePersistentState';
 
 // Plain hash links (no preventDefault): navigation goes through the router's
@@ -22,6 +22,7 @@ export default function Sidebar({ activeTab, isOpen, onClose }) {
   const rows = [];
   let groupPlaced = false;
   for (const key of TAB_KEYS) {
+    if (HIDDEN_TAB_KEYS.includes(key)) continue;
     if (databaseSet.has(key)) {
       if (!groupPlaced) {
         rows.push({ type: 'group' });
