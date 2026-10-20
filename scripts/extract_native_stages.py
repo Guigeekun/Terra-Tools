@@ -332,7 +332,30 @@ for idx, gen in enumerate(generators):
     if spawns:
         extracted_layouts.setdefault(chapter, {}).setdefault(section, {})[wave] = spawns
 
+# Chapter 29 ("Reboot") is the one chapter whose internal battle-generator
+# numbering is permuted relative to the displayed section order (the devs
+# authored the battles in a different order than the chapter presents them;
+# the game dispatches section -> battle explicitly). Mapping verified
+# stage-by-stage against terrabattle.wiki.gg/wiki/Reboot: displayed section 4
+# plays generator Battle5, section 5 plays Battle6, ..., section 9 plays
+# Battle4, section 10 plays Battle7. Every other chapter is identity.
+CHAPTER_SECTION_REMAP = {
+    29: {1: 1, 2: 2, 3: 3, 4: 5, 5: 6, 6: 8, 7: 9, 8: 10, 9: 4, 10: 7},
+}
+
 print(f"Extracted enemy layouts across {len(extracted_layouts)} chapters.")
+
+for chapter, mapping in CHAPTER_SECTION_REMAP.items():
+    sections = extracted_layouts.get(chapter)
+    if not sections:
+        print(f"Warning: chapter {chapter} in CHAPTER_SECTION_REMAP was not extracted.")
+        continue
+    extracted_layouts[chapter] = {
+        display: sections[internal]
+        for display, internal in mapping.items()
+        if internal in sections
+    }
+    print(f"Remapped chapter {chapter} battle generators to display order.")
 
 # 4. Merge into existing StagesLayout.json
 print("Merging extracted layouts into StagesLayout.json...")
