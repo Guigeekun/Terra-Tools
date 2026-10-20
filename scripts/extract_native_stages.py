@@ -100,14 +100,17 @@ inside_enemies = False
 all_rvas = set()
 
 generators = [] # list of dicts: chapter, section, wave, rva, class_name
+closures = []   # list of dicts: chapter, section|None, wave|None, source_var|None, rva, class_name
 current_class = None
 class_is_generator = False
 generator_chapter = None
 generator_section = None
 generator_wave = None
-
-slot_maps = {"ChapterBase": {}}
-current_slots_type = None
+class_is_closure = False
+closure_chapter = None
+closure_section = None
+closure_wave = None
+closure_source_var = None
 
 # Regex patterns
 class_decl_re = re.compile(
@@ -117,6 +120,21 @@ class_decl_re = re.compile(
     r"(?:\s*:\s*.*?)?\s*// TypeDefIndex: \d+$"
 )
 rva_slot_re = re.compile(r"^\s*// RVA: 0x([0-9A-Fa-f]+).*?(?: Slot: (\d+))?$")
+
+# Mid-battle summon scripts are compiler-generated closure classes nested under
+# either a battle generator (ChapterN.$BattleS_W$closure$...$ — the summon
+# belongs to that exact wave) or an enemy Init_ method (ChapterN.$Init_VAR$closure$...$
+# — the summon belongs to every wave that spawns that enemy). The strict
+# trailing $<token>.$ discriminator keeps closures from matching the generator
+# pattern: with the old loose regex both classes mapped to the same
+# (section, wave) key and the last disassembled one silently won.
+generator_re = re.compile(r"^Chapter(\d+)\.\$*Battle(\d+)_(\d+)[A-Z_]*\$\d+\.\$$")
+closure_re = re.compile(
+    r"^Chapter(\d+)\.\$*(?:Battle(\d+)_(\d+)|Init_([A-Za-z0-9_]+))\$closure.*\.\$$"
+)
+
+slot_maps = {"ChapterBase": {}}
+current_slots_type = None
 
 pending_rva_slot = None
 with open(dump_cs_path, "r", encoding="utf-8", errors="replace") as f:
@@ -148,6 +166,11 @@ with open(dump_cs_path, "r", encoding="utf-8", errors="replace") as f:
             generator_chapter = None
             generator_section = None
             generator_wave = None
+            class_is_closure = False
+            closure_chapter = None
+            closure_section = None
+            closure_wave = None
+            closure_source_var = None
 
             current_slots_type = None
             if current_class == "ChapterBase":
@@ -158,15 +181,22 @@ with open(dump_cs_path, "r", encoding="utf-8", errors="replace") as f:
                     slot_maps[current_slots_type] = {}
 
             if current_class.endswith(".$"):
-                gen_match = re.match(
-                    r"^Chapter(\d+)\.\$*Battle(\d+)_(\d+).*?\.\$$",
-                    current_class
-                )
+                gen_match = generator_re.match(current_class)
                 if gen_match:
                     class_is_generator = True
                     generator_chapter = int(gen_match.group(1))
                     generator_section = int(gen_match.group(2))
                     generator_wave = int(gen_match.group(3))
+                else:
+                    closure_match = closure_re.match(current_class)
+                    if closure_match:
+                        class_is_closure = True
+                        closure_chapter = int(closure_match.group(1))
+                        if closure_match.group(2) is not None:
+                            closure_section = int(closure_match.group(2))
+                            closure_wave = int(closure_match.group(3))
+                        else:
+                            closure_source_var = closure_match.group(4)
 
             pending_rva_slot = None
             continue
@@ -202,6 +232,16 @@ with open(dump_cs_path, "r", encoding="utf-8", errors="replace") as f:
                         "class_name": current_class
                     })
 
+                if class_is_closure and "bool MoveNext()" in stripped:
+                    closures.append({
+                        "chapter": closure_chapter,
+                        "section": closure_section,
+                        "wave": closure_wave,
+                        "source_var": closure_source_var,
+                        "rva": rva,
+                        "class_name": current_class
+                    })
+
                 pending_rva_slot = None
 
 sorted_rvas = sorted(list(all_rvas))
@@ -216,26 +256,20 @@ print(f"Discovered {len(generators)} battle generator MoveNext methods.")
 # 3. Disassemble each generator and extract spawns
 extracted_layouts = {} # chapter -> section -> wave -> list of enemy spawns
 
-print("Starting layout extraction via llvm-objdump...")
-for idx, gen in enumerate(generators):
-    chapter = gen["chapter"]
-    section = gen["section"]
-    wave = gen["wave"]
-    start_rva = gen["rva"]
-
+def extract_spawns(chapter, start_rva, stop_rva):
+    """Disassemble [start_rva, stop_rva) and return the enemy spawn calls,
+    resolving them through the chapter's vtable slots."""
     chap_name = f"Chapter{chapter}"
     chapter_slots = slot_maps.get("ChapterBase", {}).copy()
     if chap_name in slot_maps:
         chapter_slots.update(slot_maps[chap_name])
-
-    stop_rva = rva_successors.get(start_rva, start_rva + 0x1000)
 
     cmd = [objdump_cmd, "--disassemble", f"--start-address={start_rva}", f"--stop-address={stop_rva}", str(lib_path)]
     try:
         res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     except (subprocess.CalledProcessError, OSError) as e:
         print(f"Error running objdump for RVA {hex(start_rva)}: {e}")
-        continue
+        return []
 
     registers = {}
     x9_offset = None
@@ -329,10 +363,39 @@ for idx, gen in enumerate(generators):
                         })
                 x9_offset = None
 
+    return spawns
+
+print("Starting layout extraction via llvm-objdump...")
+for gen in generators:
+    start_rva = gen["rva"]
+    stop_rva = rva_successors.get(start_rva, start_rva + 0x1000)
+    spawns = extract_spawns(gen["chapter"], start_rva, stop_rva)
     if spawns:
-        extracted_layouts.setdefault(chapter, {}).setdefault(section, {})[wave] = spawns
+        extracted_layouts.setdefault(gen["chapter"], {}).setdefault(gen["section"], {})[gen["wave"]] = spawns
 
 print(f"Extracted enemy layouts across {len(extracted_layouts)} chapters.")
+
+# 3b. Disassemble summon closures. Their spawns are attached to waves after the
+# layout merge: Battle-keyed closures summon into their exact (section, wave),
+# Init_-keyed ones belong to the enemy wherever it spawns.
+summons_by_wave = {}   # chapter -> {(section, wave): [spawn, ...]}
+summons_by_source = {} # chapter -> {source_var: [spawn, ...]}
+
+print(f"Disassembling {len(closures)} summon closures...")
+for clo in closures:
+    start_rva = clo["rva"]
+    stop_rva = rva_successors.get(start_rva, start_rva + 0x1000)
+    spawns = extract_spawns(clo["chapter"], start_rva, stop_rva)
+    if not spawns:
+        continue
+    if clo["section"] is not None:
+        summons_by_wave.setdefault(clo["chapter"], {}).setdefault((clo["section"], clo["wave"]), []).extend(spawns)
+    else:
+        summons_by_source.setdefault(clo["chapter"], {}).setdefault(clo["source_var"], []).extend(spawns)
+
+print(f"Summon closures with spawns: "
+      f"{sum(len(v) for v in summons_by_wave.values())} wave-keyed, "
+      f"{sum(len(v) for v in summons_by_source.values())} enemy-keyed.")
 
 # 4. Merge into existing StagesLayout.json
 print("Merging extracted layouts into StagesLayout.json...")
@@ -368,6 +431,50 @@ for chapter, sections in extracted_layouts.items():
             })
 
         existing_layouts[ch_key][sec_key] = waves_list
+
+# 4b. Attach summons to waves. Replacement (not append) keeps reruns idempotent.
+def _dedupe(entries):
+    seen = set()
+    out = []
+    for e in entries:
+        key = (e.get("enemy_var"), e.get("enemy_id"), e.get("x"), e.get("y"))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(e)
+    return out
+
+attached_waves = 0
+for ch_key, sections in existing_layouts.items():
+    ch_num = int(ch_key) if ch_key.isdigit() else None
+    if ch_num is None:
+        continue
+    by_wave = summons_by_wave.get(ch_num, {})
+    by_source = summons_by_source.get(ch_num, {})
+    if not by_wave and not by_source:
+        continue
+    for sec_key, waves in sections.items():
+        if not isinstance(waves, list):
+            continue
+        sec_num = int(sec_key) if sec_key.isdigit() else None
+        for wave in waves:
+            if not isinstance(wave, dict) or wave.get("type") != "wave":
+                continue
+            attach = []
+            if sec_num is not None:
+                attach.extend(by_wave.get((sec_num, wave.get("wave_index")), []))
+            for enemy in wave.get("enemies", []):
+                var = enemy.get("enemy_var", "")
+                for entry in by_source.get(var, []):
+                    attach.append({**entry, "source_var": var})
+            attach = _dedupe(attach)
+            if attach:
+                wave["summons"] = attach
+                attached_waves += 1
+            elif "summons" in wave:
+                del wave["summons"]
+
+print(f"Attached summons to {attached_waves} waves.")
 
 stages_layout_path.parent.mkdir(parents=True, exist_ok=True)
 with open(stages_layout_path, "w", encoding="utf-8") as f:

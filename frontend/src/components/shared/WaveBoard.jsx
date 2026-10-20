@@ -10,8 +10,15 @@ export default function WaveBoard({ waves, lang }) {
 
   const wave = waves[activeWave];
   const enemies = wave?.enemies || [];
+  const summons = wave?.summons || [];
   const enemyMap = {};
   enemies.forEach(e => { enemyMap[`${e.x},${e.y}`] = e; });
+  const summonMap = {};
+  summons.forEach(s => {
+    if (!enemyMap[`${s.x},${s.y}`]) { summonMap[`${s.x},${s.y}`] = s; }
+  });
+  const enemyNameByVar = {};
+  enemies.forEach(e => { enemyNameByVar[e.enemy_var] = loc(e.NameString, lang, e.enemy_var); });
 
   const bgUrl = wave?.bg_url || (wave?.bgID ? `/api/bg/${wave.bgID}` : null);
 
@@ -43,12 +50,13 @@ export default function WaveBoard({ waves, lang }) {
               Array.from({ length: 6 }).map((_, x) => {
                 const y = 7 - row; // game grid origin is bottom-left, render row 0 at the bottom
                 const enemy = enemyMap[`${x},${y}`];
+                const summon = summonMap[`${x},${y}`];
                 const isBoss = enemy && (
                   enemy.enemy_var?.includes('BAKUROU') || enemy.enemy_var?.includes('CHAMP') ||
                   enemy.enemy_var?.includes('KING') || (enemy.HP && enemy.HP > 1000)
                 );
                 return (
-                  <div key={`${x},${y}`} className={`board-cell ${enemy ? 'has-enemy' : ''}`} data-coord={`${x},${y}`}>
+                  <div key={`${x},${y}`} className={`board-cell ${enemy || summon ? 'has-enemy' : ''}`} data-coord={`${x},${y}`}>
                     {enemy && (
                       <div className={`enemy-token ${isBoss ? 'boss' : ''}`}>
                         {isBoss ? 'B' : 'E'}
@@ -61,6 +69,9 @@ export default function WaveBoard({ waves, lang }) {
                           <div className="tooltip-stat-row"><span>Coord:</span><span className="tooltip-stat-val">({x}, {y})</span></div>
                         </div>
                       </div>
+                    )}
+                    {!enemy && summon && (
+                      <div className="enemy-token summon" title={loc(summon.NameString, lang, summon.enemy_var)}>S</div>
                     )}
                   </div>
                 );
@@ -81,6 +92,27 @@ export default function WaveBoard({ waves, lang }) {
               </div>
             ))
           }
+          {summons.length > 0 && (
+            <div className="wave-summons-block">
+              <div className="wave-summons-header">
+                <i className="fa-solid fa-wand-sparkles"></i> Mid-battle summons ({summons.length})
+              </div>
+              {summons.map((summon, i) => (
+                <div key={i} className="wave-enemy-item wave-summon-item">
+                  <div className="wave-enemy-name-col">
+                    <span className="wave-enemy-name-text">{loc(summon.NameString, lang, summon.enemy_var)}</span>
+                    <span className="wave-enemy-stat-badge">
+                      {summon.source_var && enemyNameByVar[summon.source_var]
+                        ? <>summoned by {enemyNameByVar[summon.source_var]}</>
+                        : 'joins mid-battle'}
+                      {summon.LV ? <> | Lv {summon.LV}</> : ''}
+                    </span>
+                  </div>
+                  <div className="wave-enemy-coord-col">({summon.x}, {summon.y})</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -90,6 +90,8 @@ def _chapter_layout(chapter_no: int, raw_layout: dict) -> tuple[dict, bool]:
             total += len(item.get("enemies", []))
             new_item = dict(item)
             new_item["enemies"] = enemies
+            if item.get("summons"):
+                new_item["summons"] = [s for s in item["summons"] if keep(s)]
             new_items.append(new_item)
         filtered[sec_key] = new_items
     placeholder_ratio = 1 - (kept / total) if total else 1.0
@@ -447,6 +449,25 @@ def _enrich_stage_chapter(ch, display_name, ctx: dict) -> dict:
                         "bgm_url": f"/api/play/BGM/{BGM_MAP[w_bgm]}" if w_bgm in BGM_MAP else None,
                         "enemies": enemies_list
                     }
+                    if item.get("summons"):
+                        summons_list = []
+                        for summon in item["summons"]:
+                            summon_id = summon.get("enemy_id")
+                            summon_info = enemies_by_id.get(summon_id) if summon_id else None
+                            summon_detail = {
+                                "enemy_var": summon.get("enemy_var"),
+                                "enemy_id": summon_id,
+                                "x": summon.get("x"),
+                                "y": summon.get("y"),
+                                "source_var": summon.get("source_var"),
+                            }
+                            if summon_info:
+                                summon_detail["NameString"] = summon_info.get("NameString")
+                                summon_detail["LV"] = summon_info.get("LV")
+                                summon_detail["HP"] = summon_info.get("HP")
+                                summon_detail["ImageID"] = summon_info.get("ImageID")
+                            summons_list.append(summon_detail)
+                        wave_entry["summons"] = summons_list
                     if pool_reason:
                         wave_entry["random_layout"] = True
                         wave_entry["random_layout_reason"] = pool_reason
