@@ -1,7 +1,9 @@
 import { useGameData } from '../../contexts/GameDataContext';
+import { HIDDEN_TAB_KEYS } from '../../utils/constants';
 
 // Cards are plain hash links (same scheme as the sidebar), so the browser's
 // own open-in-new-tab (middle-click / ctrl-click / context menu) works.
+// Hidden tabs (HIDDEN_TAB_KEYS) stay reachable by URL but get no card.
 export default function DashboardTab() {
   const { data } = useGameData();
   if (!data) return null;
@@ -28,7 +30,7 @@ export default function DashboardTab() {
     { key: 'saveEditor', label: 'PLG ⇄ ReTB', count: 'Save Editor', icon: 'fa-arrow-right-arrow-left', bg: 'save-bg' },
     { key: 'modStudio', label: 'Mod Studio', count: 'Author TerraMod mods', icon: 'fa-puzzle-piece', bg: 'skill-bg' },
     { key: 'docs', label: 'Community Docs', count: 'Guides & FAQs', icon: 'fa-book', bg: 'docs-bg' },
-  ];
+  ].filter(s => !HIDDEN_TAB_KEYS.includes(s.key));
 
   return (
     <div className="tab-content">

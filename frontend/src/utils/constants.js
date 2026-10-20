@@ -242,6 +242,10 @@ export const TAB_META = {
 
 export const TAB_KEYS = Object.keys(TAB_META);
 
+// Tabs reachable by URL (#/key) but not listed in the UI: the sidebar and the
+// dashboard cards skip them, so they are only accessible via a shared link.
+export const HIDDEN_TAB_KEYS = ['modStudio'];
+
 // Tabs stacked under the collapsible "Database" section of the sidebar, in
 // sidebar order. Keys stay flat in TAB_KEYS: URLs, the header and the router
 // are group-agnostic — this only shapes the sidebar.
