@@ -4,6 +4,12 @@ description: A custom version of ReTB to allow tweaking of the game.
 tags: reTB
 ---
 
+> **Superseded for the client side:** the maintained way to get a tweaked
+> client is now building your own with [TB client patch](client-patch.md) —
+> 4× speed, auto trash-clear, max drop rate and the rest, from your own APK
+> instead of prebuilt downloads. The prebuilts below stay here for the
+> server-side `config.py` knobs they carry, and the tweaks still work.
+
 > Warning, on both Android or PC, updating reTB might revert your tweaks
 
 # PC

@@ -6,6 +6,8 @@ tags: reTB
 
 This document is detailing the different patches for [Patched reTB client apk](https://drive.google.com/file/d/1Qef0VvL3I1Si1CjXiLdfZd20f0yp2MnC/view?usp=drive_link)
 
+> Rather build the same kind of client yourself? [TB client patch](client-patch.md) applies these fixes reproducibly to your own APK, plus in-game tweaks.
+
 # @_titten's patch
 This is a standalone consolidator for the four client-side jobs:
   1. repoint Terra Battle's il2cpp metadata endpoints at reTB Host

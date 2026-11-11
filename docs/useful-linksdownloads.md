@@ -13,10 +13,14 @@ tags: reTB, Project Liminal Gate
 ## Custom reTB
 > See reTB alternative versions for more info
 [reTBhost grindless V3](https://drive.google.com/file/d/1ITotm0EoWeQIB1XPZtH9trkkyVhJ9n9z/view?usp=sharing)
+> Superseded by the client patch below for the client side
 
 # Game & resources
 ## Game apk
 [Vanilla 5.5.7 uptodown](https://terra-battle.uptodown.com/android)
+
+[tb-client-patch](https://github.com/Nyquis/tb-client-patch)
+> Patch your own APK into a reTB client with built-in tweaks — see [TB client patch](reTB/client-patch)
 
 [Patched reTB client apk](https://drive.google.com/file/d/1Qef0VvL3I1Si1CjXiLdfZd20f0yp2MnC/view?usp=drive_link)
 > This version is patched to connect to your local reTBhost and patches webviews, more details in reTB client patch document
