@@ -130,4 +130,7 @@ nothing needs new art. The repo's own `docs/` go deep:
 `patcher.md`, `native-mods.md`, `native-guards.md`, `verification.md`.
 
 For the technical background on the WebView/ads crashes the compatibility
-patches solve, see [Patched game apk — technical detail](patched-game-apk.md).
+patches solve, see the [tb-client-patch
+README](https://github.com/Nyquis/tb-client-patch#readme). The legacy
+prebuilt patched apk (Drive download) applies the same four fixes —
+[Patched game apk](patched-game-apk.md) keeps its pointer.
