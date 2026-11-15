@@ -12,7 +12,8 @@ tags: reTB, Project Liminal Gate
 
 ## Custom reTB
 > See reTB alternative versions for more info
-[reTBhost grindless V3](https://drive.google.com/file/d/1ITotm0EoWeQIB1XPZtH9trkkyVhJ9n9z/view?usp=sharing)
+[reTBhost grindless V4](https://drive.google.com/file/d/1ZKmRwfdpvF8jRTkeokKkSCDZLF9MHWl1/view?usp=sharing)
+> Based on reTB v1.4.56
 > Superseded by the client patch below for the client side
 
 # Game & resources

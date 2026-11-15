@@ -13,7 +13,8 @@ tags: reTB
 > Warning, on both Android or PC, updating reTB might revert your tweaks
 
 # PC
-[reTB grindless V3 (formerly named working adult edition)](https://drive.google.com/file/d/17kNa-3576YzMQBjLpVnu8i-F38lVVzq8/view?usp=sharing)
+[reTB grindless V4 (formerly named working adult edition)](https://drive.google.com/file/d/19oBwzu4eN3SbdgmfGE2J9OnglW3tFJTP/view?usp=sharing)
+> Based on reTB v1.4.56
 
 Install reTBpc by following the guide and replace the `reTB` folder within the installation folder with this one
 
@@ -50,7 +51,9 @@ Modify anything you want and restart the server
 
 # Android
 ## Download & setup
-[reTBhost grindless V3](https://drive.google.com/file/d/1ITotm0EoWeQIB1XPZtH9trkkyVhJ9n9z/view?usp=sharing)
+[reTBhost grindless V4](https://drive.google.com/file/d/1ZKmRwfdpvF8jRTkeokKkSCDZLF9MHWl1/view?usp=sharing)
+> Based on reTB v1.4.56
+
 Follow the guide for reTBhost and use this apk instead of the vanilla reTBhost
 
 ## Tweak further
@@ -61,6 +64,6 @@ For this, clone reTBhost source
 ```bash
 git clone https://codeberg.org/WkmKsk/reTBHost.git
 ```
-Now follow the [documentation to build the apk](https://codeberg.org/WkmKsk/reTBHost#build) with the [reTB grindless V3](https://drive.google.com/file/d/17kNa-3576YzMQBjLpVnu8i-F38lVVzq8/view?usp=sharing), you might want to use `-PretbRoot=/abs/path/to/reTB`
+Now follow the [documentation to build the apk](https://codeberg.org/WkmKsk/reTBHost#build) with the [reTB grindless V4](https://drive.google.com/file/d/19oBwzu4eN3SbdgmfGE2J9OnglW3tFJTP/view?usp=sharing), you might want to use `-PretbRoot=/abs/path/to/reTB`
 
 This will outputs an apk that can be used in place of the vanilla reTBhost apk

@@ -18,7 +18,7 @@ PC) — with a set of grind-free game mods built in.
 ## Why it replaces the "working adult edition"
 
 Until now the tweaked-client route was a prebuilt download: the working adult
-edition / grindless V3 or the patched client apk, all Google Drive copies
+edition / grindless V4 or the patched client apk, all Google Drive copies
 somebody else built. tb-client-patch replaces those downloads:
 
 - **You build from your own APK** — no Drive links that rot or quietly change
